@@ -133,6 +133,7 @@ __all__ = [
     "GM_CMD_RELOAD", "GM_CMD_BAN", "GM_CMD_LOG", "GM_CMD_SETTINGS",
     "GM_CMD_DEBUG",
     "GM_CMD_TEST",
+    "GM_CMD_BROADCAST",
     "GM_COMMANDS", "GM_COMMAND_LEVEL", "GM_COMMAND_INDEX", "GM_DEFAULT_GRANT",
     "GM_PREFIX_REQUIRED",
     # 权限三级（admin/manager/player ↔ 机主/GM/普通玩家）
@@ -146,6 +147,7 @@ __all__ = [
     "cmd_gm_reload", "cmd_gm_ban", "cmd_gm_log", "cmd_gm_settings",
     "cmd_gm_debug",
     "cmd_gm_test",
+    "cmd_gm_broadcast",
     "handle_gm_command",
     # GM 后端引擎（WIR-07/08：/重载 真实后端 + /备份 /恢复 已声明未接线）
     "GmBackend", "backup_content", "restore_content",
@@ -176,6 +178,7 @@ from qbot_rpg.data.gm_constants import (
     GM_CMD_BANLIST,
     GM_CMD_DEBUG,
     GM_CMD_TEST,
+    GM_CMD_BROADCAST,
     GM_COMMANDS,
     GM_COMMAND_INDEX,
     GM_PREFIX_REQUIRED,
@@ -212,6 +215,7 @@ GM_COMMAND_LEVEL: Mapping[str, str] = {
     # 批75 · GM 运维：G5 调试 = 机主专属（可下授，5b §2.1 权限列「机主→GM」）
     GM_CMD_DEBUG: ROLE_ADMIN,
     GM_CMD_TEST: ROLE_ADMIN,
+    GM_CMD_BROADCAST: ROLE_ADMIN,
 }
 
 # 默认授予集（5b §1.1.1 裁决：默认授予集 = 全部指令表标注 GM 的指令）；
@@ -250,6 +254,10 @@ DEBUG_LEVEL_OFF: str = "INFO"
 # 批75 · G6 /测试：只读冒烟口径（内容 JSON glob + 路由连通下限；可配常量）
 SMOKE_CONTENT_GLOB: str = "*.json"
 SMOKE_ROUTE_MIN: int = 1
+
+# 批75 · G7 /广播：消息字数上限（5b G7「≤200 字」；可配常量）+ 定时键名（缺口登记）
+BROADCAST_MAX_CHARS: int = 200
+BROADCAST_SCHEDULE_KV: str = "定时"
 
 # 空日志文案（纯文本无装饰 emoji）
 _EMPTY_LOG: str = "（暂无系统日志）"
@@ -686,6 +694,30 @@ class GmBackend:
             "failures": failures,
             "message": f"{len(passed)} 项通过，{len(failures)} 项失败" if failures
                        else f"{len(passed)} 项全部通过",
+        }
+
+    def broadcast(self, message: Any, schedule: Any = None, groups: Any = None,
+                  ctx: Any = None) -> dict:
+        """/广播 后端（5b G7）：复用公告通道推送全部群 + 私聊（即时广播）。
+
+        公告通道经 ctx["announce"] 注入（可调用：announce(text, schedule, groups) →
+        {groups, dms, message}）；未装配 → {ok: False, message: 人话}（装配层注入前降级，
+        不硬造通道）。定时（schedule）本轮不落调度——框架无 apscheduler 既有机制
+        （runner「零 apscheduler · 懒清理」口径），定时缺口见 /广播 文档与登记表 X11。
+        """
+        ctx_map = ctx if isinstance(ctx, Mapping) else {}
+        announce = ctx_map.get("announce")
+        if not callable(announce):
+            return {"ok": False, "message": "公告通道未装配（/广播 需装配层注入 announce）"}
+        try:
+            res = announce(str(message), schedule=schedule, groups=groups) or {}
+        except Exception as exc:  # noqa: BLE001 - 通道异常降级为 failed 不崩
+            return {"ok": False, "message": f"广播推送失败：{exc}"}
+        return {
+            "ok": True,
+            "groups": int(res.get("groups") or 0),
+            "dms": int(res.get("dms") or 0),
+            "message": str(res.get("message") or "已推送"),
         }
 
     # `editor_link`（5b G13 /编辑）批30（2026-09-16）删除：旧编辑器已删、editor_url 已清空，
@@ -1167,6 +1199,57 @@ def cmd_gm_test(parsed: Any, ctx: MutableMapping[str, Any],
                               detail=f"冒烟失败：{first}", parsed=parsed, message=body)
 
 
+def cmd_gm_broadcast(parsed: Any, ctx: MutableMapping[str, Any],
+                     perm: GmPermResult) -> GmResult:
+    """/广播 <消息>（5b G7，权限「机主→GM」可下授）：即时广播全部群 + 私聊。
+
+    消息 ≤ BROADCAST_MAX_CHARS 字（超限 → 领域错误模板拦截）；缺参 → TPL-12。
+    可选 `定时=` 本轮**只做即时广播**：框架无定时既有机制（零 apscheduler），定时
+    如实登记为缺口（X11 批75），不硬造调度；请求含定时 → 即时推送 + 结果附缺口说明。
+    """
+    args = list(getattr(parsed, "args", None) or [])
+    if not args:
+        return _record_and_return(ctx, command=GM_CMD_BROADCAST, result="failed",
+                                  detail="缺参：/广播 <消息>", parsed=parsed)
+    message = " ".join(str(a) for a in args)
+    if len(message) > BROADCAST_MAX_CHARS:
+        body = _tpl_of(ctx, "gm_broadcast_too_long",
+                       {"count": len(message), "max": BROADCAST_MAX_CHARS})
+        return _record_and_return(ctx, command=GM_CMD_BROADCAST, result="failed",
+                                  detail=f"消息过长：{len(message)}/{BROADCAST_MAX_CHARS} 字",
+                                  parsed=parsed, params=message, message=body)
+    requested_schedule = None
+    for kv in getattr(parsed, "kv", None) or []:
+        if isinstance(kv, Mapping) and kv.get("key") == BROADCAST_SCHEDULE_KV:
+            requested_schedule = str(kv.get("value") or "")
+    fn = _safe_backend(ctx, "broadcast")
+    if fn is None:
+        return _record_and_return(ctx, command=GM_CMD_BROADCAST, result="failed",
+                                  detail="GM 后端未装配（/广播 需装配层注入 gm_backend）",
+                                  parsed=parsed, params=message)
+    try:
+        # schedule 恒 None：定时未接线（缺口），后端只做即时广播
+        res = fn(message, None, None, ctx) or {}
+    except Exception as exc:  # noqa: BLE001 - 广播异常降级不崩
+        return _record_and_return(ctx, command=GM_CMD_BROADCAST, result="failed",
+                                  detail=f"广播失败：{exc}", parsed=parsed, params=message)
+    if not res.get("ok"):
+        return _record_and_return(ctx, command=GM_CMD_BROADCAST, result="failed",
+                                  detail=str(res.get("message") or "广播失败"),
+                                  parsed=parsed, params=message)
+    groups = int(res.get("groups") or 0)
+    dms = int(res.get("dms") or 0)
+    body = _tpl_of(ctx, "gm_broadcast_done", {"count": groups, "amount": dms})
+    detail = f"已推送 {groups} 群 + {dms} 私聊"
+    params = message
+    if requested_schedule is not None:
+        body += "\n" + _tpl_of(ctx, "gm_broadcast_schedule_gap", {})
+        detail += f"；定时={requested_schedule} 暂不支持（框架无定时机制，已登记缺口）"
+        params += f" {BROADCAST_SCHEDULE_KV}={requested_schedule}"
+    return _record_and_return(ctx, command=GM_CMD_BROADCAST, result="success",
+                              detail=detail, parsed=parsed, params=params, message=body)
+
+
 _HANDLERS: Mapping[str, Callable[..., GmResult]] = {
     GM_CMD_RELOAD: cmd_gm_reload,
     GM_CMD_BAN: cmd_gm_ban,
@@ -1180,6 +1263,7 @@ _HANDLERS: Mapping[str, Callable[..., GmResult]] = {
     # 批75 · GM 运维：G5 调试
     GM_CMD_DEBUG: cmd_gm_debug,
     GM_CMD_TEST: cmd_gm_test,
+    GM_CMD_BROADCAST: cmd_gm_broadcast,
 }
 
 

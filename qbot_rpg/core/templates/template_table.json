@@ -931,6 +931,9 @@
     "temper_reason_not_enough_essence": "精粹不足\n需要 {need}，持有 {have}",
     "gm_debug_status": "调试模式：{state}\n日志级别：{level}\n性能计时：{result}",
     "gm_test_pass": "冒烟通过：{successes}/{total} 项\n耗时 {elapsed} 毫秒",
-    "gm_test_fail": "冒烟失败：{reason}\n已通过 {successes}/{total} 项"
+    "gm_test_fail": "冒烟失败：{reason}\n已通过 {successes}/{total} 项",
+    "gm_broadcast_done": "广播已推送\n群 {count}｜私聊 {amount}",
+    "gm_broadcast_too_long": "消息过长：{count}/{max} 字",
+    "gm_broadcast_schedule_gap": "定时=暂不支持（已登记）"
   }
 }

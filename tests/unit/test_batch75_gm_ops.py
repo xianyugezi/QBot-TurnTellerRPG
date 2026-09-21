@@ -244,3 +244,105 @@ def test_g6_message_is_templated() -> None:
     assert "{successes}" in DEFAULT_TEMPLATES["gm_test_pass"]
     assert "{reason}" in DEFAULT_TEMPLATES["gm_test_fail"]
 
+
+# =============================================================================
+# /广播 G7：≤200 字 + 定时缺口
+# =============================================================================
+
+def test_g7_constants_and_registry() -> None:
+    """/广播 G7 在 GM_COMMANDS/INDEX/LEVEL/白名单/自由参数/处理器表。"""
+    from qbot_rpg.commands.gm_commands import GM_CMD_BROADCAST
+    from qbot_rpg.commands.parsers import DEFAULT_FREE_ARG_COMMANDS
+
+    assert GM_CMD_BROADCAST in GM_COMMANDS
+    assert GM_COMMAND_INDEX[GM_CMD_BROADCAST] == "G7"
+    assert GM_COMMAND_LEVEL[GM_CMD_BROADCAST] == ROLE_ADMIN
+    assert GM_CMD_BROADCAST in DEFAULT_WHITELIST
+    assert GM_CMD_BROADCAST in DEFAULT_GM_COMMANDS
+    assert GM_CMD_BROADCAST in DEFAULT_FREE_ARG_COMMANDS
+    assert gc._HANDLERS[GM_CMD_BROADCAST] is gc.cmd_gm_broadcast
+    assert _parsed("/广播 通知").command == GM_CMD_BROADCAST
+
+
+def test_g7_push_ok_multiword() -> None:
+    """正常即时广播：多词消息合并且完整送达公告通道 + 计数回显 + 审计 success。"""
+    from qbot_rpg.commands.gm_commands import GM_CMD_BROADCAST
+
+    calls: list = []
+
+    def _announce(text: str, schedule: Any = None, groups: Any = None) -> dict:
+        calls.append((text, schedule, groups))
+        return {"groups": 5, "dms": 12, "message": "ok"}
+
+    ctx = _ctx(ROLE_ADMIN, backend=GmBackend(), announce=_announce)
+    r = handle_gm_command(_parsed("/广播 系统 维护 通知"), ctx)
+    assert r.ok, r
+    assert calls and calls[0][0] == "系统 维护 通知"
+    assert calls[0][1] is None  # 定时未接线 → schedule=None（不做假调度）
+    assert "群 5" in r.message and "私聊 12" in r.message
+    assert _last(ctx)["command"] == GM_CMD_BROADCAST
+    assert _last(ctx)["result"] == "success"
+    assert _last(ctx)["params"] == "系统 维护 通知"
+
+
+def test_g7_oversize_blocked() -> None:
+    """超 200 字被拦（领域错误模板 + 审计 failed + 零推送）。"""
+    from qbot_rpg.commands.gm_commands import BROADCAST_MAX_CHARS, GM_CMD_BROADCAST
+
+    calls: list = []
+    ctx = _ctx(ROLE_ADMIN, backend=GmBackend(),
+               announce=lambda *a, **k: calls.append(a) or {"groups": 1, "dms": 0})
+    long_msg = "字" * (BROADCAST_MAX_CHARS + 1)
+    r = handle_gm_command(_parsed("/广播 " + long_msg), ctx)
+    assert not r.ok and not r.silent
+    assert f"{BROADCAST_MAX_CHARS + 1}/{BROADCAST_MAX_CHARS}" in r.message
+    assert calls == [], "超长不得推送"
+    assert _last(ctx)["result"] == "failed"
+
+
+def test_g7_schedule_registered_as_gap() -> None:
+    """含 `定时=` → 只做即时广播 + 结果附「暂不支持（已登记）」缺口说明。"""
+    calls: list = []
+    ctx = _ctx(ROLE_ADMIN, backend=GmBackend(),
+               announce=lambda text, schedule=None, groups=None: calls.append(text)
+               or {"groups": 2, "dms": 3})
+    r = handle_gm_command(_parsed("/广播 通知 定时=2000"), ctx)
+    assert r.ok and calls == ["通知"], "定时请求仍做即时广播"
+    assert "定时=暂不支持" in r.message
+    assert "定时=2000" in _last(ctx)["detail"]
+    assert "定时=2000" in _last(ctx)["params"]
+
+
+def test_g7_colon_syntax_rejected_by_parser() -> None:
+    """设计语法 `定时=HH:MM` 的 `:` 不在 token 合法字符集 → 解析层拦（诚实拒绝，不假装）。"""
+    from qbot_rpg.commands.gm_commands import GM_CMD_BROADCAST
+
+    p = _parsed("/广播 通知 定时=20:00")
+    assert p.command == GM_CMD_BROADCAST and p.error
+    ctx = _ctx(ROLE_ADMIN, backend=GmBackend(),
+               announce=lambda *a, **k: {"groups": 1, "dms": 0})
+    r = handle_gm_command(p, ctx)
+    assert not r.ok and _last(ctx)["result"] == "failed"
+
+
+def test_g7_missing_arg_and_degrade() -> None:
+    """缺参 → TPL-12；机主 + 无后端 → 降级 failed；普通玩家静默。"""
+    ctx1 = _ctx(ROLE_ADMIN, backend=GmBackend())
+    r1 = handle_gm_command(_parsed("/广播"), ctx1)
+    assert not r1.ok and "指令不正确" in r1.message
+    ctx2 = _ctx(ROLE_ADMIN, backend=None)
+    r2 = handle_gm_command(_parsed("/广播 通知"), ctx2)
+    assert not r2.ok and "后端未装配" in _last(ctx2)["detail"]
+    ctx3 = _ctx(ROLE_PLAYER, backend=GmBackend())
+    r3 = handle_gm_command(_parsed("/广播 通知"), ctx3)
+    assert r3.silent and ctx3["audit_log"] == []
+
+
+def test_g7_messages_templated() -> None:
+    """广播三条模板在表内。"""
+    from qbot_rpg.core.templates import DEFAULT_TEMPLATES
+
+    for key in ("gm_broadcast_done", "gm_broadcast_too_long", "gm_broadcast_schedule_gap"):
+        assert DEFAULT_TEMPLATES.get(key), key
+
+

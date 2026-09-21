@@ -28,6 +28,7 @@ __all__ = [
     "GM_CMD_BANLIST",
     "GM_CMD_DEBUG",
     "GM_CMD_TEST",
+    "GM_CMD_BROADCAST",
     "GM_COMMANDS",
     "GM_COMMAND_INDEX",
     "GM_PREFIX_REQUIRED",
@@ -47,13 +48,14 @@ GM_CMD_BANLIST = "封禁列表"  # G12
 # 批75 · GM 运维 5 条（细化_5b §2.1 G5/G6/G7/G9/G11；此前「登记但未实现」）
 GM_CMD_DEBUG = "调试"       # G5（机主→GM，可下授）
 GM_CMD_TEST = "测试"        # G6（机主→GM，可下授；只读冒烟）
+GM_CMD_BROADCAST = "广播"   # G7（机主→GM，可下授；复用公告通道）
 
 # GM 指令清单（m4 §2.3：以分隔符规范 L160 长清单为准；M12 扩至 9 条；批30 G13 删除 → 8 条；
 # 批75 起补 5b 运维 5 条，逐条接入）
 GM_COMMANDS: FrozenSet[str] = frozenset({
     GM_CMD_RELOAD, GM_CMD_BAN, GM_CMD_LOG, GM_CMD_SETTINGS,
     GM_CMD_BACKUP, GM_CMD_RESTORE, GM_CMD_EXPORT, GM_CMD_BANLIST,
-    GM_CMD_DEBUG, GM_CMD_TEST,
+    GM_CMD_DEBUG, GM_CMD_TEST, GM_CMD_BROADCAST,
 })
 
 # 5b §2.1 G 序号（审计展示 /日志 行前缀用；批30 G13 编辑已删；批75 补 G5/G6/G7/G9/G11）
@@ -68,6 +70,7 @@ GM_COMMAND_INDEX: Mapping[str, str] = {
     GM_CMD_BANLIST: "G12",
     GM_CMD_DEBUG: "G5",
     GM_CMD_TEST: "G6",
+    GM_CMD_BROADCAST: "G7",
 }
 
 # GM 强制 / 前缀指令集（L128 / W07；parsers.DEFAULT_PREFIX_REQUIRED 已含 5 条，

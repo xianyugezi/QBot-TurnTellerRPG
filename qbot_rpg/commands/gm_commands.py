@@ -715,13 +715,13 @@ class GmBackend:
                        else f"{len(passed)} 项全部通过",
         }
 
-    def broadcast(self, message: Any, schedule: Any = None, groups: Any = None,
+    def broadcast(self, message: Any, deliver_at: Any = None, groups: Any = None,
                   ctx: Any = None) -> dict:
         """/广播 后端（5b G7）：复用公告通道推送全部群 + 私聊（即时广播）。
 
-        公告通道经 ctx["announce"] 注入（可调用：announce(text, schedule, groups) →
+        公告通道经 ctx["announce"] 注入（可调用：announce(text, deliver_at, groups) →
         {groups, dms, message}）；未装配 → {ok: False, message: 人话}（装配层注入前降级，
-        不硬造通道）。定时（schedule）本轮不落调度——框架无 apscheduler 既有机制
+        不硬造通道）。定时（deliver_at）本轮不落调度——框架无 apscheduler 既有机制
         （runner「零 apscheduler · 懒清理」口径），定时缺口见 /广播 文档与登记表 X11。
         """
         ctx_map = ctx if isinstance(ctx, Mapping) else {}
@@ -729,7 +729,7 @@ class GmBackend:
         if not callable(announce):
             return {"ok": False, "message": "公告通道未装配（/广播 需装配层注入 announce）"}
         try:
-            res = announce(str(message), schedule=schedule, groups=groups) or {}
+            res = announce(str(message), deliver_at, groups) or {}
         except Exception as exc:  # noqa: BLE001 - 通道异常降级为 failed 不崩
             return {"ok": False, "message": f"广播推送失败：{exc}"}
         return {
@@ -1309,7 +1309,7 @@ def cmd_gm_broadcast(parsed: Any, ctx: MutableMapping[str, Any],
                                   detail="GM 后端未装配（/广播 需装配层注入 gm_backend）",
                                   parsed=parsed, params=message)
     try:
-        # schedule 恒 None：定时未接线（缺口），后端只做即时广播
+        # deliver_at 恒 None：定时未接线（缺口），后端只做即时广播
         res = fn(message, None, None, ctx) or {}
     except Exception as exc:  # noqa: BLE001 - 广播异常降级不崩
         return _record_and_return(ctx, command=GM_CMD_BROADCAST, result="failed",

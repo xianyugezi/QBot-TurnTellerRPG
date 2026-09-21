@@ -36,6 +36,7 @@ from qbot_rpg.commands.gm_commands import (
     GM_CMD_BACKUP,
     GM_CMD_BANLIST,
     GM_CMD_DEBUG,
+    GM_CMD_TEST,
     GM_CMD_EXPORT,
     GM_CMD_LOG,
     GM_CMD_RELOAD,
@@ -204,7 +205,7 @@ def test_gm_commands_long_list():
                                      GM_CMD_SETTINGS,
                                      GM_CMD_BACKUP, GM_CMD_RESTORE,
                                      GM_CMD_EXPORT, GM_CMD_BANLIST,
-                                     GM_CMD_DEBUG})
+                                     GM_CMD_DEBUG, GM_CMD_TEST})
     assert set(GM_COMMAND_INDEX) == set(GM_COMMANDS)
     assert GM_COMMAND_INDEX[GM_CMD_RELOAD] == "G1"
     assert GM_COMMAND_INDEX[GM_CMD_BAN] == "G10"
@@ -215,6 +216,7 @@ def test_gm_commands_long_list():
     assert GM_COMMAND_INDEX[GM_CMD_EXPORT] == "G4"
     assert GM_COMMAND_INDEX[GM_CMD_BANLIST] == "G12"
     assert GM_COMMAND_INDEX[GM_CMD_DEBUG] == "G5"
+    assert GM_COMMAND_INDEX[GM_CMD_TEST] == "G6"
 
 
 def test_gm_command_level_default_grant():
@@ -229,6 +231,7 @@ def test_gm_command_level_default_grant():
     assert GM_COMMAND_LEVEL[GM_CMD_EXPORT] == ROLE_ADMIN
     assert GM_COMMAND_LEVEL[GM_CMD_BANLIST] == ROLE_MANAGER
     assert GM_COMMAND_LEVEL[GM_CMD_DEBUG] == ROLE_ADMIN
+    assert GM_COMMAND_LEVEL[GM_CMD_TEST] == ROLE_ADMIN
     assert GM_DEFAULT_GRANT == frozenset({GM_CMD_RELOAD, GM_CMD_BAN, GM_CMD_LOG,
                                           GM_CMD_BACKUP,
                                           GM_CMD_RESTORE, GM_CMD_BANLIST})

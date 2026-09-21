@@ -929,6 +929,8 @@
     "temper_reason_per_stat_cap": "{stat} 单项上限 {cap}\n已投 {used}",
     "temper_reason_total_cap": "{stat} 超出总上限\n总上限 {cap} 已投 {used}",
     "temper_reason_not_enough_essence": "精粹不足\n需要 {need}，持有 {have}",
-    "gm_debug_status": "调试模式：{state}\n日志级别：{level}\n性能计时：{result}"
+    "gm_debug_status": "调试模式：{state}\n日志级别：{level}\n性能计时：{result}",
+    "gm_test_pass": "冒烟通过：{successes}/{total} 项\n耗时 {elapsed} 毫秒",
+    "gm_test_fail": "冒烟失败：{reason}\n已通过 {successes}/{total} 项"
   }
 }

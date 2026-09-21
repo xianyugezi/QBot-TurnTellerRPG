@@ -94,6 +94,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import hmac
+import json
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -131,6 +132,7 @@ __all__ = [
     # L160 长清单指令名 / GM 清单
     "GM_CMD_RELOAD", "GM_CMD_BAN", "GM_CMD_LOG", "GM_CMD_SETTINGS",
     "GM_CMD_DEBUG",
+    "GM_CMD_TEST",
     "GM_COMMANDS", "GM_COMMAND_LEVEL", "GM_COMMAND_INDEX", "GM_DEFAULT_GRANT",
     "GM_PREFIX_REQUIRED",
     # 权限三级（admin/manager/player ↔ 机主/GM/普通玩家）
@@ -143,6 +145,7 @@ __all__ = [
     # 指令处理器
     "cmd_gm_reload", "cmd_gm_ban", "cmd_gm_log", "cmd_gm_settings",
     "cmd_gm_debug",
+    "cmd_gm_test",
     "handle_gm_command",
     # GM 后端引擎（WIR-07/08：/重载 真实后端 + /备份 /恢复 已声明未接线）
     "GmBackend", "backup_content", "restore_content",
@@ -172,6 +175,7 @@ from qbot_rpg.data.gm_constants import (
     GM_CMD_EXPORT,
     GM_CMD_BANLIST,
     GM_CMD_DEBUG,
+    GM_CMD_TEST,
     GM_COMMANDS,
     GM_COMMAND_INDEX,
     GM_PREFIX_REQUIRED,
@@ -207,6 +211,7 @@ GM_COMMAND_LEVEL: Mapping[str, str] = {
     GM_CMD_BANLIST: ROLE_MANAGER,
     # 批75 · GM 运维：G5 调试 = 机主专属（可下授，5b §2.1 权限列「机主→GM」）
     GM_CMD_DEBUG: ROLE_ADMIN,
+    GM_CMD_TEST: ROLE_ADMIN,
 }
 
 # 默认授予集（5b §1.1.1 裁决：默认授予集 = 全部指令表标注 GM 的指令）；
@@ -241,6 +246,10 @@ BAN_DEFAULT_DURATION: str = "永久"
 # 批75 · G5 /调试：调试模式两态对应日志级别（可配常量，不写死在处理器）
 DEBUG_LEVEL_ON: str = "DEBUG"
 DEBUG_LEVEL_OFF: str = "INFO"
+
+# 批75 · G6 /测试：只读冒烟口径（内容 JSON glob + 路由连通下限；可配常量）
+SMOKE_CONTENT_GLOB: str = "*.json"
+SMOKE_ROUTE_MIN: int = 1
 
 # 空日志文案（纯文本无装饰 emoji）
 _EMPTY_LOG: str = "（暂无系统日志）"
@@ -626,6 +635,59 @@ class GmBackend:
             "message": f"调试模式 {'开' if enabled else '关'}",
         }
 
+    def smoke_test(self, ctx: Any = None) -> dict:
+        """/测试 后端（5b G6）：只读冒烟检查（配置 JSON 语法 + 指令路由连通）。
+
+        **严格零写操作**（TC-20）：只读 content_dir 下 *.json 并按 json.loads 解析、
+        只读 router.names() 计数；不落盘、不改任何状态。返回
+        {ok, successes, total, elapsed, failures, message}；任一项失败 → ok=False +
+        failures 首条供错误模板展示。
+
+        冒烟边界（工程补白）：本批口径 = JSON 语法层 + 路由非空；schema/引用完整性
+        由内容包校验器（scripts/check_m7_content.py）承担，不在本指令内重复实现。
+        """
+        import time
+
+        started = time.perf_counter()
+        ctx_map = ctx if isinstance(ctx, Mapping) else {}
+        passed: List[str] = []
+        failures: List[str] = []
+        # ① 内容配置：content_dir 下全部 *.json 语法可解析（只读）
+        content_dir = ctx_map.get("content_dir")
+        if content_dir:
+            bad: List[str] = []
+            for f in sorted(Path(content_dir).glob(SMOKE_CONTENT_GLOB)):
+                try:
+                    json.loads(f.read_text(encoding="utf-8"))
+                except (OSError, ValueError) as exc:
+                    bad.append(f"{f.name}: {exc}")
+            if bad:
+                failures.extend(f"内容配置：{b}" for b in bad)
+            else:
+                passed.append("内容配置")
+        else:
+            failures.append("内容配置：未装配 content_dir")
+        # ② 指令路由：注册表非空（连通性基线，只读 names()）
+        router = ctx_map.get("router")
+        if router is not None and hasattr(router, "names"):
+            n = len(router.names())
+            if n < SMOKE_ROUTE_MIN:
+                failures.append(f"指令路由：连通数 {n} < {SMOKE_ROUTE_MIN}")
+            else:
+                passed.append("指令路由")
+        else:
+            failures.append("指令路由：未装配 router")
+        elapsed = int((time.perf_counter() - started) * 1000)
+        return {
+            "ok": not failures,
+            "successes": len(passed),
+            "total": len(passed) + len({f.split("：", 1)[0] for f in failures}),
+            "elapsed": elapsed,
+            "failures": failures,
+            "message": f"{len(passed)} 项通过，{len(failures)} 项失败" if failures
+                       else f"{len(passed)} 项全部通过",
+        }
+
     # `editor_link`（5b G13 /编辑）批30（2026-09-16）删除：旧编辑器已删、editor_url 已清空，
     # 该后端接口只剩空壳（登记表 X9）。5b 契约 G13 条目同步删除。
 
@@ -730,7 +792,8 @@ def _record_and_return(ctx: MutableMapping[str, Any], *, command: str,
     """构造审计记录 → 留痕 → 包装 GmResult（成败共用；ok 由 result 推导——单一来源）。
 
     result="success" → 静默成功（不回显成功，摘要入 audit.detail；查询类传 message）；
-    result="failed"  → TPL-12 报错（error_result）。
+    result="failed"  → 错误模板报错：默认 TPL-12；批75 起允许调用方经 message 传
+      领域错误模板正文（如冒烟首条失败项/目标不在名单），仍属统一「错误模板」出口。
     """
     record = build_audit_record(
         qq=_ctx_qq(ctx),
@@ -747,6 +810,8 @@ def _record_and_return(ctx: MutableMapping[str, Any], *, command: str,
     if result == "success":
         # 静默执行：成功不回显群聊，摘要入 audit.detail（工程补白 2）；查询类传 message
         return success_result(record, message=message)
+    if message is not None:
+        return error_result(record, message)
     return error_result(record, format_tpl12(_fragment(parsed)))
 
 
@@ -1065,6 +1130,43 @@ def cmd_gm_debug(parsed: Any, ctx: MutableMapping[str, Any],
                               parsed=parsed, message=body)
 
 
+def cmd_gm_test(parsed: Any, ctx: MutableMapping[str, Any],
+                perm: GmPermResult) -> GmResult:
+    """/测试（5b G6，权限「机主→GM」可下授）：只读冒烟（配置 JSON 语法 + 路由连通）。
+
+    无参：-passing → 通过摘要（人话）；失败 → 错误模板列首条失败项（领域错误模板，
+    仍走统一错误出口）。**严格零写盘/零状态变更**（TC-20）。
+    """
+    if getattr(parsed, "args", None) or getattr(parsed, "kv", None):
+        return _record_and_return(ctx, command=GM_CMD_TEST, result="failed",
+                                  detail="超参：/测试（无参）", parsed=parsed)
+    fn = _safe_backend(ctx, "smoke_test")
+    if fn is None:
+        return _record_and_return(ctx, command=GM_CMD_TEST, result="failed",
+                                  detail="GM 后端未装配（/测试 需装配层注入 gm_backend）",
+                                  parsed=parsed)
+    try:
+        res = fn(ctx) or {}
+    except Exception as exc:  # noqa: BLE001 - 冒烟异常降级不崩（只读，无副作用）
+        return _record_and_return(ctx, command=GM_CMD_TEST, result="failed",
+                                  detail=f"冒烟失败：{exc}", parsed=parsed)
+    successes = int(res.get("successes") or 0)
+    total = int(res.get("total") or 0)
+    elapsed = int(res.get("elapsed") or 0)
+    failures = [str(f) for f in (res.get("failures") or [])]
+    if res.get("ok"):
+        body = _tpl_of(ctx, "gm_test_pass",
+                       {"successes": successes, "total": total, "elapsed": elapsed})
+        return _record_and_return(ctx, command=GM_CMD_TEST, result="success",
+                                  detail=f"冒烟通过：{successes}/{total} 项，耗时 {elapsed} ms",
+                                  parsed=parsed, message=body)
+    first = failures[0] if failures else "未知失败"
+    body = _tpl_of(ctx, "gm_test_fail",
+                   {"reason": first, "successes": successes, "total": total})
+    return _record_and_return(ctx, command=GM_CMD_TEST, result="failed",
+                              detail=f"冒烟失败：{first}", parsed=parsed, message=body)
+
+
 _HANDLERS: Mapping[str, Callable[..., GmResult]] = {
     GM_CMD_RELOAD: cmd_gm_reload,
     GM_CMD_BAN: cmd_gm_ban,
@@ -1077,6 +1179,7 @@ _HANDLERS: Mapping[str, Callable[..., GmResult]] = {
     GM_CMD_BANLIST: cmd_gm_banlist,
     # 批75 · GM 运维：G5 调试
     GM_CMD_DEBUG: cmd_gm_debug,
+    GM_CMD_TEST: cmd_gm_test,
 }
 
 

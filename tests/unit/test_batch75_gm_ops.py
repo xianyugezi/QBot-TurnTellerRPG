@@ -166,3 +166,81 @@ def test_g5_message_is_templated() -> None:
 
     tpl = DEFAULT_TEMPLATES["gm_debug_status"]
     assert "{state}" in tpl and "{level}" in tpl and "{result}" in tpl
+
+
+# =============================================================================
+# /测试 G6：只读冒烟
+# =============================================================================
+
+class _FakeRouter:
+    def __init__(self, names: list) -> None:
+        self._names = list(names)
+
+    def names(self) -> list:
+        return list(self._names)
+
+
+def test_g6_constants_and_registry() -> None:
+    """/测试 G6 在 GM_COMMANDS/INDEX/LEVEL/白名单/处理器表。"""
+    from qbot_rpg.commands.gm_commands import GM_CMD_TEST
+
+    assert GM_CMD_TEST in GM_COMMANDS
+    assert GM_COMMAND_INDEX[GM_CMD_TEST] == "G6"
+    assert GM_COMMAND_LEVEL[GM_CMD_TEST] == ROLE_ADMIN
+    assert GM_CMD_TEST in DEFAULT_WHITELIST
+    assert GM_CMD_TEST in DEFAULT_GM_COMMANDS
+    assert gc._HANDLERS[GM_CMD_TEST] is gc.cmd_gm_test
+    assert _parsed("/测试").command == GM_CMD_TEST
+
+
+def test_g6_smoke_passes_readonly(tmp_path: Path) -> None:
+    """正常配置 → 冒烟通过；跑前后内容目录逐文件 sha256 零变化（只读铁证）。"""
+    from qbot_rpg.commands.gm_commands import GM_CMD_TEST
+
+    cdir = tmp_path / "content"
+    cdir.mkdir()
+    (cdir / "enemies.json").write_text(json.dumps([{"id": "wolf"}]), encoding="utf-8")
+    (cdir / "maps.json").write_text(json.dumps([{"id": "m1"}]), encoding="utf-8")
+    before = _digest_files(cdir)
+    ctx = _ctx(ROLE_ADMIN, backend=GmBackend(),
+               content_dir=str(cdir), router=_FakeRouter(["a", "b", "c"]))
+    r = handle_gm_command(_parsed("/测试"), ctx)
+    after = _digest_files(cdir)
+    assert before == after, "只读冒烟不得改动内容目录"
+    assert r.ok and "冒烟通过" in r.message
+    assert _last(ctx)["command"] == GM_CMD_TEST
+    assert _last(ctx)["result"] == "success"
+
+
+def test_g6_smoke_failure_lists_first(tmp_path: Path) -> None:
+    """坏 JSON → 冒烟失败，错误模板列出首条失败项 + 审计 failed。（只读不改）"""
+    cdir = tmp_path / "content"
+    cdir.mkdir()
+    (cdir / "broken.json").write_text("{not-json", encoding="utf-8")
+    before = _digest_files(cdir)
+    ctx = _ctx(ROLE_ADMIN, backend=GmBackend(),
+               content_dir=str(cdir), router=_FakeRouter(["a"]))
+    r = handle_gm_command(_parsed("/测试"), ctx)
+    assert _digest_files(cdir) == before
+    assert not r.ok and not r.silent
+    assert "冒烟失败" in r.message and "broken.json" in r.message
+    assert _last(ctx)["result"] == "failed"
+
+
+def test_g6_player_silent_and_no_backend() -> None:
+    """普通玩家静默零审计；机主 + 无后端 → 降级 failed。"""
+    ctx_p = _ctx(ROLE_PLAYER, backend=GmBackend())
+    rp = handle_gm_command(_parsed("/测试"), ctx_p)
+    assert rp.silent and ctx_p["audit_log"] == []
+    ctx_o = _ctx(ROLE_ADMIN, backend=None)
+    ro = handle_gm_command(_parsed("/测试"), ctx_o)
+    assert not ro.ok and _last(ctx_o)["result"] == "failed"
+
+
+def test_g6_message_is_templated() -> None:
+    """通过/失败均走模板表（禁 emoji）。"""
+    from qbot_rpg.core.templates import DEFAULT_TEMPLATES
+
+    assert "{successes}" in DEFAULT_TEMPLATES["gm_test_pass"]
+    assert "{reason}" in DEFAULT_TEMPLATES["gm_test_fail"]
+

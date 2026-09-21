@@ -626,6 +626,33 @@
 
 ### Fixed
 
+- **批81（2026-09-23）**：**手册 §六真功能缺口修复（A1/A2）+ 文档不一致（B1）**。
+  **A1（框架真功能失效）**：CTB 全量替换后战斗不再派发 `turn_end` 事件 →
+  `content/veinborn` 的 `surge_tick`（`trigger=turn_end`）从不触发、「困斗蓄能」恒 0。
+  依据《功能三 §2.4》「`tick_turn_end` 内 dispatch turn_end」+ CTB 映射「回合结束 DOT →
+  行动者 AFTER_ACTION」（`docs/ctb/01_asset_inventory.md:36`），在
+  `qbot_rpg/core/battle.py::_after_actor_action`（ACTOR_TURN_END / AFTER_ACTION 尾部）
+  补派发 `turn_end`（按持有者，与 `_start_actor_turn` 的 `turn_start` 对称；无
+  `trigger=turn_end` 效果 → `[]`，非 veinborn 流程逐字段一致）。实测：smoke 修前 surge=0 →
+  修后随行动上升（round1/2/3 = 1/2/3，单次行动恰 +1）。
+  **A2（内容数据误删）**：`content/veinborn/skills.json` 的
+  `vb_core_breaker.consume_marks` 于 `91df0bd`「脊剑士大剑化重做」被误改为 `{}`
+  （原 `{break_vein_core:120}`，同批 `derive_only` false→true；提交信息只说「部位技保留
+  （贯核/断脊）」、未提清破坏值，且 `desc` 仍写「清破坏值」）——属误删，**恢复原值**；
+  派生破技第 7 发破坏值 120 → 0（修前 120 → 120）。
+  **B1（文档同步，代码不动）**：G-5 覆盖率口径 `core+engine+content` → `core+content`
+  （对齐 `scripts/run_all_tests.py:117`）；G-6 旧分层名 `engine/state/editor/utils` →
+  实际 `qbot_rpg/{commands,core,world,storage,content,data,web}`（对齐
+  `scripts/check_architecture.py:31-47`）。
+  **验证脚本**：`scripts/verify_veinborn_smoke.py` 2 条独立缺口 SKIP → 真断言，
+  **PASS 10/10 / SKIP 0**。
+  **页脚批次串** →「批81 · 手册缺口修复」（`web/static/index.html` + 全部批次串断言同步）。
+  **新登记（不动手）**：`vb_tail_breaker.consume_marks` 同批误删（`{break_tail_hammer:90}` → `{}`）；
+  veinborn「机动泄压」内容侧缺失（`rb_leap` 已删、无技能移除 `surge_mark`、`surge_vent5` 悬空）；
+  enemy action `apply_mark` 引擎侧无消费点。
+  验收：全量 pytest 0 failed；`ruff` 干净；双尺子（种子 20260919）斩回不变；
+  `git status --porcelain` 空。
+
 - **批69（2026-09-23）**：**新手上路收尾（走查 §3 左栏 / 中栏可见引导 + 推荐组合后的「空骨架」误拦）**。
   依据《编辑器_新用户走查.md》§3/§5 + 真机复跑（空包 → 推荐组合 → 新建 → 必填 → 保存）。
   **① §3 左栏**：未启用行渲染**可见**的「点击启用」动作标签（`.tag.act` 强调色），不再只藏在

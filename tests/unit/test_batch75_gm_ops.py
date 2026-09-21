@@ -346,3 +346,98 @@ def test_g7_messages_templated() -> None:
         assert DEFAULT_TEMPLATES.get(key), key
 
 
+# =============================================================================
+# /玩家查询 G9：脱敏摘要
+# =============================================================================
+
+def test_g9_constants_and_registry() -> None:
+    """/玩家查询 G9 在 GM_COMMANDS/INDEX/LEVEL/白名单/处理器表。"""
+    from qbot_rpg.commands.gm_commands import GM_CMD_PLAYER_QUERY
+
+    assert GM_CMD_PLAYER_QUERY in GM_COMMANDS
+    assert GM_COMMAND_INDEX[GM_CMD_PLAYER_QUERY] == "G9"
+    assert GM_COMMAND_LEVEL[GM_CMD_PLAYER_QUERY] == ROLE_ADMIN
+    assert GM_CMD_PLAYER_QUERY in DEFAULT_WHITELIST
+    assert GM_CMD_PLAYER_QUERY in DEFAULT_GM_COMMANDS
+    assert gc._HANDLERS[GM_CMD_PLAYER_QUERY] is gc.cmd_gm_player_query
+    assert _parsed("/玩家查询 123456789").command == GM_CMD_PLAYER_QUERY
+
+
+def _lookup_rich(qq: str) -> dict:
+    """含敏感明细的玩家数据（用于验证字段最小化/脱敏）。"""
+    return {
+        "name": "阿伟",
+        "level": 32,
+        "currencies": {"coins": 12450, "gem": 3},
+        "last_active_at": "2026-09-23T11:00:00Z",
+        "banned": False,
+        # 以下均为敏感字段，绝不得出现在回显
+        "inventory": [{"id": "secret_sword", "qty": 1}],
+        "chat": "私密气泡",
+    }
+
+
+def test_g9_masked_summary() -> None:
+    """脱敏：QQ 中段打码、无背包/聊天明细；只出等级/货币/最近在线/封禁。"""
+    from qbot_rpg.commands.gm_commands import GM_CMD_PLAYER_QUERY
+
+    ctx = _ctx(ROLE_ADMIN, backend=GmBackend(), player_lookup=_lookup_rich)
+    r = handle_gm_command(_parsed("/玩家查询 123456789"), ctx)
+    assert r.ok, r
+    assert "123456789" not in r.message, "明文 QQ 不得回显"
+    assert "12*****89" in r.message, r.message
+    assert "Lv.32" in r.message and "coins 12450" in r.message
+    assert "1 小时前" in r.message and "封禁：无" in r.message
+    assert "secret_sword" not in r.message and "私密气泡" not in r.message
+    # 审计 target_qq 保留全号（封禁/溯源留痕）
+    assert _last(ctx)["command"] == GM_CMD_PLAYER_QUERY
+    assert _last(ctx)["target_qq"] == "123456789"
+    assert _last(ctx)["result"] == "success"
+
+
+def test_g9_not_found_error_template() -> None:
+    """不存在玩家 → 人话错误模板（非静默）+ 审计 failed + target_qq 留痕。"""
+    from qbot_rpg.commands.gm_commands import GM_CMD_PLAYER_QUERY
+
+    ctx = _ctx(ROLE_ADMIN, backend=GmBackend(), player_lookup=lambda qq: None)
+    r = handle_gm_command(_parsed("/玩家查询 123456789"), ctx)
+    assert not r.ok and not r.silent
+    assert "不在册" in r.message
+    assert "123456789" not in r.message
+    assert _last(ctx)["target_qq"] == "123456789"
+    assert _last(ctx)["result"] == "failed"
+
+
+def test_g9_invalid_and_missing_args() -> None:
+    """QQ 非纯数字 / 缺参 → TPL-12。"""
+    ctx = _ctx(ROLE_ADMIN, backend=GmBackend(), player_lookup=_lookup_rich)
+    r1 = handle_gm_command(_parsed("/玩家查询 abc"), ctx)
+    assert not r1.ok and "指令不正确" in r1.message
+    r2 = handle_gm_command(_parsed("/玩家查询"), ctx)
+    assert not r2.ok and "指令不正确" in r2.message
+
+
+def test_g9_player_silent_and_no_backend() -> None:
+    """普通玩家静默零审计；机主 + 无后端 → 降级 failed。"""
+    ctx_p = _ctx(ROLE_PLAYER, backend=GmBackend(), player_lookup=_lookup_rich)
+    rp = handle_gm_command(_parsed("/玩家查询 123456789"), ctx_p)
+    assert rp.silent and ctx_p["audit_log"] == []
+    ctx_o = _ctx(ROLE_ADMIN, backend=None)
+    ro = handle_gm_command(_parsed("/玩家查询 123456789"), ctx_o)
+    assert not ro.ok and _last(ctx_o)["result"] == "failed"
+
+
+def test_g9_mask_and_ago_pure() -> None:
+    """脱敏与相对时间纯函数：边界（短号/未知时间）+ 模板渲染。"""
+    from qbot_rpg.commands.gm_commands import humanize_ago, mask_qq
+
+    assert mask_qq("123456789") == "12*****89"
+    assert mask_qq("1234") == "1***"
+    assert mask_qq("") == ""
+    assert humanize_ago(None, "2026-09-23T12:00:00Z", "2026-09-23T12:00:00Z") == "刚刚"
+    assert humanize_ago(None, "2026-09-23T11:00:00Z", "2026-09-23T12:00:00Z") == "1 小时前"
+    assert humanize_ago(None, "2026-09-20T12:00:00Z", "2026-09-23T12:00:00Z") == "3 天前"
+    assert humanize_ago(None, "bad", "2026-09-23T12:00:00Z") == "未知"
+
+
+

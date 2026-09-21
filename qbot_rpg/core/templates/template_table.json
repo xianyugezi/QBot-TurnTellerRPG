@@ -934,6 +934,15 @@
     "gm_test_fail": "冒烟失败：{reason}\n已通过 {successes}/{total} 项",
     "gm_broadcast_done": "广播已推送\n群 {count}｜私聊 {amount}",
     "gm_broadcast_too_long": "消息过长：{count}/{max} 字",
-    "gm_broadcast_schedule_gap": "定时=暂不支持（已登记）"
+    "gm_broadcast_schedule_gap": "定时=暂不支持（已登记）",
+    "gm_player_query": "玩家 {qq}\nLv.{level}｜{currency}\n最近在线：{time}\n封禁：{status}",
+    "gm_player_query_not_found": "玩家 {qq} 不在册\n请确认 QQ 号",
+    "gm_player_query_banned": "有",
+    "gm_player_query_clean": "无",
+    "gm_ago_now": "刚刚",
+    "gm_ago_minute": "{count} 分钟前",
+    "gm_ago_hour": "{count} 小时前",
+    "gm_ago_day": "{count} 天前",
+    "gm_ago_unknown": "未知"
   }
 }

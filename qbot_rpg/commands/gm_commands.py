@@ -134,6 +134,7 @@ __all__ = [
     "GM_CMD_DEBUG",
     "GM_CMD_TEST",
     "GM_CMD_BROADCAST",
+    "GM_CMD_PLAYER_QUERY",
     "GM_COMMANDS", "GM_COMMAND_LEVEL", "GM_COMMAND_INDEX", "GM_DEFAULT_GRANT",
     "GM_PREFIX_REQUIRED",
     # 权限三级（admin/manager/player ↔ 机主/GM/普通玩家）
@@ -148,6 +149,7 @@ __all__ = [
     "cmd_gm_debug",
     "cmd_gm_test",
     "cmd_gm_broadcast",
+    "cmd_gm_player_query",
     "handle_gm_command",
     # GM 后端引擎（WIR-07/08：/重载 真实后端 + /备份 /恢复 已声明未接线）
     "GmBackend", "backup_content", "restore_content",
@@ -179,6 +181,7 @@ from qbot_rpg.data.gm_constants import (
     GM_CMD_DEBUG,
     GM_CMD_TEST,
     GM_CMD_BROADCAST,
+    GM_CMD_PLAYER_QUERY,
     GM_COMMANDS,
     GM_COMMAND_INDEX,
     GM_PREFIX_REQUIRED,
@@ -216,6 +219,7 @@ GM_COMMAND_LEVEL: Mapping[str, str] = {
     GM_CMD_DEBUG: ROLE_ADMIN,
     GM_CMD_TEST: ROLE_ADMIN,
     GM_CMD_BROADCAST: ROLE_ADMIN,
+    GM_CMD_PLAYER_QUERY: ROLE_ADMIN,
 }
 
 # 默认授予集（5b §1.1.1 裁决：默认授予集 = 全部指令表标注 GM 的指令）；
@@ -258,6 +262,16 @@ SMOKE_ROUTE_MIN: int = 1
 # 批75 · G7 /广播：消息字数上限（5b G7「≤200 字」；可配常量）+ 定时键名（缺口登记）
 BROADCAST_MAX_CHARS: int = 200
 BROADCAST_SCHEDULE_KV: str = "定时"
+
+# 批75 · G9 /玩家查询：脱敏口径（可配常量）——QQ 中段打码保留头/尾；货币明细限条数
+# 依据：开发规则文档 L485「日志脱敏：QQ 号/API Key」+ 5b G9 字段最小化（无背包/收益明细）
+PLAYER_QUERY_MASK_HEAD: int = 2
+PLAYER_QUERY_MASK_TAIL: int = 2
+PLAYER_QUERY_MAX_CURRENCIES: int = 3
+# 最近在线相对时间换算基准（秒；可配常量）
+AGO_MINUTE_SECONDS: int = 60
+AGO_HOUR_SECONDS: int = 3600
+AGO_DAY_SECONDS: int = 86400
 
 # 空日志文案（纯文本无装饰 emoji）
 _EMPTY_LOG: str = "（暂无系统日志）"
@@ -719,6 +733,48 @@ class GmBackend:
             "dms": int(res.get("dms") or 0),
             "message": str(res.get("message") or "已推送"),
         }
+
+    def player_query(self, qq: Any, ctx: Any = None) -> dict:
+        """/玩家查询 后端（5b G9）：只读 + 脱敏摘要（等级/货币/最近在线/封禁状态）。
+
+        数据经 ctx["player_lookup"] 注入（可调用：qq → 玩家摘要 dict |
+        {name, level, currencies, last_active_at, banned}）；未注册 → {ok: False,
+        not_found: True}（目标不存在是参数级错误，非静默）。**字段最小化**：只取
+        等级/货币（限 PLAYER_QUERY_MAX_CURRENCIES 条）/最近在线/封禁，绝不返回背包、
+        收益、聊天等明细；QQ 经 mask_qq 中段打码。只读，不写任何状态。
+        """
+        ctx_map = ctx if isinstance(ctx, Mapping) else {}
+        lookup = ctx_map.get("player_lookup")
+        if not callable(lookup):
+            return {"ok": False,
+                    "message": "玩家数据未装配（/玩家查询 需装配层注入 player_lookup）"}
+        try:
+            data = lookup(str(qq))
+        except Exception as exc:  # noqa: BLE001 - 查询异常降级不崩
+            return {"ok": False, "message": f"玩家数据读取失败：{exc}"}
+        if not data:
+            return {"ok": False, "not_found": True, "message": "目标玩家不存在"}
+        if not isinstance(data, Mapping):
+            return {"ok": False, "message": "玩家数据格式非法"}
+        banned = bool(data.get("banned"))
+        ban_store = ctx_map.get("ban_store")
+        if ban_store is not None and callable(getattr(ban_store, "is_banned", None)):
+            try:
+                banned = bool(ban_store.is_banned(str(qq)))
+            except Exception:  # noqa: BLE001 - 封禁位读取失败回落数据位
+                pass
+        currencies = data.get("currencies")
+        currency_text = "-"
+        if isinstance(currencies, Mapping) and currencies:
+            currency_text = "、".join(
+                f"{k} {v}" for k, v in list(currencies.items())[:PLAYER_QUERY_MAX_CURRENCIES])
+        return {"ok": True, "summary": {
+            "qq": mask_qq(qq),
+            "level": data.get("level", "-"),
+            "currency": currency_text,
+            "last_active": humanize_ago(ctx, data.get("last_active_at"), ctx_map.get("now")),
+            "banned": banned,
+        }}
 
     # `editor_link`（5b G13 /编辑）批30（2026-09-16）删除：旧编辑器已删、editor_url 已清空，
     # 该后端接口只剩空壳（登记表 X9）。5b 契约 G13 条目同步删除。
@@ -1250,6 +1306,109 @@ def cmd_gm_broadcast(parsed: Any, ctx: MutableMapping[str, Any],
                               detail=detail, parsed=parsed, params=params, message=body)
 
 
+def mask_qq(qq: Any, *, keep_head: int = PLAYER_QUERY_MASK_HEAD,
+            keep_tail: int = PLAYER_QUERY_MASK_TAIL) -> str:
+    """QQ 号脱敏（保留头 keep_head 位 + 尾 keep_tail 位，中段 * 打码）。
+
+    依据：开发规则文档 L485「日志脱敏：QQ 号/API Key」；用于 /玩家查询 回显（审计
+    target_qq 仍存全号以保证封禁留痕可追溯，脱敏只作用于玩家可见正文）。长度不足以
+    分段时退化为「首字符 + *」。
+    """
+    s = str(qq or "")
+    if not s:
+        return ""
+    if len(s) <= keep_head + keep_tail:
+        return s[:1] + "*" * (len(s) - 1)
+    return s[:keep_head] + "*" * (len(s) - keep_head - keep_tail) + s[-keep_tail:]
+
+
+def _parse_iso(ts: Any) -> Optional[datetime]:
+    """ISO-8601 时间串解析（容错：尾部 Z → +00:00；非法 → None）。"""
+    s = str(ts or "").strip()
+    if not s:
+        return None
+    try:
+        if s.endswith("Z"):
+            s = s[:-1] + "+00:00"
+        return datetime.fromisoformat(s)
+    except ValueError:
+        return None
+
+
+def humanize_ago(ctx: Any, iso: Any, now: Any = None) -> str:
+    """最近在线人话（模板渲染）：刚刚 / N 分钟前 / N 小时前 / N 天前 / 未知。"""
+    when = _parse_iso(iso)
+    if when is None:
+        return _tpl_of(ctx, "gm_ago_unknown", {})
+    ref = _parse_iso(now) or datetime.now(timezone.utc)
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    if ref.tzinfo is None:
+        ref = ref.replace(tzinfo=timezone.utc)
+    secs = max(0, int((ref - when).total_seconds()))
+    if secs < AGO_MINUTE_SECONDS:
+        return _tpl_of(ctx, "gm_ago_now", {})
+    if secs < AGO_HOUR_SECONDS:
+        return _tpl_of(ctx, "gm_ago_minute", {"count": secs // AGO_MINUTE_SECONDS})
+    if secs < AGO_DAY_SECONDS:
+        return _tpl_of(ctx, "gm_ago_hour", {"count": secs // AGO_HOUR_SECONDS})
+    return _tpl_of(ctx, "gm_ago_day", {"count": secs // AGO_DAY_SECONDS})
+
+
+def cmd_gm_player_query(parsed: Any, ctx: MutableMapping[str, Any],
+                        perm: GmPermResult) -> GmResult:
+    """/玩家查询 <QQ号>（5b G9，权限「机主→GM」可下授）：只读脱敏摘要。
+
+    QQ 纯数字校验；未注册 → 领域错误模板（目标不存在 ≠ 静默）；成功 → 脱敏正文
+    （等级/货币/最近在线/封禁，无背包/收益明细）+ 审计 target_qq（全号留痕）。
+    """
+    args = list(getattr(parsed, "args", None) or [])
+    if not args:
+        return _record_and_return(ctx, command=GM_CMD_PLAYER_QUERY, result="failed",
+                                  detail="缺参：/玩家查询 <QQ号>", parsed=parsed)
+    if len(args) > 1:
+        return _record_and_return(ctx, command=GM_CMD_PLAYER_QUERY, result="failed",
+                                  detail="超参：/玩家查询 <QQ号>", parsed=parsed)
+    qq = str(args[0])
+    if not qq.isdigit():
+        return _record_and_return(ctx, command=GM_CMD_PLAYER_QUERY, result="failed",
+                                  detail="QQ 号必须为纯数字", parsed=parsed, params=qq)
+    fn = _safe_backend(ctx, "player_query")
+    if fn is None:
+        return _record_and_return(ctx, command=GM_CMD_PLAYER_QUERY, result="failed",
+                                  detail="GM 后端未装配（/玩家查询 需装配层注入 gm_backend）",
+                                  parsed=parsed, params=qq, target_qq=qq)
+    try:
+        res = fn(qq, ctx) or {}
+    except Exception as exc:  # noqa: BLE001 - 查询异常降级不崩
+        return _record_and_return(ctx, command=GM_CMD_PLAYER_QUERY, result="failed",
+                                  detail=f"玩家查询失败：{exc}", parsed=parsed,
+                                  params=qq, target_qq=qq)
+    if not res.get("ok"):
+        if res.get("not_found"):
+            body = _tpl_of(ctx, "gm_player_query_not_found", {"qq": mask_qq(qq)})
+            return _record_and_return(ctx, command=GM_CMD_PLAYER_QUERY, result="failed",
+                                      detail="目标玩家不存在", parsed=parsed, params=qq,
+                                      target_qq=qq, message=body)
+        return _record_and_return(ctx, command=GM_CMD_PLAYER_QUERY, result="failed",
+                                  detail=str(res.get("message") or "玩家查询失败"),
+                                  parsed=parsed, params=qq, target_qq=qq)
+    s = res.get("summary") or {}
+    status = _tpl_of(ctx, "gm_player_query_banned" if s.get("banned")
+                     else "gm_player_query_clean", {})
+    body = _tpl_of(ctx, "gm_player_query", {
+        "qq": s.get("qq") or mask_qq(qq),
+        "level": s.get("level", "-"),
+        "currency": s.get("currency", "-"),
+        "time": s.get("last_active", "-"),
+        "status": status,
+    })
+    return _record_and_return(ctx, command=GM_CMD_PLAYER_QUERY, result="success",
+                              detail=f"玩家查询 {mask_qq(qq)} Lv.{s.get('level', '-')}"
+                                     f" 封禁={status}",
+                              parsed=parsed, params=qq, target_qq=qq, message=body)
+
+
 _HANDLERS: Mapping[str, Callable[..., GmResult]] = {
     GM_CMD_RELOAD: cmd_gm_reload,
     GM_CMD_BAN: cmd_gm_ban,
@@ -1264,6 +1423,7 @@ _HANDLERS: Mapping[str, Callable[..., GmResult]] = {
     GM_CMD_DEBUG: cmd_gm_debug,
     GM_CMD_TEST: cmd_gm_test,
     GM_CMD_BROADCAST: cmd_gm_broadcast,
+    GM_CMD_PLAYER_QUERY: cmd_gm_player_query,
 }
 
 

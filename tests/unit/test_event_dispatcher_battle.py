@@ -127,11 +127,13 @@ def test_action_end_event_fires():
 
 
 def test_turn_end_event_fires():
-    """CTB：整轮收尾 `turn_end` 触发**已随回合制删除**（清点表 §1.12 / R-20）。
+    """CTB：`turn_end` 触发映射到**行动者收尾**（ACTOR_TURN_END / AFTER_ACTION 位点）。
 
-    旧「回合收尾 tick 后触发 turn_end」映射到 CTB 的**行动者收尾**
-    （`ACTOR_TURN_END` / `AFTER_ACTION` 位点），旧的 effect trigger="turn_end"
-    不再派发——回合是已删除的时间单位，故该 trigger 不应凭空生效。
+    批81 · A1：CTB 没有「整轮收尾」，但 `turn_end` 事件语义仍有效——映射到该行动者
+    的 AFTER_ACTION 尾部（`_after_actor_action` 内、`tick_turn_end` 之后），与
+    `turn_start`（`_start_actor_turn`，按持有者）对称。此前 CTB 全量替换时未派发该
+    事件，veinborn `surge_tick`（trigger=turn_end）失效（困斗蓄能恒 0），已由批81
+    修复（依据 功能三 §2.4 + 01_asset_inventory §0.2 映射规则）。
     """
     reg_effects = {
         "te_fx": {"id": "te_fx", "type": "special", "trigger": "turn_end",
@@ -143,7 +145,8 @@ def test_turn_end_event_fires():
     eng._snap["player"]["hp"] = 300
     eng.player_act("normal")
     hp = eng.battle_state()["player"]["hp"]
-    assert hp == 300, f"turn_end 触发已删除，不应生效，实际 hp={hp}"
+    assert hp > 300, f"turn_end 应在行动者收尾派发，实际 hp={hp}"
+    assert hp <= 500, "heal 应封顶 max_hp"
 
 
 def test_no_events_config_zero_change():

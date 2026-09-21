@@ -5219,6 +5219,16 @@ class BattleEngine:
                 self._sync_scheduler_deaths()
         except Exception:  # noqa: BLE001 - 兜底不崩：行动收尾结算异常不阻断时间轴
             _logger.exception("tick_turn_end 结算失败：actor=%s", actor)
+        # 批81 · A1：turn_end 事件（通用效果事件分派器 · 功能三 §2.4「`tick_turn_end` 内
+        # dispatch turn_end，与既有 tick 清单并列，不动既有逻辑」）。CTB 无「整轮收尾」
+        # 对应物（01_asset_inventory §0.2 映射规则：回合结束 → 行动者 AFTER_ACTION 尾部），
+        # 故在该行动者的 ACTOR_TURN_END 位点派发一次；与 `_start_actor_turn` 的
+        # `turn_start`（按持有者）对称。无 trigger=turn_end 效果 → 返回 []（零行为变化；
+        # veinborn `surge_tick` 依赖此点）。事件可致死 → 复核死亡再推进时间轴。
+        if self._dispatch_event("turn_end", actor):
+            self._death_check_side("player", "turn_end_event")
+            self._death_check_side("enemy", "turn_end_event")
+            self._sync_scheduler_deaths()
         if self._finished:
             return
         # 行动条推进：该 actor 本次行动代价 = 该 action 的 recovery（唯一注入点）

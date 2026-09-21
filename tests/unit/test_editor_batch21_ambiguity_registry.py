@@ -21,10 +21,23 @@ STATUS_PREFIXES = ("待实测", "待用户裁决", "已裁决-", "已实现-")
 MIN_ITEMS = 20
 
 
+def _registry_section(text: str) -> str:
+    """批76 后：登记表正文之外还出现了汇总/判定分布等**含编号**的表格。
+
+    本用例只针对 §一「登记表」正文做一致性断言，故先把区间裁出来
+    （避免把汇总类表格的编号重复计入 —— 2026-09-23 合并批76 时出现的假红）。
+    """
+    start = text.find("## 一、登记表")
+    if start < 0:
+        return text
+    nxt = text.find("\n## ", start + 1)
+    return text[start:nxt if nxt > 0 else len(text)]
+
+
 def _rows(text: str) -> list[tuple[str, str]]:
-    """解析登记表行：`| <编号> | … | <状态> |` → [(编号, 状态)]。"""
+    """解析登记表行：`| <编号> | … | <状态> |` → [(编号, 状态)]（仅 §一 区间）。"""
     out: list[tuple[str, str]] = []
-    for line in text.splitlines():
+    for line in _registry_section(text).splitlines():
         m = re.match(r"^\|\s*([UX]\d+)\s*\|(.+)\|\s*$", line)
         if not m:
             continue

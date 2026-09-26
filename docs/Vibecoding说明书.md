@@ -273,7 +273,68 @@
 
 > **这一节是你来查"到底有没有现成机制"的地方。** 顺序：先看表 1 有没有对上你的心愿；再看表 2 有没有踩到"重复实现"的反例；最后按表 3 三步自查。
 
-<!-- TODO 3 -->
+### 表 1 · 想做 X → 该用 Y（已有机制）→ 别造 Z
+
+| 你的心愿（想做 X） | 用现成机制 Y | 别造 Z |
+|---|---|---|
+| 给技能加成长 | **技能等级变量** `[技能等级:<技能ID>]`（`core/skill_slots_battle.py`；手册§七） | 自建成长线/等级→数值映射表 |
+| 加增伤/减伤/增疗/减疗 | **双向修正轴**（一条轴两方向）：`damage_dealt_pct`/`damage_taken_pct`/`healing_done_pct`/`healing_received_pct`（`gear_stats.py:232-266`） | 新增"减X/增X"两套机制 |
+| 让装备有特效 | **特效轴 + 事件时点 + 归属过滤**（`gear_stats.py:230-447`；手册2 §4） | 改战斗引擎 |
+| 新玩法模块 | 先查 **模块目录/推荐组合**（`module_catalog.py:68`、`module_presets.py:58`） | 新造模块 |
+| 加货币/材料 | 既有 `items` + `Player.currencies`（`player.py:93`） | 自建经济系统 |
+| 任务/任务板 | 既有 `quest`/`quest_board` 模块（`module_catalog.py:68`） | 自建任务系统 |
+| 商店/库存/限购 | 既有 `shop` 模块 + `settings.shop`（`shop_models.py:5`，库存+个人限购并存） | 自建商店 |
+| 副本/地图探索 | 既有 `dungeon`/`maps` 模块（`module_catalog.py:68`） | 自建副本 |
+| 加一套冷却 | **`cooldown_pct` 轴**（`gear_stats.py:280`）/ 道具 `cooldown_of` / 技能冷却管线（`battle.py:3426`） | 又造一套冷却（会双计） |
+| 状态命中率 | `status_chance_pct` 轴（`:292`，对 buff/debuff 一视同仁） | 新增命中字段 / 按 scope 分治 |
+| 状态/增益时长 | `status_duration_pct` / `status_duration_taken_pct`（`:329`/`:340`） | 自建计时器 |
+| 层数叠加/上限 | `stack_gain_pct` / `stack_cap_delta`（`:305`/`:317`） | 自建层数逻辑 |
+| 出手快慢/行动条 | `action_speed_pct` / `action_bar_shift`（`:408`/`:362`） | 自建速度公式 |
+| 资源消耗/回复 | `resource_cost_pct` / `resource_gain_pct`（`:374`/`:386`）+ `core/resource_axis.py` | 自建资源系统 |
+| 暴击伤害 | `crit_damage_pct`（`:396`） | 新增暴击系统 |
+| 击杀时触发 | **`on_kill`**（`battle.py:1145`；手册2 §3.1） | 监听 `death` 反向实现 |
+| 死亡时触发 | **`death`**（`battle.py:1133`） | 用 `on_kill` 顶替 |
+| 状态被驱散时触发 | `statuses[].on_lose`（`effects.py:2276`） | `mark_lose`/`mark_gain`（**无派发点**） |
+| 每回合/每次行动触发 | `turn_start` / `action_start`（`battle.py:2837`/`:2959`） | 新造 hook |
+| 只对装备者生效 | **`owned_effect_ids` 归属 + 装备 `passives`**（`equip_mods.py:319`） | 自建过滤逻辑 |
+| 包自定义指令 | **E1** `commands.json` + `ext/commands.py`（`pack_ext.py:481`；手册2 §5.2） | 改框架指令（重名一律拒绝） |
+| 改文案/提示模板 | **E2b** `templates.json`（手册2 §5.4） | 改框架模板 |
+| 包私有状态存档 | **`ExtContext.set_state` 包状态格子**（`ext_api.py:283`；手册3 §1.4） | 给 `players` 表加包专属列 |
+| 包内测试/构建 | **E3** `content/<包>/tests/` + `scripts/build.py`（手册2 §5.5） | 塞进主套件 |
+| 品质分级 | 四档 `core/quality.py:80`（`quality_level` 1~10 是**正交维度**；手册3 R1） | 再定一套品质口径 |
+| 强化 vs 淬炼 | `enhance_level` 与 `temper_alloc` **状态分账**（`core/temper.py:21-22`） | 合成一套 |
+| 打造失败/随机 | `forge` 确定性（手册3 A1）/ 随机归**炼金与强化** | 给 forge 加成功率 |
+| 天气变化 | **确定性抽签**（手册3 A3） | 改真随机 |
+| 调数值范围/阈值 | 写 `settings.*` 段（手册1 §1.6） | 改框架 `DEFAULT_*` 常量 |
+| 新增一条特效轴 | 改 **`EFFECT_AXIS_SPECS` 唯一源**（`gear_stats.py:230-447`；手册1 §4.1） | 手改派生表 |
+| 地图双向边 | `bidirectional` 声明（`map_models.py:694`，**允许刻意不对称**） | 写死对称检查 |
+
+> **表 1 用法**：只要这里能对上你的心愿，**就写声明/配置，不要写代码**——每行"Y"都是框架已接线的唯一源。没对上，再看表 2 是否踩了反例，仍没有才走 §三 表 3 的三步。
+
+### 表 2 · 常见"重复实现"反例（**这样造会怎样**）
+
+| # | 重复实现 | 这样造会怎样 | 判据来源 |
+|---|---|---|---|
+| 1 | 又造一套品质口径 | **面板占比与"斩回"校准失效**；与 `quality` 四档、`quality_level` 1~10 的正交关系冲突 | 《手册·3》R1；批45/批55 测量报告 |
+| 2 | 又造一套冷却 | 与 `cooldown_pct` 轴**双计**（同一冷却被算两次，数值翻倍） | 《手册·3》R9；《手册·1》S4 |
+| 3 | 给 `forge` 加成功率/失败分支 | 违背用户拍板铁律；TC-04"确定性差分=0"与素材经济崩 | 《手册·3》A1/样例① |
+| 4 | 把承伤/易伤并进 `mitigation` 阶段 | 与护盾/保底伤害交织、结算顺序改变，红线对拍崩 | 《手册·3》样例④/C4 |
+| 5 | 手改特效轴派生表（`GEAR_EFFECT_KEYS`/`GEAR_LABELS_ZH`…） | 下次 `import` **覆盖**手改，唯一源断裂 | 《手册·1》S1/§4.1 |
+| 6 | 新增 `ItemInstance` 字段只改 dataclass | 两条归一链路**静默丢字段**（不报错） | 《手册·1》§4.3 / N2·N3（批83 已收敛为 `data/item.py::item_instance_from_mapping`） |
+| 7 | 在别处自己生成 `uid` | 与迁移补发 uuid 冲突/重复 → **符文镶嵌挂错物品** | 《手册·1》S13/S15 |
+| 8 | 包写 `owned_effect_ids` / 让归属"缺省也启用" | 打破零变化承诺，**旧包效果集体失效**或全局效果被静默吞掉 | 《手册·2》§4.3 |
+| 9 | 文件放进 `content/` 但不写 `manifest.modules` | **不加载**（`settings.json` 是唯一双通道例外） | 《手册·3》§1.3；《手册·2》§7.3.1 |
+| 10 | 拿 `mark_lose`/`turn_end` 当 `trigger` | 合法枚举但**无派发点**，效果永不触发且校验器静默通过 | 《手册·2》§2.2/§3.5 |
+
+### 表 3 · "先查再动手"三步（**三步都没命中，才轮到 vibecoding**）
+
+| 步 | 查什么 | 去哪查 | 命中就怎么办 |
+|---|---|---|---|
+| ① | **模块目录 / 字段元数据**（有没有现成模块、字段、校验） | `content/module_catalog.py:68`、`content/field_meta.py`、编辑器"推荐组合"与字段气泡 | 写声明 / 在编辑器点出来 |
+| ② | **《手册·1》常量与数据结构表**（键族 / 17 特效轴 / 阈值表 / `ctx`·`ItemInstance` 等字段） | `docs/审查/审计与方案/API手册_1_常量与数据结构.md` §1~§4 | 用现成键 / 写 `settings.*` |
+| ③ | **《手册·2》事件与扩展点**（17 时点三态表 / owner 归属 / 93 条包声明段 / E1·E2·E3） | `docs/审查/审计与方案/API手册_2_事件与扩展点.md` §2~§7 | 接现成时点 / 写声明段 / 用扩展点 |
+
+> **三步的产出**：若能指出"用哪个模块/字段/时点/声明段 + `file:line`"→ **纯配置**；若三步都确实没有、且新机制**非代码不可**→ 才走 **vibecoding（§五·模板 B）**，并在订单里写明"已查 ①②③、均无命中"。
 
 ---
 

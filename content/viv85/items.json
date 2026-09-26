@@ -1,0 +1,30 @@
+[
+  {
+    "healing_received_pct": 0.0,
+    "healing_done_pct": 0.0,
+    "damage_taken_pct": 0.0,
+    "damage_dealt_pct": 0.0,
+    "cooldown_pct": 0.0,
+    "status_chance_pct": 0.0,
+    "stack_gain_pct": 0.0,
+    "stack_cap_delta": 0.0,
+    "status_duration_pct": 0.0,
+    "status_duration_taken_pct": 0.0,
+    "status_resist_pct": 0.0,
+    "action_bar_shift": 0.0,
+    "resource_cost_pct": 0.0,
+    "resource_gain_pct": 0.0,
+    "crit_damage_pct": 0.0,
+    "action_speed_pct": 0.0,
+    "reward_mult_pct": 0.0,
+    "quality": "common",
+    "awaken": false,
+    "seed": false,
+    "material_tier": "normal",
+    "id": "viv_herb",
+    "name": "青脉草",
+    "type": "material",
+    "price": 10,
+    "desc": "四脉常见的药草，炼药与合成的基本材料。"
+  }
+]

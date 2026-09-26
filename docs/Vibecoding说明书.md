@@ -90,8 +90,8 @@
 | 深度打造 `craft_rules` | 16 键 | `settings.deep_craft.craft_rules` | `content/deep_craft_settings.py:110` | 打造成本预算/品质经验/词条数（**两件套须同步增删**） |
 | 淬炼 `temper` | 15 键（`cap_per_level=6`…） | `settings.forge.temper` | `data/temper_stats.py:70` | 淬炼上限/点数；**优先链**：`total_cap` > `total_cap_by_level[等级]` > `等级×cap_per_level`（`core/temper.py:136-167`） |
 | 精华产出 `essence_rate` | 15 键、默认 **关** | `settings.forge.essence_rate` | `data/temper_stats.py:106` | 分解回收的经济闭环 |
-| 特效强度预算 `effect_budget` | `cap_equiv_pct=8.0`、gate 默认 `warn` | `settings.effect_budget` | `data/gear_stats.py:894` | 特效等效占比与黄/红提示（默认只提示） |
-| 过量治疗 `overheal` | 默认关、`mode=discard` | `settings.overheal` | `data/gear_stats.py:1136` | **它不是特效轴**（E5 布尔开关），别搬进轴表 |
+| 特效强度预算 `effect_budget` | `cap_equiv_pct=8.0`、gate 默认 `warn` | `settings.effect_budget` | `data/gear_stats.py:899` | 特效等效占比与黄/红提示（默认只提示） |
+| 过量治疗 `overheal` | 默认关、`mode=discard` | `settings.overheal` | `data/gear_stats.py:1141` | **它不是特效轴**（E5 布尔开关），别搬进轴表 |
 | 模块目录 / 推荐组合 | 36 条目 / 3 组合 | **框架不覆盖**（目录不可改；预设包可整体覆盖同 id） | `content/module_catalog.py:70`、`content/module_presets.py:58` | 编辑器模块勾选树与"推荐组合"一键勾 |
 
 > **改常量的通用铁律**：**"未配置 = 既有行为"** 靠每张默认表配套的 `normalize_*()` 归一函数保证；改 `DEFAULT_*` 会让所有没配该段的包**静默变行为**。要加一条特效轴：只改 `EFFECT_AXIS_SPECS` 唯一源，六张派生表自动跟随——**要手改派生表说明走错了**。逐条安全改法见《手册·1》§1.6 / §4.1~§4.9。

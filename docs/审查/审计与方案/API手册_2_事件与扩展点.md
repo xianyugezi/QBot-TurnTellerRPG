@@ -12,7 +12,7 @@
 |---|---|---|
 | **唯一源**（single source of truth） | 该信息**只有一处定义**，其它模块必须 `import` 它，**不得写死字面量** | 你要改它，只改这一处；你要用它，从这一处取 |
 | **可被包覆盖** | 内容包通过 `settings.json` / 同名 json 能改；引擎侧"只读声明、不写死" | 你能在包里调数值 / 开开关，而不是改框架 |
-| **有派发点 / 无派发点** | 事件时点在**生产代码里真的有一处会调用 `_dispatch_event(...)`** / 只在枚举里声明 | **无派发点 = 你照它写效果永远不会触发**（详见 §2.2 三态表） |
+| **有派发点 / 无派发点** | 事件时点在**生产代码里真的有一处会调用 `_dispatch_event(...)`** / 只在枚举里声明 | **无派发点 = 你照它写效果永远不会触发**（详见 §2.2 二态表；校验器给 **Y-24** 黄提示，批84·B2） |
 
 **路径书写约定**：为省版面，本章正文里的 `battle.py` / `effects.py` / `event_dispatcher.py` / `validator.py` 等简写，均指 `qbot_rpg/` 下的对应文件。**唯一需要特别记住的一处歧义**：`battle.py` = `qbot_rpg/core/battle.py`（**不是** `qbot_rpg/data/battle.py`，后者是 `BattleSnapshot` 等契约 dataclass）。其余引用若省略目录，可在仓库里用 `grep -rn` 按文件名定位。
 
@@ -35,9 +35,13 @@
 - **已发现并纠正的盘点文档说法**（详见 §10 复核记录）：
   1. 盘点把 `settings.*` 声明段记为 **41 条**；本次运行 `field_meta._module_table()` 实测框架 `settings` schema 有 **54 段**（41 是盘点选择性列出的行数）。
   2. 盘点把 `field_meta.json` 顶层段记为 **12 条**；本次读 `field_meta_pack.TOP_LEVEL_KEYS` 实测 **16 个顶层键**（12 是盘点把 4 组同族键合并成行后的行数）。
-  3. 盘点称 `EVENT_POINTS` 17 点里 **11 点有派发点**；本次全仓 `grep -rn` 复核**结论一致**（§2.2 给了 11 条派发点原文证据）。
+  3. 盘点称 `EVENT_POINTS` 17 点里 **11 点有派发点**；本手册初版复核当时结论一致。**批84·B1 重核为 12 点**
+     （`turn_end` 由批81·A1 补派发点）——§2.2 按批84 实测回填，本项旧"11 点"作废。
   4. 盘点"93 条"= **行数口径**（9+41+30+12+1），不是唯一键数口径；§7.1 说明两种口径的差别。
-  5. **本次新发现 3 条盘点未提的事实**：veinborn 的 `surge_tick` 静默死效果（§3.3）、`on_expire` 无派发路径（§3.2）、`action_end` 与 `action_start` 不对称（§2.4）——均**只报告、不改**，列入 §10.3 待查。
+  5. **本次（初版）新发现 3 条盘点未提的事实**：veinborn 的 `surge_tick` 静默死效果（§3.3）、
+     `on_expire` 无派发路径（§3.2）、`action_end` 与 `action_start` 不对称（§2.4）——初版均**只报告、不改**，
+     列入 §10.3 待查。**批84 更新**：P-2（`surge_tick`）由批81·A1 补 `turn_end` 派发点收口；P-1（`on_expire`）
+     由批84·B3 按设计口径补派发并给出修前/修后对拍；P-4（`action_end` 不对称）仍**待裁决**。
 - **标"待查"**：凡本章未亲手核到唯一源 / 未确认意图的，一律写"待查"，**不猜**。
 
 ### 0.4 本章结构
@@ -45,7 +49,7 @@
 | 节 | 讲什么 | 你会拿它做什么 |
 |---|---|---|
 | §1 | 两套"事件"体系辨析 | 先分清你要用的是哪一套（**外部开发者第一坑**） |
-| §2 | `EVENT_POINTS` 逐时点 17 点 + 三态表 | 写 `effects.trigger` 前查这里，确认它真的会触发 |
+| §2 | `EVENT_POINTS` 逐时点 17 点 + 二态表（已接 12 / 二期未接 5） | 写 `effects.trigger` 前查这里，确认它真的会触发 |
 | §3 | 易混对专章（各给正 / 反例） | 避免把效果挂到错误的一侧 |
 | §4 | 归属（owner）规则 | 理解"谁的效果只能由谁触发" |
 | §5 | 扩展点 E1 / E2 / E3 契约 | 写包自持指令 / 渲染 / 测试 |
@@ -131,77 +135,92 @@ statuses.json 条目.on_gain/on_lose/on_expire ──┤
 
 | 项 | file:line | 说明 |
 |---|---|---|
-| **唯一源** 【稳定契约】 | `qbot_rpg/data/event_points.py:25` | `EVENT_POINTS: Tuple[str, ...]`，17 个时点。**这是 `effects.trigger` 的唯一值域源** |
-| 再导出（兼容旧 import 路径） | `qbot_rpg/core/event_dispatcher.py:68` | `EVENT_POINTS = EVENT_POINTS_SOURCE`，故 `from qbot_rpg.core.event_dispatcher import EVENT_POINTS` 依旧可用 |
-| 状态事件子集 | `qbot_rpg/data/event_points.py:38` | `STATUS_EVENT_POINTS = ("status_gain", "status_lose")` |
-| 派发封装（唯一出口） | `qbot_rpg/core/battle.py:2035` | `Battle._dispatch_event` |
-| 归属作用域 | `qbot_rpg/core/battle.py:2067` | `Battle._owner_scope` |
-| 校验器（值域门禁） | `qbot_rpg/content/validator.py:3335-3412` | `trigger ∉ EVENT_POINTS` → **黄提示 Y-19**（允许先声明未来时点，但永不触发）；非字符串 → **红拦 R-1**；缺 `trigger` / 空串 → 放行 |
+| **唯一源** 【稳定契约】 | `qbot_rpg/data/event_points.py:59` | 批84 起 = `EVENT_POINT_TABLE: Tuple[EventPoint, ...]`（时点名称 + `dispatched` 派发状态 + 备注），`EVENT_POINTS` 由其派生（`:85`）。**这既是 `effects.trigger` 的唯一值域源，也是「有无派发点」的唯一源** |
+| 派发状态查询入口 | `qbot_rpg/data/event_points.py:88` `:94` `:100` | `EVENT_POINT_INDEX`（name→EventPoint）/ `is_dispatched()` / `undispatched_points()` |
+| 再导出（兼容旧 import 路径） | `qbot_rpg/core/event_dispatcher.py:78` | `EVENT_POINTS = EVENT_POINTS_SOURCE`（并再导出 `EVENT_POINT_TABLE` 等），故 `from qbot_rpg.core.event_dispatcher import EVENT_POINTS` 依旧可用 |
+| 状态事件子集 | `qbot_rpg/data/event_points.py:91` | `STATUS_EVENT_POINTS = ("status_gain", "status_lose")` |
+| 派发封装（唯一出口） | `qbot_rpg/core/battle.py:2092` | `Battle._dispatch_event` |
+| 归属作用域 | `qbot_rpg/core/battle.py:2124` | `Battle._owner_scope` |
+| 校验器（值域门禁） | `qbot_rpg/content/validator.py:3362` | `trigger ∉ EVENT_POINTS` → **黄提示 Y-19**；**合法枚举但 `dispatched=False` → 黄提示 Y-24**（批84·B2，允许先声明，但该效果永不触发；**不红拦**）；非字符串 → **红拦 R-1**；缺 `trigger` / 空串 → 放行 |
 
 **为什么落在 `data` 层而不是 `core` 层**（`event_points.py:3-6`）：为了让 `content` 层校验器能按分层契约 `content → {data}` 校验 `trigger` 取值域，而**不必**反向 `import core`——与批50 把面板三轴 stem 落在 `data/gear_stats.py` 是同一取舍。**改这个文件的层位 = 改分层契约**，属【稳定契约】。
 
 **顺序也是契约**（`event_points.py:23-24`）：前 16 点（`battle_start` … `season_change`）**原样保序**，批51 新增的 `on_kill` **插在 `on_skill` 与 `season_change` 之间**——目的是避免既有断言位移。**追加新时点请追加在末尾**，不要插入中间。
 
-### 2.2 三态总表（17 点：已接 11 / 二期未接 5 / 故意不派发 1）
+### 2.2 二态总表（17 点：已接 12 / 二期未接 5）
 
-> **这是本章最重要的一张表**。外部开发者照枚举写效果之前**必须**先看"态"列：写"无派发点"的时点，效果**永远不会触发**（校验器只发黄提示，不拦你）。
+> **这是本章最重要的一张表**。外部开发者照枚举写效果之前**必须**先看"态"列：写"无派发点"的
+> 时点，效果**永远不会触发**——**批84·B2 起校验器会给黄提示 Y-24**（此前静默通过），但**只提示、不拦你**。
+>
+> **批84·C1 回填说明**：本表按批84·B1 的**实测结果**（唯一源 `data/event_points.EVENT_POINT_TABLE`
+> 的 `dispatched`）与代码重核，已与 `docs/Vibecoding说明书.md` §2.3 A/D 对齐，消除「turn_end 故意
+> 不派发 / 17 点只有 11 点」的批81 前旧口径。
 
 | # | 时点 | 态 | 生产派发点（file:line） | 谁收（side） | 备注 |
 |---|---|---|---|---|---|
-| 1 | `battle_start` | ✅ 已接 | `battle.py:2465`（player）/ `:2466`（enemy） | 两侧各一次 | 在资源初始化之后、CTB 建条之前 |
-| 2 | `battle_end` | ✅ 已接 | `battle.py:2170`（player）/ `:2171`（enemy） | 两侧各一次 | **在 marks 清零前**派发——效果仍可读印记/状态 |
-| 3 | `action_start` | ✅ 已接 | `battle.py:2959` | 行动者 | 在 `_do_action_inner` 动作分派**之前**，**覆盖全部动作类型**（普攻/技能/道具/防御/逃跑） |
-| 4 | `action_end` | ✅ 已接 | `battle.py:3018` / `:3119` / `:4058` / `:4635` / `:5044` | 行动者 | **5 条返回路径各自派发**（见 §2.4 缺口）；改战斗流程时勿漏 |
-| 5 | `turn_start` | ✅ 已接 | `battle.py:2837` | **行动者**（不是双方） | 按持有者派发（替代旧的全员 `turn_start`） |
-| 6 | `turn_end` | ⛔ **故意不派发** | **无** | — | CTB 已删除"回合单位"；枚举保留**仅为兼容**。见 §3.3 |
-| 7 | `status_gain` | ✅ 已接 | `effects.py:2254`（`_dispatch_status_event`，def `:2031`） | **状态持有侧** | 状态施加**成功后**（`res.applied` 为真）才派发 |
-| 8 | `status_lose` | ⚠️ 已接（驱散）/ 未接（tick 过期） | `effects.py:2276`（dispel 移除后） | 状态持有侧 | `on_expire` 也映射到本事件（`event_dispatcher.py:74`）；**tick 过期路径的 `on_lose` 尚未接**（见 §3.2 待查） |
-| 9 | `mark_gain` | ⛔ 二期未接 | **无** | 印记持有侧 | `记录.md:842` 列为二期。**写了永不触发** |
-| 10 | `mark_lose` | ⛔ 二期未接 | **无** | 印记持有侧 | 同上。注意：`battle.py:1102` 的 `result["mark_lose"]` 是**战斗结果标记**，与本事件**同名不同物**，别误认成派发点 |
-| 11 | `death` | ✅ 已接 | `battle.py:1133` | **死者自己** | 唯一死亡判定点 `_death_check_side`（`battle.py:1114`） |
-| 12 | `revive` | ✅ 已接 | `battle.py:1188` | 复活侧 | 注释 `:1157` 记录："此前无人派发，现补" |
-| 13 | `on_attack` | ⛔ 二期未接 | **无** | 攻击方 | 全仓**零字面量**（除枚举/docstring） |
-| 14 | `on_hit` | ⛔ 二期未接 | **无** | 攻击方 | 设计意图见 `docs/审查参考/效果系统设计定稿.md:157`（特效伤害不进 `on_attack`，需 `on_hit` 显式配置）。**当前不可用** |
-| 15 | `on_skill` | ⛔ 二期未接 | **无** | 攻击方 | `记录.md:842` 列为二期 |
-| 16 | `season_change` | ✅ 已接 | `battle.py:2031`（player）/ `:2032`（enemy） | 两侧各一次 | 与 `season_procs`（既有装配通道）**双轨**触发 |
-| 17 | `on_kill` | ✅ 已接 | `battle.py:1145` | **击杀者侧**（1v1 的另一侧） | 批51 新增；`dead_mark` 门控，每次击杀**恰好一次**；同归于尽 / 战斗已结束 → 不派发 |
+| 1 | `battle_start` | ✅ 已接 | `battle.py:2522`（player）/ `:2523`（enemy） | 两侧各一次 | 在资源初始化之后、CTB 建条之前 |
+| 2 | `battle_end` | ✅ 已接 | `battle.py:2227`（player）/ `:2228`（enemy） | 两侧各一次 | **在 marks 清零前**派发——效果仍可读印记/状态 |
+| 3 | `action_start` | ✅ 已接 | `battle.py:3016` | 行动者 | 在 `_do_action_inner` 动作分派**之前**，**覆盖全部动作类型**（普攻/技能/道具/防御/逃跑） |
+| 4 | `action_end` | ✅ 已接 | `battle.py:3075` / `:3176` / `:4115` / `:4692` / `:5101` | 行动者 | **5 条返回路径各自派发**（见 §2.4 缺口）；改战斗流程时勿漏 |
+| 5 | `turn_start` | ✅ 已接 | `battle.py:2894` | **行动者**（不是双方） | 按持有者派发（替代旧的全员 `turn_start`） |
+| 6 | `turn_end` | ✅ 已接（**批81·A1 补点**） | `battle.py:5228` | 行动者 | CTB 下映射到该行动者的 `ACTOR_TURN_END`（与 `turn_start` 对称）；为恢复 veinborn `surge_tick`。**不再是"故意不派发"**，见 §3.3 |
+| 7 | `status_gain` | ✅ 已接 | `effects.py:2296`（`_dispatch_status_event`，def `:2045`） | **状态持有侧** | 状态施加**成功后**（`res.applied` 为真）才派发 |
+| 8 | `status_lose` | ✅ 已接（**驱散 + tick 到期**，批84·B3） | `effects.py:2318`（dispel 移除后）；`effects.py:1425`（持续双维归零）/ `:1443`（衰减归零） | 状态持有侧 | `on_expire` 也映射到本事件（`event_dispatcher.py:81`；`ON_EXPIRE_KEY`）。**批84·B3 已补 tick 过期路径的派发**（原待查 P-1，现裁定"该触发"，见 §3.2） |
+| 9 | `mark_gain` | ⛔ 二期未接 | **无** | 印记持有侧 | `记录.md:842` 列为二期。**写了永不触发**；校验器给 **Y-24 黄提示**（批84·B2） |
+| 10 | `mark_lose` | ⛔ 二期未接 | **无** | 印记持有侧 | 同上。注意：`battle.py:1159` 的 `result["mark_lose"]` 是**战斗结果标记**，与本事件**同名不同物**，别误认成派发点 |
+| 11 | `death` | ✅ 已接 | `battle.py:1190` | **死者自己** | 唯一死亡判定点 `_death_check_side`（`battle.py:1171`） |
+| 12 | `revive` | ✅ 已接 | `battle.py:1245` | 复活侧 | 注释 `:1214` 记录："此前无人派发，现补" |
+| 13 | `on_attack` | ⛔ 二期未接 | **无** | 攻击方 | 全仓**零字面量**（除枚举/docstring）；校验器 **Y-24 黄提示** |
+| 14 | `on_hit` | ⛔ 二期未接 | **无** | 攻击方 | 设计意图见 `docs/审查参考/效果系统设计定稿.md:157`（特效伤害不进 `on_attack`，需 `on_hit` 显式配置）。**当前不可用**；校验器 **Y-24 黄提示** |
+| 15 | `on_skill` | ⛔ 二期未接 | **无** | 攻击方 | `记录.md:842` 列为二期；校验器 **Y-24 黄提示** |
+| 16 | `season_change` | ✅ 已接 | `battle.py:2088`（player）/ `:2089`（enemy） | 两侧各一次 | 与 `season_procs`（既有装配通道）**双轨**触发 |
+| 17 | `on_kill` | ✅ 已接 | `battle.py:1202` | **击杀者侧**（1v1 的另一侧） | 批51 新增；`dead_mark` 门控，每次击杀**恰好一次**；同归于尽 / 战斗已结束 → 不派发 |
 
-**计数核对**：已接 = #1,2,3,4,5,7,8,11,12,16,17 = **11 点**；二期未接 = #9,10,13,14,15 = **5 点**；故意不派发 = #6 = **1 点**。11+5+1 = 17 ✅。
+**计数核对**：已接 = #1,2,3,4,5,6,7,8,11,12,16,17 = **12 点**；二期未接 = #9,10,13,14,15 = **5 点**。
+12 + 5 = 17 ✅。（旧口径"已接 11 / 故意不派发 1"已作废：`turn_end` 由批81·A1 补派发点。）
 
-**"无派发点"的复核方法**（你可自己重跑）：
+**唯一源（批84·B1）**：`data/event_points.py` 的 `EVENT_POINT_TABLE`（每项 `EventPoint(name, dispatched, note)`）。
+校验器与本文档的"态"列均以它为唯一判据；`dispatched=False` 的 5 点 = §3.5 的"静默死效果"清单。
+
+**"无派发点"的复核方法**（你可自己重跑；**唯一源直接可读**）：
 ```bash
 cd /root/QBot-TurnTellerRPG
-for ev in mark_gain mark_lose on_attack on_hit on_skill turn_end; do
+python -c "from qbot_rpg.data.event_points import undispatched_points as u; print(u())"
+# 或逐点 grep 真实派发点（以代码为准）：
+for ev in mark_gain mark_lose on_attack on_hit on_skill; do
   echo "### $ev"
-  grep -rn "\"$ev\"\|'$ev'" --include=*.py qbot_rpg/ \
-    | grep -v "event_points.py\|event_dispatcher.py"
+  grep -rn "dispatch_event(\"$ev\"\|dispatch_status_event(\"$ev\"" --include=*.py qbot_rpg/
 done
 ```
-实测：`mark_gain` / `on_attack` **零输出**；`mark_lose` 只命中 `battle.py` 的战斗结果标记；`turn_end` 只命中 `_LEGACY_BOUNDARIES`（`battle.py:212`）与 DOT 的 `tick` 值（`effects.py:1374`）；`on_hit` 只命中 `resource_axis_validator.py:99` 的**另一套** `PROC_TRIGGER_EVENTS`（`on_turn_start/on_hit/on_season_change`，与 `EVENT_POINTS` **不是同一套**，见 §10 待查 P-3）；`on_skill` 只命中 `effects.py:2179` 的 `when in ("instant","on_skill")`（技能**施放时机**字段，不是事件派发）。
+实测（批84·B1）：`dispatched=True` = 12 点（#1–8,11,12,16,17），其中 #8 `status_lose` 的 tick 到期
+由批84·B3 补；`dispatched=False` = 5 点（#9,10,13,14,15）——`grep` 生产派发调用**零命中**。
+`on_hit` 在 `resource_axis_validator.py:99` 的 `PROC_TRIGGER_EVENTS` 是**另一套**词表（见 §10 待查 P-3）；
+`on_skill` 在 `effects.py` 的 `when in ("instant","on_skill")` 是技能**施放时机**字段，不是事件派发。
 
-### 2.3 逐时点"何时派发"细节（已接 11 点）
+### 2.3 逐时点"何时派发"细节（已接 12 点）
 
 > 供维护者改战斗流程时对表；供扩展开发者判断"我这个时点到底在哪个瞬间"。
 
 | 时点 | 派发时机（人话） | 派发点所在函数 | 关键上下文 |
 |---|---|---|---|
-| `battle_start` | 战斗**开始**、资源已初始化、CTB 还没建条 | `Battle.start`（def `battle.py:2284`） | 两侧各派一次；`_to_state(STATE_ACT,"battle_start")` 在其后 `:2475` |
-| `battle_end` | 战斗**收尾**，`result.flag` 已写、combo 已清零、**marks 尚未清零** | `Battle._settle`（def `:2142`） | 效果可读印记/状态；`marks_state` 在其后 `:2173` 清零 |
-| `action_start` | 一次行动**开始**，在动作分派前（`atype` 尚未解析） | `Battle._do_action_inner`（def `:2956`） | **全动作类型覆盖**：普攻/技能/道具/防御/逃跑 |
-| `action_end` | 一次行动**收尾**（各 return 前） | `_guard_actor:3018` / `_resolve_item_action:3119` / `_position_miss_outcome:4058` / `_resolve_damage_action:4635`、`:5044` | 5 条路径 |
-| `turn_start` | 该 actor 的回合开始（`PHASE_TURN_START` 已设） | `Battle._start_actor_turn`（def `:2821`） | 按 actor 单侧派发；其后处理 `tick=="turn_start"` 的 DOT（`:2844`） |
-| `status_gain` | **状态施加成功后**（`res.applied` 为真） | `effects.execute_action` 的 `atype=="status_apply"` 分支（`effects.py:2248-2255`） | 经 `_dispatch_status_event`（`:2031`）→ 注入的 `dispatch_event` |
-| `status_lose` | **驱散移除后**，对该次被移除的每个 `status_id` 各派一次 | `effects.execute_action` 的 `atype=="dispel"` 分支（`effects.py:2257-2277`） | 注释 `:2259` 明写"印记非增益/减益，**天然不命中**" |
-| `death` | 死亡标记后（`_mark_dead` 已完成、`STATE_DTH` 已设） | `Battle._death_check_side`（def `:1114`） | 派给**死者侧**（`side`） |
-| `revive` | 复活成功：清 `dead_mark`、恢复 HP、去弱体、回收标记之后 | `Battle.revive_side`（def `:1150`） | 只对 `dead_mark=True` 的侧生效 |
-| `season_change` | 季节事件结算之后（`season_procs` 通道已跑完） | `Battle._fire_season_event`（def `:1992`） | 双轨：`season_procs` + effects 通道 |
-| `on_kill` | 与 `death` **同一判定点**，紧接着 `death` 之后 | `Battle._death_check_side`（def `:1114`） | 派给**击杀者侧** `self._opposite(side)`；`killer in BATTLE_SIDES and not self._dead(killer)` 才派 |
+| `battle_start` | 战斗**开始**、资源已初始化、CTB 还没建条 | `Battle.start`（def `battle.py:2341`；派发 `:2522`/`:2523`） | 两侧各派一次 |
+| `battle_end` | 战斗**收尾**，`result.flag` 已写、combo 已清零、**marks 尚未清零** | `Battle._settle`（def `:2199`；派发 `:2227`/`:2228`） | 效果可读印记/状态 |
+| `action_start` | 一次行动**开始**，在动作分派前（`atype` 尚未解析） | `Battle._do_action_inner`（def `:3013`；派发 `:3016`） | **全动作类型覆盖**：普攻/技能/道具/防御/逃跑 |
+| `action_end` | 一次行动**收尾**（各 return 前） | `battle.py:3075` / `:3176` / `:4115` / `:4692` / `:5101` | 5 条路径（见 §2.4 缺口） |
+| `turn_start` | 该 actor 的回合开始（`PHASE_TURN_START` 已设） | `Battle._start_actor_turn`（def `:2878`；派发 `:2894`） | 按 actor 单侧派发；其后处理 `tick=="turn_start"` 的 DOT |
+| `turn_end` | 该 actor 行动**收尾**（`ACTOR_TURN_END`；批81·A1） | `Battle._end_actor_turn`（派发 `:5228`） | 与 `turn_start` 对称；CTB 无"整轮收尾"，映射到行动者 |
+| `status_gain` | **状态施加成功后**（`res.applied` 为真） | `effects.execute_action` 的 `atype=="status_apply"` 分支（`effects.py:2296`） | 经 `_dispatch_status_event`（def `:2045`）→ 注入的 `dispatch_event` |
+| `status_lose` | **驱散移除后**（每个被移除 `status_id` 各一次）**+ tick 到期**（持续双维 / 衰减归零，批84·B3） | dispel：`effects.py:2318`；到期：`effects.py:1425`（`tick_turn_end`→`tick_turns`）、`:1443`（`tick_after_action`→`decay_carrier`） | 注释 `:2259` 明写"印记非增益/减益，**天然不命中**"；`on_expire` 与 `on_lose` 共用本事件 |
+| `death` | 死亡标记后（`_mark_dead` 已完成、`STATE_DTH` 已设） | `Battle._death_check_side`（def `:1171`；派发 `:1190`） | 派给**死者侧**（`side`） |
+| `revive` | 复活成功：清 `dead_mark`、恢复 HP、去弱体、回收标记之后 | `Battle.revive_side`（def `:1207`；派发 `:1245`） | 只对 `dead_mark=True` 的侧生效 |
+| `season_change` | 季节事件结算之后（`season_procs` 通道已跑完） | `Battle._fire_season_event`（def `:2049`；派发 `:2088`/`:2089`） | 双轨：`season_procs` + effects 通道 |
+| `on_kill` | 与 `death` **同一判定点**，紧接着 `death` 之后 | `Battle._death_check_side`（def `:1171`；派发 `:1202`） | 派给**击杀者侧** `self._opposite(side)`；`killer in BATTLE_SIDES and not self._dead(killer)` 才派 |
 
 ### 2.4 本次新发现：`action_start` / `action_end` **不对称**（待裁决，勿擅自"修"）
 
-- `action_start` 派发点在 `_do_action_inner`（`battle.py:2959`），位于 **atype 分派之前** → **所有**动作类型都会派发。
+- `action_start` 派发点在 `_do_action_inner`（`battle.py:3016`），位于 **atype 分派之前** → **所有**动作类型都会派发。
 - `action_end` 只有 **5 个派发点**，覆盖：防御（`_guard_actor`）、道具（`_resolve_item_action`）、方位 miss（`_position_miss_outcome`）、伤害结算（`_resolve_damage_action` ×2）。
-- **`_flee_actor`（def `battle.py:3044`）与 `_skip_turn`（def `:3025`）里没有任何 `_dispatch_event`**（本次逐函数扫描确认）。
+- **`_flee_actor` 与 `_skip_turn` 里没有任何 `_dispatch_event`**（本次逐函数扫描确认）。
 
 **这意味着**：`trigger="action_start"` 的效果在**逃跑/跳过回合**时会触发，`trigger="action_end"` 的效果在同样情形下**不会**触发。
 
@@ -209,19 +228,23 @@ done
 
 ### 2.5 状态事件映射（`on_gain` / `on_lose` / `on_expire`）
 
-`statuses.json` 条目的三个字段映射到两个时点（`event_dispatcher.py:71-75`）：
+`statuses.json` 条目的三个字段映射到两个时点（`event_dispatcher.py:81-85`）：
 
 | status 字段 | 映射到 | 说明 |
 |---|---|---|
 | `on_gain` | `status_gain` | 状态**获得**时 |
-| `on_lose` | `status_lose` | 状态**消失**时（驱散） |
+| `on_lose` | `status_lose` | 状态**消失**时（驱散；**批84·B3 起也含 tick 到期**——两字段共用事件） |
 | `on_expire` | **`status_lose`** | 过期**归入消失语义**（同一事件，来源区分放在侧信息里） |
 
 **这是"故意设计"**：三个字段、两个时点，`on_expire` 与 `on_lose` **共用一个事件**。改成一事件对一字段会拆掉既有内容包的效果链路，属【稳定契约】。
 
-**字段值形态**：`[{"effect": id, "overrides": {...}}]` 或裸 actions 列表（`event_dispatcher.py:15-18`、`:130-138`）。状态事件的效果**默认作用在状态持有侧**（`side`）：动作未显式 `target` → 补 `target=side`（`event_dispatcher.py:232-235`）——"heal 状态获得回自己、爆炸打对方由动作显式指定"。
+> **批84·B3 补充**：`on_lose` / `on_expire` 原先只在**驱散**时触发，tick 过期路径不派发（待查 P-1）。
+> 现按设计口径（`细化_1b:106` / `功能三设计 §2.4:100` / `实现说明:736`）在**到期处理处**补齐：
+> **声明了 `on_lose` 或 `on_expire` 的状态，无论被驱散还是自然到期，都会派发 `status_lose`**。
 
-**状态事件不受归属过滤影响**（`event_dispatcher.py:104-105`）：状态 `on_*` 由 `status_id` 精确定位，**本已归属到状态持有侧**，所以 `owner_effect_ids` / `claimed_effect_ids` 对它不生效。
+**字段值形态**：`[{"effect": id, "overrides": {...}}]` 或裸 actions 列表（`event_dispatcher.py:15-18`、`:140-148`）。状态事件的效果**默认作用在状态持有侧**（`side`）：动作未显式 `target` → 补 `target=side`（`event_dispatcher.py:245`）——"heal 状态获得回自己、爆炸打对方由动作显式指定"。
+
+**状态事件不受归属过滤影响**（`event_dispatcher.py:113-114`）：状态 `on_*` 由 `status_id` 精确定位，**本已归属到状态持有侧**，所以 `owner_effect_ids` / `claimed_effect_ids` 对它不生效。
 
 ---
 
@@ -326,22 +349,35 @@ done
 
 **判据**：`effects.py:2259`（"印记非增益/减益，天然不命中"）；`data/gear_stats.py` 的 `stack_cap_delta` 轴 `consumer_note` 明写"marks.max_stack_of 半边未接，印记与状态两套容器"。
 
-**待查 P-1（本次复核确认是"结构性缺口"，但未见意图裁决）**：`on_expire` 在分派器里映射到 `status_lose`（`event_dispatcher.py:74`），但**生产代码里唯一派发 `status_lose` 的地方是 `dispel` 分支**（`effects.py:2276`）。本次逐路径核对两条**tick 过期**路径，都只写 log、**不派发事件**：
+**待查 P-1 → 已裁定并修复（批84·B3，2026-09-23）**：`on_expire` 在分派器里映射到 `status_lose`
+（`event_dispatcher.py:81`），原生产代码里唯一派发 `status_lose` 的地方是 `dispel` 分支
+（`effects.py:2318`），两条 **tick 过期**路径都只写 log、**不派发事件**：
 - 衰减归零移除：`effects.py:824-825`（`_remove_status` 后 log `{"type": "status_expired", ...}`）；
-- 持续双维回合扣减归零移除：`effects.py:1418-1420`（`tick_turns` 返回后 log `status_expired`）。
+- 持续双维回合扣减归零移除：`effects.py:1417-1421`（`tick_turns` 返回后 log `status_expired`）。
 
-**结论**：`on_expire` 声明的效果**当前不会触发**；`on_lose` 只在**被驱散**时触发。这是"合法字段 + 无派发点"的第二类陷阱（与 §3.5 第 3 行同族，但更隐蔽——`on_expire` 连 `EVENT_POINTS` 值域校验都不过，因为它不是 `trigger` 字段）。**判据只有源码结构，无裁决文本** → 标**待查**，不改。
+**裁定依据（设计口径明确"该触发"，非"无裁决文本"）**：
+- `docs/细化/细化_1b_效果系统契约.md:106`：`on_gain`/`on_lose`/`on_expire` 字段「状态获得/**消失**/**过期**时触发」；
+- `docs/框架_功能三_通用效果事件分派器_设计.md:100`（§2.4 接线表）：`_remove_status / dispel / tick 过期 → 补 dispatch status_lose/on_expire（**新能力**）`；`:120`（§三 批3）把 `_remove_status/dispel/tick` 列为接线批次；
+- `docs/深度打造_实现说明.md:736`：`status_lose` = 「状态获得 / 消失（**含过期**）」。
 
-### 3.3 `turn_start` vs `action_start`（附 `turn_end` 废弃）
+**修复（已落地）**：批84·B3 在**既有到期处理处并列补一枪**（参照批81 `turn_end` 先例，不动既有移除/log 逻辑）：
+`effects._dispatch_status_expire`（def `effects.py:2081`）→ `tick_turn_end`（`:1425`）与 `tick_after_action`（`:1443`）。
+修前/修后对拍：**未声明 `on_lose`/`on_expire` 的流程逐字段一致**（worktree@8cb640a 对拍 full JSON IDENTICAL）；
+声明场景 `enemy_hp` 300→270（现触发）。
+
+**结论（更新）**：`on_lose` / `on_expire` **驱散与自然到期都会触发**。这是本手册原标 P-1 的收口；
+字段仍不是 `trigger`，故不经 `EVENT_POINTS` 值域校验（但现由批84·B3 覆盖到期路径）。
+
+### 3.3 `turn_start` vs `action_start`（`turn_end` **已由批81·A1 补派发**）
 
 **CTB 之下"回合单位"已被"行动单位"取代**：一次行动开始 = `action_start`；一个 actor 轮到自己 = `turn_start`。
 
 | 对比项 | `turn_start` | `action_start` |
 |---|---|---|
 | 派发次数 | 该 actor 轮到时 **1 次** | 该 actor **每次行动** 1 次 |
-| 派发位置 | `Battle._start_actor_turn`（`battle.py:2821`） | `Battle._do_action_inner`（`:2956`） |
+| 派发位置 | `Battle._start_actor_turn`（`battle.py:2894`） | `Battle._do_action_inner`（`:3016`） |
 | 覆盖动作类型 | 回合开始（不含具体动作） | **全部**动作类型（普攻/技能/道具/防御/逃跑） |
-| 配套收尾 | **无**（`turn_end` 不派发） | `action_end`（**5 条路径，且逃跑/跳过不派发**，见 §2.4） |
+| 配套收尾 | `turn_end`（**批81·A1 补派发**，`battle.py:5228`） | `action_end`（**5 条路径，且逃跑/跳过不派发**，见 §2.4） |
 
 **正例（每回合开始叠一层、每次行动开始回蓝）**：
 ```json
@@ -351,25 +387,26 @@ done
 { "id": "action_mp",   "trigger": "action_start", "type": "mp_gain", "actions": [{"type":"mp_gain","target":"self","value":3}] }
 ```
 
-**反例（`turn_end` 永不触发）**：
+**旧反例（`turn_end` 永不触发）—— 已作废（批81·A1 补派发点）**：
 ```json
 {
-  "id": "tick_gain_WRONG",
+  "id": "surge_tick",
   "trigger": "turn_end",
   "actions": [{ "type": "mark_add", "target": "enemy", "mark": "surge_mark", "count": 1 }],
-  "desc": "❌ turn_end 故意不派发——CTB 已删除回合单位，枚举保留仅为兼容"
+  "desc": "✅ 现可触发：turn_end 已在行动者 ACTOR_TURN_END 派发（battle.py:5228）"
 }
 ```
 
-**⚠️ 这个反例在仓库里真实存在（本次复核发现，高价值）**：
-`content/veinborn/effects.json:51-64` 的 `surge_tick` 写了 `"trigger": "turn_end"`，而它自己的 `desc` 是"每次行动结束时敌方困斗+1（蚀脉蓄能）"——**描述的是 `action_end` 的语义，写的却是永不派发的 `turn_end`**。
+**⚠️ 待查 P-2 → 已收口（批81·A1）**：本手册原记录 `content/veinborn/effects.json` 的 `surge_tick`
+写了 `trigger: "turn_end"` 却"永不触发"。**批81·A1 已给 CTB 的行动者收尾补 `turn_end` 派发点**
+（`battle.py:5228`），正是为恢复该 `surge_tick`——故 P-2 的"改内容包还是补派发点"由**框架补派发点**收口，
+内容包无需改动。
 
-- **为什么校验器没拦**：`validator.py:3409` 的 Y-19 判据是 `tv not in EVENT_POINTS`。`turn_end` **在** `EVENT_POINTS` 里，所以**黄提示不触发**（`validator.py:3373-3375` 的注释只说"值 ∉ EVENT_POINTS"这一种情况）。
-- **为什么测试没拦**：全仓唯一引用它的测试是 `tests/unit/test_editor_batch45_nested_labels.py:147`，只验证**编辑器嵌套字段的中文 label**（`("veinborn","effects","surge_tick",("actions",0,"mark"))`），**不验证效果是否触发**。
-- **结论**：这是一个**"合法枚举值 + 无派发点 = 静默死效果"**的实例，`desc` 与行为不一致。这正是框架自己在 `event_dispatcher.py:101-102` 警告的"**登记了不生效 = 陷阱**"同族问题。
-- **本章态度**：**报告，不擅自改**。修它有两种可能（改 `trigger` 为 `action_end`，或框架补 `turn_end` 派发点），**都会改变 veinborn 的战斗数值**，须走评审。标 **待查 P-2**。
+- **校验器现在会怎样**：`turn_end` 属 `dispatched=True`，**不再**触发 Y-19 / Y-24；真正无派发点的
+  `mark_gain`/`mark_lose`/`on_attack`/`on_hit`/`on_skill` 由 **Y-24 黄提示**（批84·B2）兜底，不再静默。
 
-**判据（`turn_end` 是故意不派发）**：`docs/深度打造_实现说明.md:735`（"CTB 已删除回合单位 → 不再派发（写法保留仅为兼容）"）；`battle.py:212`（`_LEGACY_BOUNDARIES` 含 `turn_end`，仅作 legacy 边界名）。
+**判据（`turn_end` 语义）**：CTB 无"整轮收尾"，映射到该行动者的 `ACTOR_TURN_END`（`battle.py:5170` 注）；
+`battle.py:212` 的 `_LEGACY_BOUNDARIES` 含 `turn_end` 仅作 legacy 边界名，与本派发点不冲突。
 
 ### 3.4 `EVENT_POINTS` vs `[事件:XXX]` —— 两套体系
 
@@ -389,16 +426,20 @@ done
 | 你写了 | 会发生什么 | 校验器反应 | 怎么发现 |
 |---|---|---|---|
 | `trigger` 是**拼错的词**（如 `on_kil`） | 永不触发 | **Y-19 黄提示** | 看校验输出 |
-| `trigger` 是**未来时点**（`on_hit` 等） | 永不触发 | **Y-19 黄提示** | 看校验输出 |
-| `trigger` 是**合法枚举但无派发点**（`turn_end` / `mark_gain` / `mark_lose` / `on_attack` / `on_hit` / `on_skill`） | 永不触发 | **⚠️ 静默通过（无提示）** | **只能查 §2.2 三态表** |
+| `trigger` 是**未来时点**（`on_hit` 等） | 永不触发 | **Y-19 黄提示**（未登记）；**Y-24 黄提示**（已登记但无派发点） | 看校验输出 |
+| `trigger` 是**合法枚举但无派发点**（`mark_gain` / `mark_lose` / `on_attack` / `on_hit` / `on_skill`） | 永不触发 | **Y-24 黄提示**（批84·B2；**不再静默**） | 看校验输出 + §2.2 二态表 |
+| `turn_end` | **会触发**（批81·A1 补派发点 `battle.py:5228`） | 无提示（已接） | §2.2 #6 |
 | `trigger` 非字符串（如数字） | 永不触发 | **R-1 红拦**（整包拒绝） | 看校验输出 |
 | `trigger` 缺省 / 空串 | 走主动作/状态链路（非事件型） | 放行 | — |
 
-**结论**：**第 3 行是本框架最危险的一类**——校验器只能判"枚举里有没有"，判不了"有没有人派发"。**唯一可靠的判据是本章 §2.2 的三态表**。
+**结论（批84 更新）**：原先"合法枚举但无派发点 → 静默通过"是**最危险的一类**（校验器只判
+"枚举里有没有"，判不了"有没有人派发"）。**批84·B2 起由唯一源 `data/event_points.EVENT_POINT_TABLE`
+的 `dispatched` 判据发 Y-24 黄提示**——仍有"永不触发"风险（只提示不拦），但**不再静默**。
+最可靠的判据仍是本章 §2.2 二态表（与唯一源同源）。
 
 ### 3.6 未登记的未来时点（框架预留的扩展位）
 
-以下时点**尚未进入 `EVENT_POINTS`**，属于"未来扩展位"素材。**它们连枚举都没有**，所以写了会命中 **Y-19 黄提示**（比 `turn_end` 那种静默死效果更安全）：
+以下时点**尚未进入 `EVENT_POINTS`**，属于"未来扩展位"素材。**它们连枚举都没有**，所以写了会命中 **Y-19 黄提示**（而"合法枚举但无派发点"的 5 点由 **Y-24** 兜底，两者都不再静默）：
 
 | 未来时点 | 依据 | 说明 |
 |---|---|---|
@@ -1121,7 +1162,7 @@ E2a 是**用代码改写文本**；E2b 是**用数据替换模板串**。E2b 更
 
 > ⚠️ **这不是内容包能做的事**。内容包只能**使用**已有时点。新增时点 = 改框架战斗流程。
 
-**前置判断**：你要的语义能不能用现有时点表达？先查 §2.2 三态表——**如果只是写错名字，不用新增时点**。
+**前置判断**：你要的语义能不能用现有时点表达？先查 §2.2 二态表——**如果只是写错名字，不用新增时点**。
 
 **六步清单**（缺一步就会留下"登记了不生效"陷阱）：
 
@@ -1148,7 +1189,7 @@ E2a 是**用代码改写文本**；E2b 是**用数据替换模板串**。E2b 更
 self._dispatch_event("<新时点>", "<side>")   # side ∈ {"player","enemy"}，或 attacker/actor
 ```
 
-**🔴 反例警示（真实存在）**：`content/veinborn/effects.json:51-64` 的 `surge_tick` 用了 `trigger: "turn_end"`——**枚举里有、但没人派发**，所以**静默不触发**，校验器也不报警。**新增时点后请务必确认第 2 步真的做了**（§3.3 待查 P-2）。
+**🟠 反例警示（真实存在 · 批84 更新）**：`content/veinborn/effects.json:51-64` 的 `surge_tick` 用 `trigger: "turn_end"`——批81·A1 之前"枚举里有、但没人派发"（静默不触发）；**批81·A1 已补 `turn_end` 派发点**（`battle.py:5228`），故现**正常触发**。**新增时点后请务必确认第 2 步真的做了**（§3.3；未接的 5 点现由 Y-24 黄提示兜底报警）。
 
 ### 9.2 新增一个**指令**（包侧，5 步可复制）
 
@@ -1208,14 +1249,14 @@ async def my_handler(ctx, parsed):
 
 改任何"事件 / 扩展点 / 声明段"之前，按顺序过这 6 条：
 
-1. **它有三态表里的哪一态？** 查 §2.2。删一条"无派发点"的枚举**看似清死代码，实则可能删掉已登记的二期扩展位**（先看 `docs/死代码删除登记表.md`）。
+1. **它有二态表里的哪一态？** 查 §2.2。删一条"无派发点"的枚举**看似清死代码，实则可能删掉已登记的二期扩展位**（先看 `docs/死代码删除登记表.md`）。
 2. **它是"零变化口径"的一部分吗？** §4.3 的三态（`(None,None)` = 全库扫描）、§5.3.4 的"未装钩子零改动"——**改它们=打破向后兼容承诺**。
 3. **它在 §7.8 legacy 表里吗？** 在 → **勿删**，先读对应 `file:line` 的注释与裁决。
 4. **它在 `ext_api.__all__`（§6.3）里吗？** 在 → 破坏性变更**必须**递增 `EXT_API_VERSION`（`ext_api.py:59`）。
 5. **它有 `docs/深度打造_决策记录.md` 的落地登记吗？** 有 → 改动要同步那一条。
 6. **改完跑什么？** 至少 `python3 scripts/check_architecture.py`（架构门禁）+ `python3 scripts/compare_field_meta_migration.py`（字段迁移门禁）+ 相关 `tests/`。
 
-**本手册对维护者的核心价值**：§3.5 的"合法枚举 + 无派发点 = 静默死效果"、§4.3 的"零变化口径"、§7.8 的 legacy 表——**这三处一旦被当成 bug"修"掉，会静默破坏既有内容包**。
+**本手册对维护者的核心价值**：§3.5 的"合法枚举 + 无派发点 = **Y-24 黄提示**（批84·B2 前为静默通过）"、§4.3 的"零变化口径"、§7.8 的 legacy 表——**§3.5/§4.3/§7.8 这三处一旦被当成 bug"修"掉，会静默破坏既有内容包**。
 
 ---
 
@@ -1230,7 +1271,7 @@ async def my_handler(ctx, parsed):
 | 逐函数归属 | `python3` 脚本把每个 `_dispatch_event(...)` 调用映射到所属函数 | 11 个已接时点 + `action_end` 的 5 条路径 |
 | 运行时枚举 | `python3 -c` 导入 `_module_table()` | `settings` 段 **54**、模块表 **36** 条目 |
 | 读常量 | 直接读 `TOP_LEVEL_KEYS` | `field_meta.json` **16** 键 |
-| 实测包 | 读 `content/zz_probe_ext/*`、`content/veinborn/*` | E1/E2/E3 最小示例、`surge_tick` 死效果 |
+| 实测包 | 读 `content/zz_probe_ext/*`、`content/veinborn/*` | E1/E2/E3 最小示例、`surge_tick`（`turn_end`，批81·A1 后可触发） |
 
 ### 10.2 本章纠正 / 补充了盘点文档的哪些结论
 
@@ -1239,11 +1280,11 @@ async def my_handler(ctx, parsed):
 | 1 | `settings.*` 声明段 **41 条** | 框架 `settings` schema 实测 **54 段** | §7.3.2 全 54 段列出，漏列的 14 段标"＋补" |
 | 2 | `field_meta.json` **12 段** | `TOP_LEVEL_KEYS` 实测 **16 键** | §7.5 全 16 键列出，标注盘点 12 行的合并关系 |
 | 3 | "93 条" | 是**行数口径**，非键数口径 | §7.1 明确两种口径并给对照表 |
-| 4 | `EVENT_POINTS` 17 点 / 11 点有派发点 | **复核一致**（给出 11 条原文证据） | §2.2 |
-| 5 | 行号（基于 `d86d9dd`） | HEAD `62cc299` 已漂移（`battle.py` −3~−5、`effects.py` −3~−9） | **本章所有行号已重核** |
-| 6 | `turn_end` "故意不派发" | 复核一致（`实现说明.md:735`） | §3.3 |
-| 7 | `status_lose` "部分：tick 过期待接" | **复核确认**：两条 tick 过期路径（`effects.py:824-825`、`:1418-1420`）只写 log、不派发 | §3.2 待查 P-1（给出精确行号） |
-| 8 | `content/veinborn` 是"真实大包" | ⚠️ **新发现**：其 `effects.json:51-64` `surge_tick` 用 `turn_end` → **静默死效果**，校验器与测试都不拦 | §3.3 / §9.1 待查 P-2 |
+| 4 | `EVENT_POINTS` 17 点 / 11 点有派发点 | **批84 重核为 12 点有派发**（B1 唯一源 `EVENT_POINT_TABLE` 逐点 grep；旧"11"是批81 前口径） | §2.2 |
+| 5 | 行号（基于 `d86d9dd`） | HEAD `62cc299` 已漂移；**批84 又因 B1/B2/B3 改动再次重核** | **本章相关行号已重核**（批84·C1） |
+| 6 | `turn_end` "故意不派发" | **已作废**：批81·A1 已补派发点（`battle.py:5228`，为恢复 veinborn `surge_tick`） | §3.3 |
+| 7 | `status_lose` "部分：tick 过期待接" | 原复核确认两条 tick 过期路径只写 log、不派发；**批84·B3 已按设计口径补派发**（`effects.py:1425`/`:1443`） | §3.2 P-1 **已收口** |
+| 8 | `content/veinborn` 是"真实大包" | 原新发现：其 `effects.json:51-64` `surge_tick` 用 `turn_end` → 曾为静默死效果；**批81·A1 补派发后已可用** | §3.3 P-2 **已收口** |
 | 9 | `action_start`/`action_end` 对称 | ⚠️ **新发现**：`_flee_actor` / `_skip_turn` **不派发 `action_end`** | §2.4 待查 P-4 |
 | 10 | 方案 E 文档"只写 `build.py --check`，未写明在 `scripts/` 子目录" | **复核部分不成立**：`docs/游戏包扩展点_方案_E.md:49` **已**写明 `content/<pack>/scripts/`；只是 `:50` 那句"入口约定"没在本句点明路径 | §5.5.2 改判为"**表述精度提示**"，非"文档缺项" |
 | 11 | "未启用时零文件访问"（`pack_ext.py:503` 注释） | **复核：表述宽松**——`pack_path = Path(pack_dir)` 在双闸判定**之前**执行（`:506`），但只构造 `Path` + `.name`，未 stat/read | §5.2.5 按实测口径写明，不称其为 bug |
@@ -1252,8 +1293,8 @@ async def my_handler(ctx, parsed):
 
 | 编号 | 待查内容 | 已知事实（file:line） | 缺什么 |
 |---|---|---|---|
-| **P-1** | `status_lose` 的 **tick 过期**路径不派发，`on_expire` 效果是否会触发？ | `effects.py:824-825`、`:1418-1420` 只 log 不派发；`event_dispatcher.py:74` 把 `on_expire` 映射到 `status_lose` | **意图裁决**（是漏设计还是故意二期） |
-| **P-2** | `content/veinborn/effects.json:51-64` `surge_tick` 的 `trigger:"turn_end"` 是笔误还是预留？ | `turn_end` 无派发点；其 `desc` 写的是"每次行动结束时" | 原作者意图 / 是否应改为 `action_end` |
+| ~~**P-1**~~ **已收口（批84·B3）** | `status_lose` 的 tick 过期路径不派发，`on_expire` 是否会触发？ | 设计口径明确"该触发"：`细化_1b:106`（过期时触发）、`功能三设计:100`/`:120`（tick 过期补 dispatch）、`实现说明:736`（消失含过期）→ **已补派发**（`effects.py:1425`/`:1443`） | ~~意图裁决~~ **已裁定并实现** |
+| ~~**P-2**~~ **已收口（批81·A1）** | `content/veinborn/effects.json:51-64` `surge_tick` 的 `trigger:"turn_end"` 是笔误还是预留？ | `turn_end` 已补派发点（`battle.py:5228`，正是为该 `surge_tick`）；内容包无需改 | ~~原作者意图~~ **框架补派发点收口** |
 | **P-3** | `resource_axis_validator.py:99` 的 `PROC_TRIGGER_EVENTS = ("on_turn_start","on_hit","on_season_change")` 与 `EVENT_POINTS` 是否是**同一套**？ | 命名风格近似但值不同（`on_turn_start` ≠ `turn_start`） | 两套是否有意统一 |
 | **P-4** | `action_start` / `action_end` 不对称（逃跑/跳过无 `action_end`）是设计还是遗漏？ | `battle.py:2959`（全类型）vs `:3018/3119/4058/4635/5044`（5 路径）；`_flee_actor:3044-3091`、`_skip_turn:3025-3043` 无派发 | 意图裁决 |
 | **P-5** | `settings.ext` / `settings.schema_ext` / `settings.worldtime` **无 field_meta 登记**，写错键名无任何提示 | `ext_api` 语义源 `pack_ext.py:115`；`schema_ext` @ `validator.py:390-402`；`worldtime` @ `assemble.py:164` | 是否应补 schema 登记（属改进项，非 bug） |
@@ -1276,7 +1317,9 @@ async def my_handler(ctx, parsed):
 
 ---
 
-*第 2 章完。本章所有 `file:line` 基于 HEAD `62cc299`，均经本次逐条重读或运行核对。*
+*第 2 章完。初版所有 `file:line` 基于 HEAD `62cc299`；**批84·C1 已按 `w-g48` 工作树重核 §2.2/§2.3/
+§3.2/§3.3/§3.5/§10（唯一源 `data/event_points.EVENT_POINT_TABLE` + B1 逐点实测 + B3 派发点新增）
+并回填。** 其余章节的 `file:line` 仍以初版核对为准，引用前请复读。*
 
 
 

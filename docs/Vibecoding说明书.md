@@ -107,8 +107,9 @@
 
 | 常量 | 值域 / 数量 | 唯一源 file:line | 作者能改吗 |
 |---|---|---|---|
-| `EVENT_POINTS` | **17 时点**（前 16 保序） | `data/event_points.py:25` | ❌ 值域固定（见 §2.3） |
-| `STATUS_EVENT_POINTS` | `status_gain`/`status_lose` | `data/event_points.py:38` | ❌ |
+| `EVENT_POINTS` | **17 时点**（前 16 保序） | `data/event_points.py:59`（表）/ `:85`（派生） | ❌ 值域固定（见 §2.3） |
+| `EVENT_POINT_TABLE` | 17 项 `EventPoint(name, dispatched, note)`（**批84·B1 起 = 派发状态唯一源**） | `data/event_points.py:59` | ❌ |
+| `STATUS_EVENT_POINTS` | `status_gain`/`status_lose` | `data/event_points.py:91` | ❌ |
 | `POOL_KINDS`/`REACTION_KINDS` | 3/3（常见/专属/联动；冲突/增幅/反转） | `data/affinity_keys.py:37`/`:43` | ❌ |
 | `AFFINITY_KEYS` | 4（settings 四个段名，**不是"6 个相性键"**） | `data/affinity_keys.py:46` | ❌ |
 | `RUNE_TIERS` | (1,2,3) 珠阶 | `data/runes.py:41` | ❌ |
@@ -171,7 +172,7 @@
 
 ### 2.3 事件
 
-**唯一源**：`data/event_points.py:25`（17 时点，值域固定、**前 16 保序**）；**派发唯一出口**：`core/battle.py:2092` `Battle._dispatch_event`。**写效果时 `trigger` 只能取这 17 个值。**
+**唯一源**：`data/event_points.py:59`（`EVENT_POINT_TABLE`，17 时点 + 每点 `dispatched` 派发状态；`EVENT_POINTS` 由其派生 `:85`）；**派发唯一出口**：`core/battle.py:2092` `Battle._dispatch_event`。**写效果时 `trigger` 只能取这 17 个值。**
 
 #### A. 17 个时点（名称 / 一句语义 / 何时派发 / 谁收 / 态）
 
@@ -184,7 +185,7 @@
 | 5 | `turn_start` | 该 actor 轮到自己 | `battle.py:2894` | **行动者**（不是双方） | ✅ |
 | 6 | `turn_end` | 该 actor 行动收尾（与 `turn_start` 对称） | `battle.py:5228` | 行动者 | ✅（**批81·A1 补点**，见下注） |
 | 7 | `status_gain` | 状态**施加成功后**（`res.applied` 为真） | `effects.py:2254` | **状态持有侧** | ✅ |
-| 8 | `status_lose` | 状态**被驱散移除后** | `effects.py:2276` | 状态持有侧 | ⚠️ 驱散已接 / **tick 过期未接** |
+| 8 | `status_lose` | 状态**被驱散移除后 + tick 到期**（持续双维/衰减归零） | `effects.py:2318`（驱散）+ `effects.py:1425`/`:1443`（**批84·B3 补 tick 到期**） | 状态持有侧 | ✅ **批84·B3 起完整**（原"tick 过期未接"已收口；`on_expire`/`on_lose` 驱散与到期都触发） |
 | 9 | `mark_gain` | —— | **无** | 印记持有侧 | ⛔ 二期未接 |
 | 10 | `mark_lose` | —— | **无**（`battle.py:1159` 的 `result["mark_lose"]` 是**战斗结果标记，同名不同物**） | 印记持有侧 | ⛔ 二期未接 |
 | 11 | `death` | 死亡标记后 | `battle.py:1190` | **死者自己** | ✅ |
@@ -196,7 +197,9 @@
 | 17 | `on_kill` | 击杀（与 `death` **同一判定点**、紧接其后） | `battle.py:1202` | **击杀者侧**（1v1 的另一侧） | ✅ |
 
 > **计数**：已接 **12**（#1–8,11,12,16,17）/ 二期未接 **5**（#9,10,13,14,15）= 17 ✅。
-> **⚠️ 与《手册·2》§2.2 的差异（如实标）**：该章仍写"`turn_end` 故意不派发、17 点只有 11 点会派发"（**批81 之前的口径**）；实际 **批81·A1 已补 `turn_end` 派发点**（`battle.py:5228`，为恢复 veinborn `surge_tick`），故现为 **12 点**。**以代码为准**；此处按素材纪律如实标注差异。
+> **历史差异备注（批84·C1 已消除）**：《手册·2》§2.2 原写"`turn_end` 故意不派发、17 点只有 11 点
+> 会派发"（批81 之前口径）。**批84·C1 已把《手册·2》§2.2 按唯一源 `EVENT_POINT_TABLE` 回填为
+> 二态表（已接 12 / 二期未接 5）**，与本节 A 表一致；差异不再存在。
 
 #### B. 易混对（照口诀写，别写反）
 
@@ -223,10 +226,10 @@
 
 #### D. **哪些时点当前没有派发点（如实标，别踩）**
 
-- **静默死效果**（合法枚举 + 无派发点 → 校验器**静默通过**，最危险）：`mark_gain` / `mark_lose` / `on_attack` / `on_hit` / `on_skill`。**唯一可靠判据是本节 A 表**，不是校验输出。（`turn_end` **不在**此列——批81·A1 已补派发点，见 A 表 #6。）
-- `status_lose` 的 **tick 过期路径未接**；`on_expire` 声明的效果**当前不会触发**（标**待查 P-1**：只有源码结构、无裁决文本）。
-- **未入枚举的未来位**（写了会命中 **Y-19 黄提示**，比上面安全）：`on_struck`/`on_block`/`on_crit`/`on_interrupt`/`on_cc`/`on_synergy`/`on_tick`。
-- **自查口径**：`trigger` 拼错或写未来时点 → Y-19 黄提示；写**合法枚举但无派发点** → **静默通过**；非字符串 → R-1 红拦。详见《手册·2》§2.2/§3.5。
+- **静默死效果（批84·B2 起不再静默）**（合法枚举 + 无派发点）：`mark_gain` / `mark_lose` / `on_attack` / `on_hit` / `on_skill`。**批84·B2 起校验器按唯一源 `EVENT_POINT_TABLE.dispatched` 发 Y-24 黄提示**（只提示不拦，效果仍永不触发）；**唯一源 + 本节 A 表**是最可靠判据。（`turn_end` **不在**此列——批81·A1 已补派发点，见 A 表 #6。）
+- `status_lose` 的 **tick 过期路径已接**（**批84·B3**）：`on_expire`/`on_lose` 声明的效果**驱散与到期都会触发**（原**待查 P-1** 已裁定"设计口径=该触发"并落地：`细化_1b:106` + `功能三设计 §2.4:100` + `实现说明:736`）。
+- **未入枚举的未来位**（写了会命中 **Y-19 黄提示**）：`on_struck`/`on_block`/`on_crit`/`on_interrupt`/`on_cc`/`on_synergy`/`on_tick`。
+- **自查口径（批84 更新）**：`trigger` 拼错或写未来时点 → **Y-19** 黄提示；写**合法枚举但无派发点** → **Y-24** 黄提示（批84·B2 前为静默通过）；非字符串 → R-1 红拦。详见《手册·2》§2.2/§3.5。
 
 ### 2.4 状态机
 
@@ -761,7 +764,7 @@
 | 把关者 | 拦什么（例） | 红拦 / 黄提示 | 撞了怎么处理 |
 |---|---|---|---|
 | **内容包校验器** `check_pack`（`validator.py:3901`） | **R-4 引用不存在**（`rule="ref_missing"`，`validator.py:3763`）· R-1 枚举外值（`:3656`）· R-5 必填缺失/死配置/依赖成环（`:3600`/`:3613`/`:1861`）· R-5 formula 安全例外（`:3689`） | 🔴 红拦（`PackError`，`models.py:47`） | **必修**：补齐引用/枚举/必填；保存链**一个字节都不写**（`editor_ops.py:748-750`） |
-| 同上（黄提示侧） | **Y-19 未知触发时点**（`validator.py:3409`）· Y-18 未知特效轴（`:2358`）· Y-7 未注册 stats 键（`:3747`）· Y-1/Y-2 区间/概率异常（`:3731-3739`） | 🟡 黄提示（`PackWarning`，`models.py:57`） | **按需**：多半是拼错或"未接线"→ 查 §2.3 D / §2.1 B；**仍可保存**（`editor_ops.py:778-783`） |
+| 同上（黄提示侧） | **Y-19 未知触发时点**（`validator.py:3414`）· **Y-24 已登记但无派发点**（批84·B2，`validator.py:3421`）· Y-18 未知特效轴（`:2358`）· Y-7 未注册 stats 键（`:3747`）· Y-1/Y-2 区间/概率异常（`:3731-3739`） | 🟡 黄提示（`PackWarning`，`models.py:57`） | **按需**：多半是拼错或"未接线"→ 查 §2.3 D / §2.1 B；**仍可保存**（`editor_ops.py:778-783`） |
 | **架构门禁** `scripts/check_architecture.py:422` | TC-01/02 零 NoneBot 与层向 · TC-03 import 依赖方向+无环 · TC-04 `data/` 五类 frozen 各定义一次（`:167`/`:189`/`:319`/`:381`） | 🔴 红拦（`ARCH-FAIL`，`:446`；通过 = `ARCH-OK` `:444`） | **必修**：动了分层/import → 还原或拉评审（《手册·3》§4 S12） |
 | **字段迁移门禁** `scripts/compare_field_meta_migration.py:597` | 公开字段**删除 / 改值**（hard）· **新增**（soft，逐条列出）（口径 `:20-31`） | 🔴 hard / 🟡 soft | hard 必须 **= 0**（`:624-630`）；新增允许但要逐条列出并更新元数据（§4 S1） |
 | **一致性 / 提示类** `check_m7_content.py:475`、`check_template_width.py:104` | 可达性/条件键白名单/占位符；模板行宽 ≤14 全角 | 🟡 **提示性，不阻断**（`check_m7_content.py:4-17`） | 按需修；**"可保存但建议修复"** |

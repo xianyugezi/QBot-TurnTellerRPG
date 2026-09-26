@@ -8,7 +8,7 @@
 
 ## 目录（可跳转）
 
-> 节号 + 一句。**第二批新增** = §十二（12.1~12.10）。
+> 节号 + 一句。**第二批新增** = §十二（12.1~12.10）；**第三批新增** = §十三（13.1~13.6）。
 
 - [一、先分清三条路](#一先分清三条路决定你要不要-vibecoding) — 配置 / 推荐组合 / vibecoding，先判你走哪条。
 - [二、框架能力地图](#二框架能力地图有什么谁负责动了会影响谁) — 常量·变量·事件·状态机·互相影响的索引。
@@ -32,6 +32,8 @@
   - [12.8 AI 跑偏了怎么纠正（话术表）](#128-ai-跑偏了怎么纠正话术表) — 一句纠正话术。
   - [12.9 可打勾的验收清单（附命令）](#129-可打勾的验收清单附命令) — 命令 + 通过标准。
   - [12.10 指令速查（含 GM 5 条）](#1210-指令速查含-gm-5-条) — 玩家向 + GM 5 条。
+- [十三、第三批：开关 · 门禁 · 权限 · 预算 · 随机 · 验收](#十三第三批开关--门禁--权限--预算--随机--验收) — 第三批新增。
+  - [13.1 模块目录与启用矩阵（能力开关总纲）](#131-模块目录与启用矩阵能力开关总纲) — 36 模块 + 3 推荐组合。
 
 ---
 
@@ -706,6 +708,40 @@
 **权限语义（务必记牢）**：三级 = 机主 > GM > 普通玩家（`check_gm_permission:344`）。**GM 指令对无权限者是「静默」**——**无视、不报错、不提示、不写审计**（零出站零审计：`:71-72`、`:351-352`、`silent_result:397`）——**不是「会报错」**，别把静默当 bug。注意：这与「**被封玩家**发游玩指令 → 人话提示」是两回事（后者非 GM 模块职责，`:72`）。
 
 > 旧 GM 清单（`docs/玩家指令手册.md` §十二）尚未同步这 5 条（**待同步**）。
+
+---
+
+## 十三、第三批：开关 · 门禁 · 权限 · 预算 · 随机 · 验收
+
+> **第三批新增**：13.1~13.6。**统一口径**：每条写清「**谁拥有 / 你能改哪 / 改了会影响谁**」；深度细节一律指向《手册·1/2/3》或既有章节，不重复搬运。
+> **行号口径**：`file:line` 以本次写入时的 HEAD `b8d1492` 为准；框架后续改动会使行号漂移，**权威口径以《手册·X》§Y 为准**。
+> **一条总纲**：**「想加玩法，先在这里（13.1）找；找不到再考虑 vibecoding。」**
+
+### 13.1 模块目录与启用矩阵（**能力开关总纲**）
+
+> **一句话**：模块目录 = 框架「能开哪些玩法」的**总开关**（`module_catalog.py:70`，**实测 36 条**）；「推荐组合」= 新作者一键起步（`module_presets.py:58`，**3 组**）。
+
+| 层 | 谁拥有 | 你能改哪 | 改了会影响谁 |
+|---|---|---|---|
+| **模块目录**（id/中文名/用途/`requires`/`implemented`） | 框架 `content/module_catalog.py:70` | ❌ 不可改（框架通用知识） | 编辑器左栏模块树 · 推荐组合的依赖闭包 |
+| **推荐组合**（`basic_rpg`/`life_adventure`/`story_exploration`） | 框架 `module_presets.py:58` | 包可**同 id 整体覆盖**或**追加**；`manifest.module_presets_disable` 可关（`merge_module_presets:124`） | 面板顶部「推荐组合」一键勾（**累加**，不取消已勾） |
+| **启用声明** | **内容包** `manifest.json` 的 `modules` | ✅ **唯一入口** = 编辑器 ⚙ 模块开关（`editor_ops.py:1203`） | **未声明的模块不加载**（`loader.py:101`） |
+| 包内中文名/展示 | 内容包 `field_meta.json`/`manifest` | ✅ 包声明**优先**于框架兜底（`web/api.py:1338`） | 编辑器展示文案（换包零改动） |
+
+**36 条矩阵**（`implemented` 实测**全部 ✅**；★ = **能力标记**：运行时配置落 `settings.<段>`/`maps` 子段、无独立校验器 → 门禁处由 `CAPABILITY_MARKER_MODULES` 豁免，`module_catalog.py:173`）
+
+| 族 | 模块 id（中文名） | `requires`（软依赖，非空者） | 推荐组合（基/活/故） |
+|---|---|---|---|
+| 技能/效果 | `skills`技能 · `skill_chains`派生链 · `effects`效果 · `statuses`状态 · `marks`印记 · `action`行动 · `jobs`职业 | `skill_chains`→`skills` | `skills`/`effects`/`statuses`=基·故；`skill_chains`=基；余 — |
+| 物品/装备 | `items`物品 · `equipment`装备 · `traits`特性 · `slots`珠插槽 · `runes`符文 · `enhance`强化 | `equipment`/`slots`→`items`；`runes`→`items`·`effects`；`enhance`→`equipment` | `items`=基·活·故；`equipment`=基·活；`runes`=活；余 — |
+| 生活/生产 | `recipe`配方 · `proficiency`熟练度 · `forge`锻造 · `fishing`钓鱼 · `farming`种植★ · `contest`品评会★ · `assistant`代工助手★ · `gathering`采集/挖掘★ | `recipe`/`farming`/`assistant`→`items`；`contest`→`proficiency`；`gathering`→`maps` | **全部 = 活** |
+| 世界/内容 | `enemies`怪物 · `maps`地图 · `dungeon`副本 · `npc`NPC · `shop`商店 · `quest`任务 · `checkin`签到 · `achievements`成就 | — | `enemies`/`maps`/`npc`/`quest`=基·故；`shop`=基；`dungeon`/`achievements`=故；`checkin`=— |
+| 数据/规则 | `quest_board`委托板★ · `codex`图鉴★ · `conditional`条件加成 · `stats`属性表 · `formula`公式库 · `templates`消息模板 · `settings`通用设置 | `quest_board`→`quest` | `quest_board`/`codex`=故；余 — |
+
+> **停用语义**（`editor_ops.py:1208`、`module_catalog.py:62-65`）：**停用 = 只从 `manifest.modules` 移除声明，数据文件保留**，重新勾选即恢复——框架**不删你的数据**。
+> **启用/停用的校验容忍**（`editor_ops.py:1213-1215`）：启用新空骨架只容忍「归属该模块自身」的红拦；停用只容忍指向该模块条目的 R-4 悬空引用；被容忍项**以黄提示如实返回**，其余红拦一律阻断落盘。
+> **`requires` 只是软依赖**：缺前置 → **黄提示「建议同时启用」，不硬拦**（`module_catalog.py:38`）；一键推荐组合会**自动补依赖闭包**（`preset_modules_with_deps:158`——实测生活冒险包声明 11 条 → 生效 **13** 条，自动补 `maps`+`effects`）。
+> **矩阵怎么用**：在表里找到你要的玩法 → 去 §三 表 1 找对应文件与字段 → 依然没有，才走 §十二 12.2 五问 → vibecoding。
 
 ---
 

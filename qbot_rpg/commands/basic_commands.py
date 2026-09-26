@@ -104,7 +104,7 @@ from qbot_rpg.core.message_format.list_render import (
 from qbot_rpg.core.player_attributes import calc_all_final_attributes
 from qbot_rpg.core.skill_slots_battle import leveled_skill_levels
 from qbot_rpg.data.gear_stats import GEAR_DISPLAY_KEYS, GEAR_LABELS_ZH, PCT_SUFFIX
-from qbot_rpg.data.item import ItemInstance
+from qbot_rpg.data.item import ItemInstance, item_instance_from_mapping
 from qbot_rpg.data.logging_utils import get_logger
 from qbot_rpg.data.player import EquipmentSlot, Player, PlayerAttributes
 
@@ -1561,41 +1561,12 @@ class EquipmentEngineAdapter:
         # M12.5/veinborn 收口：装配层 Player dataclass asdict 后 inventory 为
         # list[dict]（_player 静态转换），引擎契约须 ItemInstance——dict 形态归一
         # 转换（字段与 ItemInstance 对齐；非 dict 保持原样走 isinstance 判定）。
+        # 批83 · N2/N3/N5 收敛：归一走**公共函数** `item_instance_from_mapping`
+        # （`data/item.py`，唯一源）——与 runner 的 ctx dict 归一**同一处定义**，字段集
+        # 与读档 codec 对齐（补回原漏的 `effect_refs` / `stack_max` / `cooldown_until`）。
         if isinstance(item, Mapping):
             try:
-                _sb = item.get("stats_bonus")
-                _aff = item.get("affinities")
-                item = ItemInstance(
-                    item_id=str(item.get("item_id") or ""),
-                    name=str(item.get("name") or ""),
-                    count=int(item.get("count", 1)),
-                    quality=str(item.get("quality") or "normal"),
-                    bound=bool(item.get("bound", False)),
-                    slot=str(item.get("slot")) if item.get("slot") else None,
-                    stats_bonus=dict(_sb) if isinstance(_sb, Mapping) else {},
-                    traits=tuple(item.get("traits") or ()),
-                    enhance_level=int(item.get("enhance_level", 0) or 0),
-                    # 批40 · H4：uid 原样带过（asdict dict 行 → 引擎实例；缺省由
-                    # __post_init__ 补发）——否则穿戴落档身份在归一转换处丢失
-                    uid=str(item.get("uid") or ""),
-                    # 批42 · C：相性 / 套装词条 / 被动原样带过（asdict 行 → 引擎实例）
-                    affinities={str(k): float(v) for k, v in _aff.items()
-                                if isinstance(v, (int, float))
-                                and not isinstance(v, bool)}
-                    if isinstance(_aff, Mapping) else {},
-                    set_affixes=tuple(item.get("set_affixes") or ()),
-                    passives=tuple(item.get("passives") or ()),
-                    # 批43：品质等级 + 强化特殊词条载荷原样带过（asdict 行 → 引擎实例）
-                    quality_level=int(item.get("quality_level", 0) or 0),
-                    enhance_affixes=tuple(item.get("enhance_affixes") or ()),
-                    # 批57：装备等级（淬炼上限输入）+ 淬炼分配原样带过（缺省 0/空）
-                    required_level=int(item.get("required_level", 0) or 0),
-                    temper_alloc={str(_k): int(_v)
-                                  for _k, _v in (item.get("temper_alloc") or {}).items()
-                                  if isinstance(_v, int) and not isinstance(_v, bool)
-                                  and _v > 0}
-                    if isinstance(item.get("temper_alloc"), Mapping) else {},
-                )
+                item = item_instance_from_mapping(item)
             except (TypeError, ValueError):
                 pass
         if not isinstance(item, ItemInstance):

@@ -14,12 +14,13 @@ frozen=True：实例一经构造不可变，防战斗/结算中被误改（细�
 """
 
 import uuid
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from qbot_rpg.data.types import ItemID
 
-__all__ = ["ItemInstance", "new_item_uid"]
+__all__ = ["ItemInstance", "new_item_uid", "item_instance_from_mapping"]
 
 
 def new_item_uid() -> str:
@@ -100,3 +101,59 @@ class ItemInstance:
         """
         if not self.uid:
             object.__setattr__(self, "uid", new_item_uid())
+
+
+def item_instance_from_mapping(raw: Mapping[str, Any]) -> ItemInstance:
+    """dict 行 → `ItemInstance` 归一（写路径**公共归一函数**，唯一源）。
+
+    依据：《手册·1》§3.1 构造点清单 + §3.4「收敛而非补齐」——`assembly/runner.py`
+    的 `_ctx_inventory_to_player`（ctx `inventory_instances` 行）与
+    `commands/basic_commands.py` 的 `/装备` dict 归一，原为两份**内联**构造，
+    逐批补字段时只补一处即丢字段（批82 · Q4/N2/N3/N5：`effect_refs` / `stack_max`
+    在两条链路静默丢失，回落默认值）。本函数把两条链路收敛为**同一处定义**，
+    字段集与读档 codec `storage.repository._item_from_dict`（20/20）对齐，以后新增
+    `ItemInstance` 字段只改这里 + 读 codec 两处。
+
+    入参：`raw` —— 形如 `dataclasses.asdict(ItemInstance)` 的 dict 行（缺键容忍）。
+    出参：`ItemInstance`。核心逻辑：逐字段读取，与既有内联归一**逐字段同口径**
+    （缺省补默认、非法值过滤），并**保留全部 20 字段**——本次补回两条链路原丢的
+    `stack_max` / `cooldown_until` / `effect_refs`。
+
+    边界：`effect_refs` 只收非空 str（保序、**不去重**，与既有 runner 内联一致；
+    读档 codec `_effect_refs_of` 另行去重，是读取侧口径，本函数不改动）。
+    `stats_bonus` / `affinities` / `temper_alloc` 非 Mapping → 取默认空。
+    """
+    _sb = raw.get("stats_bonus")
+    _aff = raw.get("affinities")
+    _ta = raw.get("temper_alloc")
+    return ItemInstance(
+        item_id=str(raw.get("item_id") or ""),
+        name=str(raw.get("name") or ""),
+        count=int(raw.get("count", 1)),
+        quality=str(raw.get("quality") or "normal"),
+        bound=bool(raw.get("bound", False)),
+        # N3：stack_max 原两条归一均漏 → 回落默认 99（`stack_max=1` 的实例变"可堆叠"）；
+        # 按读档 codec 同口径补读（缺省 99）。
+        stack_max=int(raw.get("stack_max", 99) or 99),
+        slot=str(raw.get("slot")) if raw.get("slot") else None,
+        stats_bonus=dict(_sb) if isinstance(_sb, Mapping) else {},
+        traits=tuple(raw.get("traits") or ()),
+        cooldown_until=raw.get("cooldown_until"),
+        enhance_level=int(raw.get("enhance_level", 0) or 0),
+        uid=str(raw.get("uid") or ""),
+        affinities={str(k): float(v) for k, v in _aff.items()
+                    if isinstance(v, (int, float)) and not isinstance(v, bool)}
+        if isinstance(_aff, Mapping) else {},
+        set_affixes=tuple(raw.get("set_affixes") or ()),
+        passives=tuple(raw.get("passives") or ()),
+        quality_level=int(raw.get("quality_level", 0) or 0),
+        enhance_affixes=tuple(raw.get("enhance_affixes") or ()),
+        required_level=int(raw.get("required_level", 0) or 0),
+        temper_alloc={str(_k): int(_v) for _k, _v in (_ta or {}).items()
+                      if isinstance(_v, int) and not isinstance(_v, bool) and _v > 0}
+        if isinstance(_ta, Mapping) else {},
+        # N2：effect_refs 原仅 runner 链路保留、`/装备` 链路漏（写回背包永久丢失）；
+        # 本函数统一保留（只收非空 str，保序）。
+        effect_refs=tuple(x for x in (raw.get("effect_refs") or ())
+                          if isinstance(x, str) and x),
+    )

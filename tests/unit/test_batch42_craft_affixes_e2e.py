@@ -394,16 +394,25 @@ def test_serialization_includes_new_fields() -> None:
 
 
 def test_all_data_bearing_construction_sites_pass_new_fields() -> None:
-    """6 处非测试构造点：**有实例来源**的三处逐一透传新字段（静态守卫，防漏）。"""
+    """6 处非测试构造点：**有实例来源**的三处逐一透传新字段（静态守卫，防漏）。
+
+    批83 · N2/N3/N5 收敛后：写路径两条内联归一（runner / basic_commands）收敛为
+    公共函数 `data/item.py::item_instance_from_mapping`——字段透传断言随之落到
+    「读档 codec + 公共归一函数」两处唯一源；两条链路只断言**调用公共函数**。
+    """
     from pathlib import Path
 
     repo = Path(__file__).resolve().parents[2]
     for rel in ("qbot_rpg/storage/repository.py",
-                "qbot_rpg/assembly/runner.py",
-                "qbot_rpg/commands/basic_commands.py"):
+                "qbot_rpg/data/item.py"):
         src = (repo / rel).read_text(encoding="utf-8")
         for key in ("affinities=", "set_affixes=", "passives="):
             assert key in src, f"{rel} 的 ItemInstance 构造点未透传新字段：{key}"
+    for rel in ("qbot_rpg/assembly/runner.py",
+                "qbot_rpg/commands/basic_commands.py"):
+        src = (repo / rel).read_text(encoding="utf-8")
+        assert "item_instance_from_mapping(" in src, \
+            f"{rel} 未走公共归一函数 item_instance_from_mapping（批83 · N5）"
 
     # 无实例来源的三处（equipment unequip 兜底 / shop 新建）保留缺省；dataclasses.replace
     # 路径自动保留字段 —— 仅登记位置，勿误认为漏传。

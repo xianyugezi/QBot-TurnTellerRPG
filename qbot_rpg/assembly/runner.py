@@ -693,7 +693,7 @@ def _make_handler(spec: Any, parsed: ParsedCommand, ctx: MutableMapping[str, Any
             if ctx.get("_m8_dirty_inventory"):
                 from dataclasses import replace as _dcreplace  # noqa: PLC0415
                 from qbot_rpg.commands.shop_tx import _ctx_inventory_to_player  # noqa: PLC0415
-                from qbot_rpg.data.item import ItemInstance  # noqa: PLC0415
+                from qbot_rpg.data.item import item_instance_from_mapping  # noqa: PLC0415
 
                 # M8 批13 审查收口（P1-5 实例双计→数量×2）：实例通道的 item_id 从
                 # count map merge 剔除（实例携带真实品质/特性数量），避免先 merge 计数
@@ -715,43 +715,11 @@ def _make_handler(spec: Any, parsed: ParsedCommand, ctx: MutableMapping[str, Any
                         if not isinstance(it, Mapping):
                             continue
                         try:
-                            _sb = it.get("stats_bonus")
-                            _aff = it.get("affinities")
-                            new_inv = new_inv + (ItemInstance(
-                                item_id=str(it.get("item_id") or ""),
-                                name=str(it.get("name") or ""),
-                                count=int(it.get("count") or 1),
-                                quality=str(it.get("quality") or "normal"),
-                                bound=bool(it.get("bound", False)),
-                                slot=str(it.get("slot")) if it.get("slot") else None,
-                                stats_bonus=dict(_sb) if isinstance(_sb, Mapping) else {},
-                                traits=tuple(it.get("traits") or ()),
-                                enhance_level=int(it.get("enhance_level", 0) or 0),
-                                # 批40 · H4：uid 原样带过（缺省由 __post_init__ 补发）
-                                uid=str(it.get("uid") or ""),
-                                # 批42 · C：相性 / 套装词条 / 被动原样带过（打造产物不丢字段）
-                                affinities={str(k): float(v) for k, v in _aff.items()
-                                            if isinstance(v, (int, float))
-                                            and not isinstance(v, bool)}
-                                if isinstance(_aff, Mapping) else {},
-                                set_affixes=tuple(it.get("set_affixes") or ()),
-                                passives=tuple(it.get("passives") or ()),
-                                # 批43：品质等级 + 强化特殊词条载荷原样带过（打造/强化产物不丢字段）
-                                quality_level=int(it.get("quality_level", 0) or 0),
-                                enhance_affixes=tuple(it.get("enhance_affixes") or ()),
-                                # 批57：装备等级 + 淬炼分配原样带过（打造/淬炼产物不丢字段）
-                                required_level=int(it.get("required_level", 0) or 0),
-                                temper_alloc={str(_k): int(_v)
-                                              for _k, _v in
-                                              (it.get("temper_alloc") or {}).items()
-                                              if isinstance(_v, int)
-                                              and not isinstance(_v, bool) and _v > 0}
-                                if isinstance(it.get("temper_alloc"), Mapping) else {},
-                                # 批61 · 口径 B：附加效果引用原样带过（炼金产物不丢字段）
-                                effect_refs=tuple(
-                                    x for x in (it.get("effect_refs") or ())
-                                    if isinstance(x, str) and x),
-                            ),)
+                            # 批83 · N2/N3/N5 收敛：ctx dict 行 → ItemInstance 走公共归一
+                            # `item_instance_from_mapping`（`data/item.py`，唯一源）——
+                            # 与 `/装备` dict 归一（basic_commands.py）同定义、字段集与读档
+                            # codec 对齐（补回 stack_max / cooldown_until / effect_refs）。
+                            new_inv = new_inv + (item_instance_from_mapping(it),)
                         except (TypeError, ValueError):
                             continue
                 p = _dcreplace(p, inventory=new_inv)

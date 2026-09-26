@@ -97,11 +97,98 @@
 
 ### 2.2 变量（作者可以"引用"的东西）
 
-<!-- TODO 2.2 -->
+#### A. 公式 / 效果里能引用的变量
+
+| 变量（写法） | 谁提供 | 什么时候能读到 | 改了会影响谁 |
+|---|---|---|---|
+| **`[技能等级:<技能ID>]`** | 装配层进战注入 `skill_levels`（`core/battle.py`） | **施放该技能时**求值 → 取 `attacker.skill_level[ID]` | 值是**三源并集**（装备赋予/套装档位/`skill_slots` 行 level），**同技能多源取最大**；纯读、不写存档（`core/skill_slots_battle.py`）。**无来源 → 等级 1**；公式不引用它 → 结果逐字节与改前一致。改了会**同步改所有引用该占位符的技能公式** |
+| combatant 基础键（18） | 框架默认表 `_DEFAULT_STATS`（`core/battle.py:317-322`） | 战斗中公式直读 | 是战斗契约；**加键 = 改战斗**（须同时改 ≥4 处构造点） |
+| combatant 开战追加键 | 敌方 `battle_launch_commands.py:184-208`、玩家 `core/pvp.py:155-202` | 同上 | `enemies.json stats` 里**未映射的键原样透传**进 combatant——作者可借此带自定义数据 |
+| `marks` / `marks_total` | `MarksManager.formula_view`（`core/marks.py:421`） | 战斗公式视图 | 只读聚合；改它不影响层数本体 |
+| 条件引擎变量 / 运算符 | `core/condition_engine.py:155`（`VAR_ALIASES`）、`:98-123` | 任务/NPC/成就条件求值 | 旧运算符 `min→ge`/`max→le` 与中英别名是**兼容层，别删**（《手册·3》C12） |
+
+> **声明侧（技能等级）**：`skills[].level = {max, growth[]}`——**`max ≥ 2` 才进等级线**，`growth` 长度须 `= max` 且 `growth[0]=1.0`（非法红拦）；旧标量 `level: 1` 兼容。**用什么曲线由作者定**，框架故意不内置"等级→伤害/冷却"映射（**勿当 bug 修**）。详见《手册·七 · 技能等级变量》。
+
+#### B. 战斗 / 玩家数据对象（**运行期是 dict 还是 dataclass，本框架最大的坑**）
+
+| 对象 | 字段 / 形状 | 谁提供 | 什么时候能读到 | 改它的影响面 |
+|---|---|---|---|---|
+| **`ItemInstance`** | **20 字段**（`data/item.py:40-102`，frozen） | 框架 | 背包/装备/商店/打造成品行 | **实例级数据优先塞 `stats_bonus` 或 `persistent_state`**；非要加字段要走 9 条清单（读 codec/两条归一链路/迁移补缺…），**漏一条就静默丢字段** |
+| **`EquipmentSlot`** | 6 字段（`data/player.py:57-75`） | 框架 | 穿戴槽 | `uid` **回指 `ItemInstance.uid`**，不是自生成 id |
+| **`Player`** | 23 字段（`data/player.py:79-113`） | 框架（SQLite 落档） | 玩家主档 | **包自持代码不得直接改**：落档走 `storage.save_player`，运行期改 `ctx`；**7 个字段名 ≠ 列名**是历史设计，别"修正" |
+| 状态实例 dict | 14 键，**唯一构造源** `_new_instance`（`core/effects.py:735-763`） | 框架 effects | 状态生效期间 | `decay` 运行期是 **str**（契约 spec 写 float，属**已登记双轨**，不是 bug） |
+| 印记实例 dict | 6 键，权威键元组 `_MARK_INSTANCE_KEYS`（`core/marks.py:53-60`） | 框架 marks | 印记存在期间 | `remaining_turns` **条件存在**，代码必须 `.get()` |
+| combatant / 战斗快照 | dict，**无单一源**（默认/归一/敌方/玩家 ≥4 处构造） | 框架 core | 战斗全程 | **加一个 combatant 键必须同时改全部构造点**，否则只在部分路径生效 |
+
+> 契约 dataclass 与运行期 dict **同名不同形**（`CombatantSnapshot`/`StatusInstance` 等已自登记"双轨未收敛"）——**别按 dataclass 去 grep 运行期字段，也别"顺手统一"**。详见《手册·1》§2.0~§2.8 / §3 / §4.3。
+
+#### C. `ctx`（指令上下文）——**数量级 + 如实标注**
+
+| 项 | 事实 | 唯一源 file:line |
+|---|---|---|
+| 内部 `ctx` dict 键数 | **注册态 162~166 / 未注册态 134~138**（随包内模块数浮动；仅注册态多 **28** 键恒定） | `assembly/context.py:1256` `make_context`；详见《手册·1》§2.7.3 |
+| 两个"ctx"别混 | **`ExtContext`** = 包扩展收到的**稳定面**（`EXT_API_VERSION="1"`）；**内部 `ctx` dict** = 框架指令壳用，**非扩展契约** | `ext_api.py:125-304`；`assembly/context.py:1256` |
+| ⚠️ 3 个键**当前无框架消费方** | `monster_pool`（注入 `context.py:1670`，未实装→`[]`）· `shop_engine`（注入 `:1348`，**恒 `None` · 准死键**）· `worn_refs`（`:1449`/`:1634`） | 《手册·1》§2.7.3 逐键表（批83 标注）；**登记待收敛，不删键** |
+
+> **作者能改哪**：内部 `ctx` **不是**给作者的接口——包自持代码请用 `ExtContext` + `get_state/set_state`（本包状态格子）。**未注册态缺键**（③ 有而 ④ 没有）：消费方必须 `ctx.get` 兜底。3 个零消费键若将来确有包经 ctx 读取，则改判为"仅供包自持代码读取"，仍须按 `ExtContext` 口径收敛。
 
 ### 2.3 事件
 
-<!-- TODO 2.3 -->
+**唯一源**：`data/event_points.py:25`（17 时点，值域固定、**前 16 保序**）；**派发唯一出口**：`core/battle.py:2035` `Battle._dispatch_event`。**写效果时 `trigger` 只能取这 17 个值。**
+
+#### A. 17 个时点（名称 / 一句语义 / 何时派发 / 谁收 / 态）
+
+| # | 时点 | 一句语义 | 何时派发（file:line） | 谁收 | 态 |
+|---|---|---|---|---|---|
+| 1 | `battle_start` | 战斗开始、资源已初始化、CTB 还没建条 | `battle.py:2465`/`:2466` | 两侧各一次 | ✅ |
+| 2 | `battle_end` | 战斗收尾（**marks 尚未清零**，效果仍可读印记/状态） | `battle.py:2170`/`:2171` | 两侧各一次 | ✅ |
+| 3 | `action_start` | 一次行动开始，在动作分派**之前**（**覆盖全部动作类型**） | `battle.py:2959` | 行动者 | ✅ |
+| 4 | `action_end` | 一次行动收尾 | `battle.py:3018`/`:3119`/`:4058`/`:4635`/`:5044`（5 条路径） | 行动者 | ✅（**逃跑/跳过不派发**） |
+| 5 | `turn_start` | 该 actor 轮到自己 | `battle.py:2837` | **行动者**（不是双方） | ✅ |
+| 6 | `turn_end` | —— | **无** | — | ⛔ **故意不派发**（CTB 已删"回合单位"，枚举仅为兼容） |
+| 7 | `status_gain` | 状态**施加成功后**（`res.applied` 为真） | `effects.py:2254` | **状态持有侧** | ✅ |
+| 8 | `status_lose` | 状态**被驱散移除后** | `effects.py:2276` | 状态持有侧 | ⚠️ 驱散已接 / **tick 过期未接** |
+| 9 | `mark_gain` | —— | **无** | 印记持有侧 | ⛔ 二期未接 |
+| 10 | `mark_lose` | —— | **无**（`battle.py:1102` 的 `result["mark_lose"]` 是**战斗结果标记，同名不同物**） | 印记持有侧 | ⛔ 二期未接 |
+| 11 | `death` | 死亡标记后 | `battle.py:1133` | **死者自己** | ✅ |
+| 12 | `revive` | 复活成功后 | `battle.py:1188` | 复活侧 | ✅ |
+| 13 | `on_attack` | —— | **无** | 攻击方 | ⛔ 二期未接 |
+| 14 | `on_hit` | —— | **无** | 攻击方 | ⛔ 二期未接 |
+| 15 | `on_skill` | —— | **无** | 攻击方 | ⛔ 二期未接 |
+| 16 | `season_change` | 季节事件结算之后 | `battle.py:2031`/`:2032` | 两侧各一次 | ✅ |
+| 17 | `on_kill` | 击杀（与 `death` **同一判定点**、紧接其后） | `battle.py:1145` | **击杀者侧**（1v1 的另一侧） | ✅ |
+
+> **计数**：已接 **11**（#1,2,3,4,5,7,8,11,12,16,17）/ 二期未接 **5**（#9,10,13,14,15）/ 故意不派发 **1**（#6）= 17 ✅。
+
+#### B. 易混对（照口诀写，别写反）
+
+| 别混 | 一句话口诀 / 区别 | 判据 |
+|---|---|---|
+| `death` vs `on_kill` | **"我想在谁身上发生什么？"** 动作对象是**死者**→`death`，是**击杀者**→`on_kill`；`target` 相对各自派发侧。**同归于尽/战斗已结束 → `on_kill` 不派发**（故意，不是漏判） | 《手册·2》§3.1 |
+| `status_gain` vs `mark_gain` | **状态与印记是两套独立容器**：状态有增益/减益、可被驱散；印记**非增益非减益、天然不吃 dispel**。`mark_gain`/`mark_lose` **无派发点**，写了永不触发 | 《手册·2》§3.2 |
+| `turn_start` vs `action_start` | 轮到自己 **1 次** vs 每次行动 **1 次**；`turn_end` 已废弃（见 #6） | 《手册·2》§3.3 |
+| `EVENT_POINTS` vs `[事件:XXX]` | **两套体系、互不派发**：写 `effects.json` 的 `trigger` 查 `EVENT_POINTS`；写条件/任务里的 `[事件:…]` 查 `EVENT_KEY_DEFAULTS`（`core/event_bus.py:66`，13 类） | 《手册·2》§1.1/§3.4 |
+| 状态 `on_gain`/`on_lose`/`on_expire` | **三字段两时点**：`on_expire` 与 `on_lose` **共用 `status_lose`**；状态事件默认作用在持有侧 | 《手册·2》§2.5（**稳定契约**） |
+
+#### C. owner 归属——**"谁的效果只能由谁触发"**
+
+| 环节 | 事实 | file:line |
+|---|---|---|
+| 归属键 | `owned_effect_ids`（`OWNED_EFFECT_IDS_KEY`） | `data/gear_stats.py:491` |
+| 谁写 | **装配层**从装备 `passives` + traits `effects` 推导 id 集 | `core/equip_mods.py:319` |
+| 谁读 / 过滤 | 战斗侧 `_owner_scope` → 分派器判定式 | `core/battle.py:2067`、`core/event_dispatcher.py:144-151` |
+| 三态（**零变化**是灵魂） | ① 两侧都没声明 → **全库扫描**（= 本机制引入前的旧行为）；② 任一侧声明 → 该侧候选 = **自己拥有的 ∪ 未被任何一侧认领的全局效果**；③ 声明为空列表 → 该侧**零候选** | `event_dispatcher.py:100-102`、`:144-151` |
+| 判定式 | **`eid ∈ owner` 或 `eid ∉ claimed`**（`claimed=None` 视为无全局豁免）；用的是 effects 注册 id | 同上 |
+| 例外 | **状态 `on_*` 事件不受归属过滤**（按 `status_id` 精确定位）；**符文**走 `extra_candidates`（另一条"只对持侧生效"的路） | `event_dispatcher.py:104-105`、`battle.py:2107` |
+
+> **作者能改哪**：**包不写 `owned_effect_ids`**——只写装备的 `passives` / traits 的 `effects`，框架自己推导。**勿当 bug 修**：让"缺省也启用过滤"= 打破零变化（旧包效果集体失效）；改判定式为纯白名单 = 静默吞掉全局效果。去重/上限/chance 全部复用 `EffectRuntime`（`max_triggers_per_turn=10` 等），**别在分派器里另造一套**。详见《手册·2》§4。
+
+#### D. **哪些时点当前没有派发点（如实标，别踩）**
+
+- **静默死效果**（合法枚举 + 无派发点 → 校验器**静默通过**，最危险）：`turn_end` / `mark_gain` / `mark_lose` / `on_attack` / `on_hit` / `on_skill`。**唯一可靠判据是 §2.3 这张三态表**，不是校验输出。
+- `status_lose` 的 **tick 过期路径未接**；`on_expire` 声明的效果**当前不会触发**（标**待查 P-1**：只有源码结构、无裁决文本）。
+- **未入枚举的未来位**（写了会命中 **Y-19 黄提示**，比上面安全）：`on_struck`/`on_block`/`on_crit`/`on_interrupt`/`on_cc`/`on_synergy`/`on_tick`。
+- **自查口径**：`trigger` 拼错或写未来时点 → Y-19 黄提示；写**合法枚举但无派发点** → **静默通过**；非字符串 → R-1 红拦。详见《手册·2》§2.2/§3.5。
 
 ### 2.4 状态机
 

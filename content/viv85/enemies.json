@@ -2239,5 +2239,1233 @@
     "trigger_cooldown": 6
    }
   ]
+ },
+ {
+  "id": "vein_revenant",
+  "name": "脉骸亡者",
+  "tier": "normal",
+  "area": "脉心深窟",
+  "desc": "深窟里游荡的亡骸，骨架被脉光缠住。",
+  "stats": {
+   "hp": 12000,
+   "mp": 600,
+   "str": 128,
+   "int": 40,
+   "con": 120,
+   "spr": 36,
+   "foc": 56,
+   "agi": 34,
+   "luk": 12
+  },
+  "weakness": {
+   "types": [
+    "斩",
+    "魔"
+   ],
+   "elements": {
+    "crystal": 1.3
+   }
+  },
+  "pv": 500,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 20000,
+   "currencies": {
+    "coins": 10000
+   }
+  },
+  "actions": [
+   {
+    "action": "en_bone_sweep",
+    "probability": 1,
+    "weight": 40,
+    "cooldown": 0
+   },
+   {
+    "action": "en_void_gaze",
+    "probability": 1,
+    "weight": 30,
+    "cooldown": 0
+   },
+   {
+    "action": "en_roar",
+    "probability": 1,
+    "weight": 20,
+    "cooldown": 0
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_core_shard",
+     "chance": 80,
+     "count": [
+      1,
+      2
+     ]
+    },
+    {
+     "item": "mat_common_hide",
+     "chance": 60,
+     "count": [
+      3,
+      5
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "脉骸亡者弱斩击与法术。"
+   },
+   {
+    "unlock": 50,
+    "desc": "虚空凝视会造成出血。"
+   },
+   {
+    "unlock": 100,
+    "desc": "常掉脉核碎片。"
+   }
+  ]
+ },
+ {
+  "id": "echo_wraith",
+  "name": "回响幽影",
+  "tier": "normal",
+  "area": "回响之厅",
+  "desc": "厅中回声凝成的影体，说话声由远及近。",
+  "stats": {
+   "hp": 11000,
+   "mp": 800,
+   "str": 120,
+   "int": 52,
+   "con": 108,
+   "spr": 50,
+   "foc": 62,
+   "agi": 44,
+   "luk": 14
+  },
+  "weakness": {
+   "types": [
+    "斩",
+    "突"
+   ],
+   "elements": {
+    "crystal": 1.3
+   }
+  },
+  "pv": 480,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 19000,
+   "currencies": {
+    "coins": 9500
+   }
+  },
+  "actions": [
+   {
+    "action": "en_echo_shriek",
+    "probability": 1,
+    "weight": 40,
+    "cooldown": 0
+   },
+   {
+    "action": "en_core_pulse",
+    "probability": 1,
+    "weight": 25,
+    "cooldown": 0
+   },
+   {
+    "action": "en_wail",
+    "probability": 1,
+    "weight": 20,
+    "cooldown": 0
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_echo_dust",
+     "chance": 80,
+     "count": [
+      1,
+      2
+     ]
+    },
+    {
+     "item": "mat_magic_crystal",
+     "chance": 60,
+     "count": [
+      3,
+      5
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "回响幽影弱斩击与突刺。"
+   },
+   {
+    "unlock": 50,
+    "desc": "尖啸会降低你的速度。"
+   },
+   {
+    "unlock": 100,
+    "desc": "常掉回响尘。"
+   }
+  ]
+ },
+ {
+  "id": "altar_sentinel",
+  "name": "祭坛侍者",
+  "tier": "normal",
+  "area": "四脉祭坛",
+  "desc": "侍立在祭坛四角的石人，四脉各一。",
+  "stats": {
+   "hp": 13500,
+   "mp": 620,
+   "str": 134,
+   "int": 44,
+   "con": 132,
+   "spr": 40,
+   "foc": 58,
+   "agi": 32,
+   "luk": 12
+  },
+  "weakness": {
+   "types": [
+    "打",
+    "突"
+   ],
+   "elements": {
+    "thunder": 1.3
+   }
+  },
+  "pv": 560,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 22000,
+   "currencies": {
+    "coins": 11000
+   }
+  },
+  "actions": [
+   {
+    "action": "en_altar_wrath",
+    "probability": 1,
+    "weight": 40,
+    "cooldown": 0
+   },
+   {
+    "action": "en_slam",
+    "probability": 1,
+    "weight": 30,
+    "cooldown": 0
+   },
+   {
+    "action": "en_hardbody",
+    "probability": 1,
+    "weight": 20,
+    "cooldown": 0
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_altar_relic",
+     "chance": 80,
+     "count": [
+      1,
+      2
+     ]
+    },
+    {
+     "item": "mat_blunt_rock",
+     "chance": 60,
+     "count": [
+      3,
+      5
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "祭坛侍者守四祭坛，弱打击与突刺。"
+   },
+   {
+    "unlock": 50,
+    "desc": "祭坛之怒伤害很高。"
+   },
+   {
+    "unlock": 100,
+    "desc": "常掉祭坛残片。"
+   }
+  ]
+ },
+ {
+  "id": "abyss_crawler",
+  "name": "渊脉爬兽",
+  "tier": "normal",
+  "area": "渊脉裂隙",
+  "desc": "裂隙壁上攀爬的兽类，四足生钩。",
+  "stats": {
+   "hp": 14000,
+   "mp": 700,
+   "str": 142,
+   "int": 46,
+   "con": 126,
+   "spr": 42,
+   "foc": 60,
+   "agi": 40,
+   "luk": 12
+  },
+  "weakness": {
+   "types": [
+    "打",
+    "魔"
+   ],
+   "elements": {
+    "void": 1.3
+   }
+  },
+  "pv": 540,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 21000,
+   "currencies": {
+    "coins": 10500
+   }
+  },
+  "actions": [
+   {
+    "action": "en_abyss_bite",
+    "probability": 1,
+    "weight": 40,
+    "cooldown": 0
+   },
+   {
+    "action": "en_charge",
+    "probability": 1,
+    "weight": 30,
+    "cooldown": 0
+   },
+   {
+    "action": "en_spit",
+    "probability": 1,
+    "weight": 20,
+    "cooldown": 0
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_abyss_scale",
+     "chance": 80,
+     "count": [
+      1,
+      2
+     ]
+    },
+    {
+     "item": "mat_common_hide",
+     "chance": 60,
+     "count": [
+      3,
+      5
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "渊脉爬兽弱打击与法术。"
+   },
+   {
+    "unlock": 50,
+    "desc": "撕咬会造成出血。"
+   },
+   {
+    "unlock": 100,
+    "desc": "常掉渊脉鳞。"
+   }
+  ]
+ },
+ {
+  "id": "core_wisp",
+  "name": "脉核游灵",
+  "tier": "normal",
+  "area": "脉核禁宫",
+  "desc": "禁宫内游动的灵体，体心一点脉光。",
+  "stats": {
+   "hp": 13000,
+   "mp": 1000,
+   "str": 126,
+   "int": 60,
+   "con": 116,
+   "spr": 58,
+   "foc": 66,
+   "agi": 46,
+   "luk": 16
+  },
+  "weakness": {
+   "types": [
+    "打",
+    "突"
+   ],
+   "elements": {
+    "crystal": 1.3
+   }
+  },
+  "pv": 520,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 20000,
+   "currencies": {
+    "coins": 10000
+   }
+  },
+  "actions": [
+   {
+    "action": "en_core_pulse",
+    "probability": 1,
+    "weight": 40,
+    "cooldown": 0
+   },
+   {
+    "action": "en_beamblast",
+    "probability": 1,
+    "weight": 30,
+    "cooldown": 0
+   },
+   {
+    "action": "en_web",
+    "probability": 1,
+    "weight": 20,
+    "cooldown": 0
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_core_shard",
+     "chance": 80,
+     "count": [
+      1,
+      3
+     ]
+    },
+    {
+     "item": "mat_echo_dust",
+     "chance": 60,
+     "count": [
+      2,
+      4
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "脉核游灵弱打击与突刺。"
+   },
+   {
+    "unlock": 50,
+    "desc": "核心脉冲贯穿力极强。"
+   },
+   {
+    "unlock": 100,
+    "desc": "常掉脉核碎片。"
+   }
+  ]
+ },
+ {
+  "id": "sanctum_devourer",
+  "name": "深窟噬者",
+  "tier": "elite",
+  "area": "脉心深窟",
+  "desc": "深窟里的捕食者，张开的口能吞下石柱。",
+  "stats": {
+   "hp": 30000,
+   "mp": 1400,
+   "str": 186,
+   "int": 60,
+   "con": 176,
+   "spr": 54,
+   "foc": 78,
+   "agi": 44,
+   "luk": 14
+  },
+  "weakness": {
+   "types": [
+    "斩",
+    "突"
+   ],
+   "elements": {
+    "crystal": 1.3
+   }
+  },
+  "pv": 1200,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 45000,
+   "currencies": {
+    "coins": 24000
+   }
+  },
+  "actions": [
+   {
+    "action": "en_abyss_bite",
+    "probability": 1,
+    "weight": 35,
+    "cooldown": 0
+   },
+   {
+    "action": "en_quake",
+    "probability": 1,
+    "weight": 30,
+    "cooldown": 0
+   },
+   {
+    "action": "en_void_gaze",
+    "probability": 1,
+    "weight": 25,
+    "cooldown": 0
+   },
+   {
+    "action": "en_hardbody",
+    "probability": 1,
+    "weight": 20,
+    "cooldown": 0
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_core_shard",
+     "chance": 100,
+     "count": [
+      2,
+      4
+     ]
+    },
+    {
+     "item": "mat_abyss_scale",
+     "chance": 60,
+     "count": [
+      2,
+      3
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "深窟噬者弱斩击与突刺。"
+   },
+   {
+    "unlock": 50,
+    "desc": "半血后会蓄势重击，注意打断。"
+   },
+   {
+    "unlock": 100,
+    "desc": "必掉脉核碎片。"
+   }
+  ],
+  "special_actions": [
+   {
+    "id": "devourer_charge",
+    "action": "en_heavy_charge",
+    "trigger": {
+     "type": "hp_below",
+     "value": 50,
+     "timing": "current_turn"
+    },
+    "once": true,
+    "priority": 20,
+    "trigger_cooldown": 5
+   }
+  ]
+ },
+ {
+  "id": "echo_chorus",
+  "name": "回响合唱体",
+  "tier": "elite",
+  "area": "回响之厅",
+  "desc": "由许多声音堆成的合唱之影，越打越响。",
+  "stats": {
+   "hp": 28000,
+   "mp": 1800,
+   "str": 170,
+   "int": 78,
+   "con": 158,
+   "spr": 74,
+   "foc": 82,
+   "agi": 50,
+   "luk": 16
+  },
+  "weakness": {
+   "types": [
+    "斩",
+    "打"
+   ],
+   "elements": {
+    "crystal": 1.3
+   }
+  },
+  "pv": 1150,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 43000,
+   "currencies": {
+    "coins": 23000
+   }
+  },
+  "actions": [
+   {
+    "action": "en_echo_shriek",
+    "probability": 1,
+    "weight": 35,
+    "cooldown": 0
+   },
+   {
+    "action": "en_core_pulse",
+    "probability": 1,
+    "weight": 30,
+    "cooldown": 0
+   },
+   {
+    "action": "en_wail",
+    "probability": 1,
+    "weight": 25,
+    "cooldown": 0
+   },
+   {
+    "action": "en_web",
+    "probability": 1,
+    "weight": 20,
+    "cooldown": 0
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_echo_dust",
+     "chance": 100,
+     "count": [
+      2,
+      4
+     ]
+    },
+    {
+     "item": "mat_core_shard",
+     "chance": 60,
+     "count": [
+      2,
+      3
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "回响合唱体弱斩击与打击。"
+   },
+   {
+    "unlock": 50,
+    "desc": "连番削弱会让你越打越弱。"
+   },
+   {
+    "unlock": 100,
+    "desc": "必掉回响尘。"
+   }
+  ],
+  "special_actions": [
+   {
+    "id": "chorus_beam",
+    "action": "en_black_ray",
+    "trigger": {
+     "type": "hp_below",
+     "value": 45,
+     "timing": "current_turn"
+    },
+    "once": true,
+    "priority": 25,
+    "trigger_cooldown": 6
+   }
+  ]
+ },
+ {
+  "id": "altar_keeper",
+  "name": "祭坛守望",
+  "tier": "elite",
+  "area": "四脉祭坛",
+  "desc": "四祭坛的看守者，四臂各持一脉法器。",
+  "stats": {
+   "hp": 34000,
+   "mp": 1500,
+   "str": 194,
+   "int": 62,
+   "con": 196,
+   "spr": 58,
+   "foc": 76,
+   "agi": 42,
+   "luk": 14
+  },
+  "weakness": {
+   "types": [
+    "打",
+    "魔"
+   ],
+   "elements": {
+    "thunder": 1.3
+   }
+  },
+  "pv": 1400,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 50000,
+   "currencies": {
+    "coins": 26000
+   }
+  },
+  "actions": [
+   {
+    "action": "en_altar_wrath",
+    "probability": 1,
+    "weight": 35,
+    "cooldown": 0
+   },
+   {
+    "action": "en_quake",
+    "probability": 1,
+    "weight": 30,
+    "cooldown": 0
+   },
+   {
+    "action": "en_slam",
+    "probability": 1,
+    "weight": 25,
+    "cooldown": 0
+   },
+   {
+    "action": "en_howl",
+    "probability": 1,
+    "weight": 20,
+    "cooldown": 0
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_altar_relic",
+     "chance": 100,
+     "count": [
+      2,
+      4
+     ]
+    },
+    {
+     "item": "mat_blunt_rock",
+     "chance": 60,
+     "count": [
+      4,
+      6
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "祭坛守望防御极高，打击破防收益最大。"
+   },
+   {
+    "unlock": 50,
+    "desc": "震地范围重击，血线留足。"
+   },
+   {
+    "unlock": 100,
+    "desc": "必掉祭坛残片。"
+   }
+  ]
+ },
+ {
+  "id": "abyss_maw",
+  "name": "渊口巨颚",
+  "tier": "elite",
+  "area": "渊脉裂隙",
+  "desc": "裂隙深处只剩一张巨口，颚上生齿如林。",
+  "stats": {
+   "hp": 32000,
+   "mp": 1600,
+   "str": 200,
+   "int": 66,
+   "con": 172,
+   "spr": 60,
+   "foc": 84,
+   "agi": 48,
+   "luk": 16
+  },
+  "weakness": {
+   "types": [
+    "打",
+    "突"
+   ],
+   "elements": {
+    "void": 1.3
+   }
+  },
+  "pv": 1300,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 48000,
+   "currencies": {
+    "coins": 25000
+   }
+  },
+  "actions": [
+   {
+    "action": "en_abyss_bite",
+    "probability": 1,
+    "weight": 35,
+    "cooldown": 0
+   },
+   {
+    "action": "en_charge",
+    "probability": 1,
+    "weight": 30,
+    "cooldown": 0
+   },
+   {
+    "action": "en_bone_sweep",
+    "probability": 1,
+    "weight": 25,
+    "cooldown": 0
+   },
+   {
+    "action": "en_void_gaze",
+    "probability": 1,
+    "weight": 20,
+    "cooldown": 0
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_abyss_scale",
+     "chance": 100,
+     "count": [
+      2,
+      4
+     ]
+    },
+    {
+     "item": "mat_core_shard",
+     "chance": 60,
+     "count": [
+      2,
+      3
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "渊口巨颚弱打击与突刺。"
+   },
+   {
+    "unlock": 50,
+    "desc": "撕咬带出血，连吃两口很危险。"
+   },
+   {
+    "unlock": 100,
+    "desc": "必掉渊脉鳞。"
+   }
+  ]
+ },
+ {
+  "id": "four_veins_avatar",
+  "name": "四脉化身",
+  "tier": "boss",
+  "area": "四脉祭坛",
+  "desc": "四脉力量凝成的化身，身上同时亮着四种脉光。",
+  "stats": {
+   "hp": 52000,
+   "mp": 2600,
+   "str": 220,
+   "int": 96,
+   "con": 208,
+   "spr": 92,
+   "foc": 96,
+   "agi": 56,
+   "luk": 18
+  },
+  "weakness": {
+   "types": [
+    "斩",
+    "打",
+    "突",
+    "魔"
+   ],
+   "elements": {
+    "crystal": 1.2
+   }
+  },
+  "pv": 2200,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 80000,
+   "currencies": {
+    "coins": 40000
+   }
+  },
+  "actions": [
+   {
+    "action": "en_altar_wrath",
+    "probability": 1,
+    "weight": 30,
+    "cooldown": 0
+   },
+   {
+    "action": "en_bone_sweep",
+    "probability": 1,
+    "weight": 26,
+    "cooldown": 0
+   },
+   {
+    "action": "en_void_gaze",
+    "probability": 1,
+    "weight": 24,
+    "cooldown": 0
+   },
+   {
+    "action": "en_hardbody",
+    "probability": 1,
+    "weight": 20,
+    "cooldown": 0
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_altar_relic",
+     "chance": 100,
+     "count": [
+      4,
+      8
+     ]
+    },
+    {
+     "item": "mat_core_shard",
+     "chance": 100,
+     "count": [
+      3,
+      6
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "四脉化身四脉皆通，但没有哪一脉特别弱。"
+   },
+   {
+    "unlock": 50,
+    "desc": "会切换铠甲般的护体，破防是唯一解。"
+   },
+   {
+    "unlock": 100,
+    "desc": "首次击破可解锁满级生活线。"
+   }
+  ],
+  "special_actions": [
+   {
+    "id": "avatar_ray",
+    "action": "en_black_ray",
+    "trigger": {
+     "type": "hp_below",
+     "value": 50,
+     "timing": "current_turn"
+    },
+    "once": true,
+    "priority": 30,
+    "trigger_cooldown": 6
+   }
+  ]
+ },
+ {
+  "id": "abyss_sovereign",
+  "name": "渊脉君王",
+  "tier": "boss",
+  "area": "渊脉裂隙",
+  "desc": "裂隙底部的君王，形体半虚半实，随脉光涨落。",
+  "stats": {
+   "hp": 60000,
+   "mp": 3000,
+   "str": 232,
+   "int": 104,
+   "con": 220,
+   "spr": 96,
+   "foc": 100,
+   "agi": 54,
+   "luk": 18
+  },
+  "weakness": {
+   "types": [
+    "斩",
+    "魔"
+   ],
+   "elements": {
+    "void": 1.4,
+    "thunder": 1.2
+   }
+  },
+  "pv": 2600,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 95000,
+   "currencies": {
+    "coins": 48000
+   }
+  },
+  "actions": [
+   {
+    "action": "en_abyss_bite",
+    "probability": 1,
+    "weight": 30,
+    "cooldown": 0
+   },
+   {
+    "action": "en_core_pulse",
+    "probability": 1,
+    "weight": 26,
+    "cooldown": 0
+   },
+   {
+    "action": "en_quake",
+    "probability": 1,
+    "weight": 24,
+    "cooldown": 0
+   },
+   {
+    "action": "en_roar",
+    "probability": 1,
+    "weight": 20,
+    "cooldown": 0
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_abyss_scale",
+     "chance": 100,
+     "count": [
+      4,
+      8
+     ]
+    },
+    {
+     "item": "mat_core_shard",
+     "chance": 100,
+     "count": [
+      4,
+      7
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "渊脉君王弱斩击与法术，虚空属性对它无效。"
+   },
+   {
+    "unlock": 50,
+    "desc": "核心脉冲有穿透，务必带护盾。"
+   },
+   {
+    "unlock": 100,
+    "desc": "掉落满级装备的主材料。"
+   }
+  ],
+  "special_actions": [
+   {
+    "id": "sovereign_ray",
+    "action": "en_black_ray",
+    "trigger": {
+     "type": "hp_below",
+     "value": 45,
+     "timing": "current_turn"
+    },
+    "once": true,
+    "priority": 32,
+    "trigger_cooldown": 7
+   }
+  ]
+ },
+ {
+  "id": "vein_core_tyrant",
+  "name": "脉核霸主",
+  "tier": "boss",
+  "area": "脉核禁宫",
+  "desc": "禁宫最深处、坐在脉核之上的霸主，一动则地脉呻吟。",
+  "stats": {
+   "hp": 75000,
+   "mp": 3600,
+   "str": 250,
+   "int": 110,
+   "con": 240,
+   "spr": 104,
+   "foc": 106,
+   "agi": 52,
+   "luk": 18
+  },
+  "weakness": {
+   "types": [
+    "打",
+    "突"
+   ],
+   "elements": {
+    "crystal": 1.4,
+    "void": 1.2
+   }
+  },
+  "pv": 3000,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 120000,
+   "currencies": {
+    "coins": 60000
+   }
+  },
+  "actions": [
+   {
+    "action": "en_core_pulse",
+    "probability": 1,
+    "weight": 30,
+    "cooldown": 0
+   },
+   {
+    "action": "en_altar_wrath",
+    "probability": 1,
+    "weight": 26,
+    "cooldown": 0
+   },
+   {
+    "action": "en_bone_sweep",
+    "probability": 1,
+    "weight": 24,
+    "cooldown": 0
+   },
+   {
+    "action": "en_hardbody",
+    "probability": 1,
+    "weight": 20,
+    "cooldown": 0
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_core_shard",
+     "chance": 100,
+     "count": [
+      6,
+      10
+     ]
+    },
+    {
+     "item": "mat_echo_dust",
+     "chance": 100,
+     "count": [
+      4,
+      8
+     ]
+    },
+    {
+     "item": "mat_altar_relic",
+     "chance": 80,
+     "count": [
+      4,
+      7
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "脉核霸主是本包最终 BOSS，弱打击与突刺。"
+   },
+   {
+    "unlock": 50,
+    "desc": "核心脉冲+祭坛之怒的连招极其致命。"
+   },
+   {
+    "unlock": 100,
+    "desc": "击破后四脉试炼彻底通关（成就）。"
+   }
+  ],
+  "special_actions": [
+   {
+    "id": "tyrant_charge",
+    "action": "en_heavy_charge",
+    "trigger": {
+     "type": "hp_below",
+     "value": 60,
+     "timing": "current_turn"
+    },
+    "once": true,
+    "priority": 35,
+    "trigger_cooldown": 5
+   },
+   {
+    "id": "tyrant_ray",
+    "action": "en_black_ray",
+    "trigger": {
+     "type": "hp_below",
+     "value": 30,
+     "timing": "current_turn"
+    },
+    "once": true,
+    "priority": 36,
+    "trigger_cooldown": 7
+   }
+  ]
  }
 ]

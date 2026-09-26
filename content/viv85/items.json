@@ -62,5 +62,56 @@
    "heal_mid"
   ],
   "desc": "恢复 220 点生命。"
+ },
+ {
+  "id": "mat_core_shard",
+  "name": "脉核碎片",
+  "type": "material",
+  "price": 800,
+  "desc": "脉核崩落的碎片，满级装备的核心材料。"
+ },
+ {
+  "id": "mat_echo_dust",
+  "name": "回响尘",
+  "type": "material",
+  "price": 600,
+  "desc": "回响之厅凝出的粉尘，触之有声。"
+ },
+ {
+  "id": "mat_abyss_scale",
+  "name": "渊脉鳞",
+  "type": "material",
+  "price": 900,
+  "desc": "渊脉生物脱落的鳞片，坚不可摧。"
+ },
+ {
+  "id": "mat_altar_relic",
+  "name": "祭坛残片",
+  "type": "material",
+  "price": 700,
+  "desc": "四脉祭坛上的残破法器片段。"
+ },
+ {
+  "id": "pot_high",
+  "name": "大回春散",
+  "type": "consumable",
+  "price": 600,
+  "usable": true,
+  "effects": [
+   "heal_mid"
+  ],
+  "desc": "恢复 220 点生命（满级常备）。"
+ },
+ {
+  "id": "pot_full",
+  "name": "回天散",
+  "type": "consumable",
+  "price": 1500,
+  "usable": true,
+  "effects": [
+   "heal_mid",
+   "heal_mid"
+  ],
+  "desc": "连用两剂中回复，重伤时救命。"
  }
 ]

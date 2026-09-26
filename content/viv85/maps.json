@@ -317,15 +317,6 @@
    "right": {
     "to": "trial_hall",
     "mode": "bidirectional"
-   },
-   "left": {
-    "to": "trial_hall",
-    "mode": "hidden",
-    "condition": {
-     "var": "codex_done",
-     "op": "eq",
-     "param": "four_veins"
-    }
    }
   },
   "mechanics": []
@@ -345,8 +336,191 @@
    "left": {
     "to": "four_veins_cross",
     "mode": "bidirectional"
+   },
+   "up": {
+    "to": "endgame_gate",
+    "mode": "bidirectional"
    }
   },
   "mechanics": []
+ },
+ {
+  "id": "endgame_gate",
+  "name": "脉门关",
+  "desc": "试炼之外的脉门关，两条石道通向脉心深处；满级猎者在此整备。",
+  "monsters": [],
+  "mechanics": [],
+  "exits": {
+   "down": {
+    "to": "trial_hall",
+    "mode": "bidirectional"
+   },
+   "right": {
+    "to": "sanctum_depths",
+    "mode": "bidirectional"
+   }
+  }
+ },
+ {
+  "id": "sanctum_depths",
+  "name": "脉心深窟",
+  "desc": "脉心深处的窟穴，脉骸亡者与深窟噬者在此徘徊。",
+  "monsters": [
+   {
+    "enemy": "vein_revenant",
+    "count": 3,
+    "respawn_minutes": 20
+   },
+   {
+    "enemy": "sanctum_devourer",
+    "count": 1,
+    "respawn_minutes": 45
+   }
+  ],
+  "mechanics": [],
+  "exits": {
+   "left": {
+    "to": "endgame_gate",
+    "mode": "bidirectional"
+   },
+   "right": {
+    "to": "echo_hall",
+    "mode": "bidirectional"
+   },
+   "up": {
+    "to": "four_altars",
+    "mode": "bidirectional"
+   }
+  }
+ },
+ {
+  "id": "echo_hall",
+  "name": "回响之厅",
+  "desc": "脚步会层层回响的大厅，回响幽影与合唱体在其中应声。",
+  "monsters": [
+   {
+    "enemy": "echo_wraith",
+    "count": 3,
+    "respawn_minutes": 20
+   },
+   {
+    "enemy": "echo_chorus",
+    "count": 1,
+    "respawn_minutes": 45
+   }
+  ],
+  "mechanics": [],
+  "exits": {
+   "left": {
+    "to": "sanctum_depths",
+    "mode": "bidirectional"
+   },
+   "right": {
+    "to": "abyss_crevice",
+    "mode": "bidirectional"
+   }
+  }
+ },
+ {
+  "id": "four_altars",
+  "name": "四脉祭坛",
+  "desc": "斩、打、突、魔四座祭坛围成的圆形广场，侍者静立，化身居中。",
+  "monsters": [
+   {
+    "enemy": "altar_sentinel",
+    "count": 3,
+    "respawn_minutes": 20
+   },
+   {
+    "enemy": "altar_keeper",
+    "count": 1,
+    "respawn_minutes": 45
+   },
+   {
+    "enemy": "four_veins_avatar",
+    "count": 1,
+    "respawn_minutes": 90
+   }
+  ],
+  "mechanics": [],
+  "exits": {
+   "down": {
+    "to": "sanctum_depths",
+    "mode": "bidirectional"
+   },
+   "right": {
+    "to": "abyss_crevice",
+    "mode": "bidirectional"
+   },
+   "up": {
+    "to": "vein_core",
+    "mode": "bidirectional"
+   }
+  }
+ },
+ {
+  "id": "abyss_crevice",
+  "name": "渊脉裂隙",
+  "desc": "地脉裂开的最深处，渊脉爬兽攀壁而行，君王盘踞在下。",
+  "monsters": [
+   {
+    "enemy": "abyss_crawler",
+    "count": 3,
+    "respawn_minutes": 20
+   },
+   {
+    "enemy": "abyss_maw",
+    "count": 1,
+    "respawn_minutes": 45
+   },
+   {
+    "enemy": "abyss_sovereign",
+    "count": 1,
+    "respawn_minutes": 90
+   }
+  ],
+  "mechanics": [],
+  "exits": {
+   "left": {
+    "to": "echo_hall",
+    "mode": "bidirectional"
+   },
+   "up": {
+    "to": "four_altars",
+    "mode": "bidirectional"
+   },
+   "right": {
+    "to": "vein_core",
+    "mode": "bidirectional"
+   }
+  }
+ },
+ {
+  "id": "vein_core",
+  "name": "脉核禁宫",
+  "desc": "四脉之心所在的禁宫，脉核霸主坐在核上，一动则地脉呻吟。",
+  "monsters": [
+   {
+    "enemy": "core_wisp",
+    "count": 3,
+    "respawn_minutes": 25
+   },
+   {
+    "enemy": "vein_core_tyrant",
+    "count": 1,
+    "respawn_minutes": 120
+   }
+  ],
+  "mechanics": [],
+  "exits": {
+   "left": {
+    "to": "abyss_crevice",
+    "mode": "bidirectional"
+   },
+   "down": {
+    "to": "four_altars",
+    "mode": "bidirectional"
+   }
+  }
  }
 ]

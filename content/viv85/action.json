@@ -348,5 +348,118 @@
    "元素"
   ],
   "armor": true
+ },
+ {
+  "id": "en_void_gaze",
+  "name": "虚空凝视",
+  "kind": "active",
+  "power": 1.2,
+  "attack_type": "魔",
+  "element": "void",
+  "effects": [
+   "fx_bleed_apply"
+  ],
+  "weight": 25,
+  "probability": 1.0,
+  "intent": "伤害",
+  "cooldown": 2,
+  "hungry": 0,
+  "tags": [
+   "元素",
+   "持续"
+  ]
+ },
+ {
+  "id": "en_bone_sweep",
+  "name": "骸骨横扫",
+  "kind": "active",
+  "power": 1.35,
+  "attack_type": "打",
+  "element": "earth",
+  "effects": [],
+  "weight": 25,
+  "probability": 1.0,
+  "intent": "伤害",
+  "cooldown": 1,
+  "hungry": 0,
+  "tags": [
+   "物理",
+   "范围"
+  ]
+ },
+ {
+  "id": "en_echo_shriek",
+  "name": "回响尖啸",
+  "kind": "active",
+  "power": 1.15,
+  "attack_type": "魔",
+  "element": "crystal",
+  "effects": [
+   "fx_slow_apply"
+  ],
+  "weight": 25,
+  "probability": 1.0,
+  "intent": "伤害",
+  "cooldown": 2,
+  "hungry": 0,
+  "tags": [
+   "控制"
+  ]
+ },
+ {
+  "id": "en_core_pulse",
+  "name": "核心脉冲",
+  "kind": "active",
+  "power": 1.6,
+  "attack_type": "魔",
+  "element": "crystal",
+  "effects": [],
+  "weight": 25,
+  "probability": 1.0,
+  "intent": "伤害",
+  "cooldown": 3,
+  "hungry": 0,
+  "tags": [
+   "元素",
+   "远程"
+  ]
+ },
+ {
+  "id": "en_altar_wrath",
+  "name": "祭坛之怒",
+  "kind": "active",
+  "power": 1.5,
+  "attack_type": "打",
+  "element": "earth",
+  "effects": [],
+  "weight": 25,
+  "probability": 1.0,
+  "intent": "伤害",
+  "cooldown": 2,
+  "hungry": 0,
+  "tags": [
+   "物理",
+   "重击"
+  ]
+ },
+ {
+  "id": "en_abyss_bite",
+  "name": "深渊撕咬",
+  "kind": "active",
+  "power": 1.45,
+  "attack_type": "斩",
+  "element": "void",
+  "effects": [
+   "fx_bleed_apply"
+  ],
+  "weight": 25,
+  "probability": 1.0,
+  "intent": "伤害",
+  "cooldown": 1,
+  "hungry": 0,
+  "tags": [
+   "物理",
+   "持续"
+  ]
  }
 ]

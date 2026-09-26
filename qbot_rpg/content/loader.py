@@ -222,10 +222,21 @@ def check_manifest_modules_registered(
 
     返回声明了但 field_meta 未登记校验器的模块名列表（空 = 通过）；防「声明模块
     无校验器 → 整包绕过校验」静默漏检。settings 常驻模块豁免（D3 WIR-13 备注）。
+
+    批83 · NEW-6 口径补正：**框架能力标记条目豁免**——`FRAMEWORK_MODULE_CATALOG`
+    中 `CAPABILITY_MARKER_MODULES`（assistant/codex/contest/farming/gathering/
+    quest_board）引擎已实装、运行时配置落 `settings.<段>` / `maps` 子段，可被编辑器
+    勾选并**写入 `manifest.modules`**（`web/editor_ops.py::set_module_enabled`，实测），
+    但其验证由对应 settings/maps 段承接、本无独立数据模块校验器。豁免它们可避免
+    「作者勾选 farming → 框架自身门禁误报」。
     """
+    from qbot_rpg.content.module_catalog import (  # noqa: PLC0415
+        CAPABILITY_MARKER_MODULES,
+    )
+
     table = meta if meta is not None else default_field_meta_table()
     declared = [m for m in (manifest_modules or ()) if isinstance(m, str)]
-    available = set(table.modules.keys())
+    available = set(table.modules.keys()) | set(CAPABILITY_MARKER_MODULES)
     return sorted(set(declared) - available)
 
 

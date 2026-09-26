@@ -159,6 +159,21 @@ CATALOG_BY_MODULE: Dict[str, ModuleCatalogEntry] = {
     entry.module: entry for entry in FRAMEWORK_MODULE_CATALOG
 }
 
+# 批83 · NEW-6：`check_manifest_modules_registered` 的**能力标记豁免清单**。
+#
+# 这些目录条目 `implemented=True`、可被编辑器勾选（`editor_ops.set_module_enabled`
+# **确实会写入 `manifest.modules` 并创建空骨架**，已实测），但它们的**运行时配置落在
+# `settings.<段>` / `maps` 子段，没有独立数据语义、没有 field_meta 校验器**（验证由对应
+# settings/maps 段承接）。若不豁免，作者勾选 farming 等即触发框架自身 WIR-13 门禁误报
+# （`check_manifest_modules_registered` 报「声明模块无校验器」）。
+#
+# 口径依据：`FRAMEWORK_MODULE_CATALOG` 注释明写这些条目是「让作者看到框架支持这项能力」
+# 的**能力标记**（settings_section 标注实际落点）；`gathering` 落点 = `maps[].gather_points`
+# （U1 已裁决，无 settings 段）。
+CAPABILITY_MARKER_MODULES: Tuple[str, ...] = (
+    "assistant", "codex", "contest", "farming", "gathering", "quest_board",
+)
+
 
 def catalog_entry(module: object) -> Optional[ModuleCatalogEntry]:
     """按模块键取目录条目（未知模块 → None；不抛）。"""
@@ -168,6 +183,7 @@ def catalog_entry(module: object) -> Optional[ModuleCatalogEntry]:
 
 
 __all__ = [
+    "CAPABILITY_MARKER_MODULES",
     "CATALOG_BY_MODULE",
     "FRAMEWORK_MODULE_CATALOG",
     "MODULE_PANEL_HINT",

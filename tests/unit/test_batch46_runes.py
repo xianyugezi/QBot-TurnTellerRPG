@@ -375,7 +375,12 @@ async def test_old_save_backfilled_idempotently_in_context() -> None:
 
 
 def test_item_instance_construction_sites_audit() -> None:
-    """6 处非测试 ItemInstance 构造点静态审计：uid 透传（漏一处即丢）。"""
+    """`ItemInstance` 构造点静态审计：uid 透传（漏一处即丢）。
+
+    批83 · N2/N3/N5 收敛后：写路径两条内联归一（runner / basic_commands）不再各自
+    构造 `ItemInstance`，改调公共函数 `data/item.py::item_instance_from_mapping`
+    （该函数内**单点**构造并透传 uid）→ 静态构造点数 6 → 5。
+    """
     root = Path(qbot_rpg.__file__).parent
     sites: List[Any] = []
     for f in sorted(root.rglob("*.py")):
@@ -384,11 +389,13 @@ def test_item_instance_construction_sites_audit() -> None:
             if isinstance(node, ast.Call) and getattr(node.func, "id", None) == "ItemInstance":
                 kw = {k.arg for k in node.keywords}
                 sites.append((f.relative_to(root).as_posix(), node.lineno, "uid" in kw))
-    assert len(sites) == 6, sites
+    assert len(sites) == 5, sites
     no_uid = {(p, ln) for p, ln, u in sites if not u}
     # 两个合法落点：全新购买实例（__post_init__ 补新 uid）+ 旧实例无字段的 TypeError 兜底
     assert {p for p, _ in no_uid} == {"commands/shop_tx.py", "core/equipment.py"}, no_uid
     assert all(p != "storage/repository.py" or u for p, _l, u in sites)  # 读档必须透传
+    # 公共归一函数（写路径唯一构造点）必须透传 uid
+    assert all(p != "data/item.py" or u for p, _l, u in sites), sites
 
 
 # ===========================================================================

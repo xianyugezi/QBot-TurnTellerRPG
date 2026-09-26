@@ -45,7 +45,7 @@ from qbot_rpg.data.affinity_keys import (
     REACTION_KINDS,
     affinity_requires,
 )
-from qbot_rpg.data.event_points import EVENT_POINTS
+from qbot_rpg.data.event_points import EVENT_POINT_INDEX, EVENT_POINT_TABLE, EVENT_POINTS
 from qbot_rpg.data.gear_stats import (
     DEPRECATED_EFFECT_AXES,
     EFFECT_AGGREGATES,
@@ -3372,7 +3372,12 @@ class _Checker:
             泛型类型校验不覆盖，故在此补齐）；
           · 值 ∉ EVENT_POINTS → **黄提示 Y-19**（拼错 / 自造 / 未来时点：分派器只认
             EVENT_POINTS，该效果**永不触发**；不硬拦——允许内容包先行声明未来时点，
-            对齐批50「未知轴黄提示 Y-18」的既有口径）。
+            对齐批50「未知轴黄提示 Y-18」的既有口径）；
+          · 值 ∈ EVENT_POINTS 但 **`dispatched=False`（合法枚举 + 无派发点）** →
+            **黄提示 Y-24**（批84 · B2「静默死效果」：`mark_gain`/`mark_lose`/
+            `on_attack`/`on_hit`/`on_skill` 当前无生产派发点，写了永不触发；
+            **只提示、不红拦**——不阻断既有内容，也不改变运行行为）。
+            数据源 = 唯一源 `data/event_points.EVENT_POINT_INDEX[..].dispatched`。
 
         覆盖两处声明面（批48 起 `trigger` 实际被书写的两处）：
           · `effects.<idx>.trigger`；
@@ -3410,6 +3415,17 @@ class _Checker:
                                event=tv, key_space=list(known),
                                msg=f"未登记的触发时点「{tv}」：分派器只认 EVENT_POINTS，"
                                    "该效果在当前框架下不会触发（拼写错误？或需先由框架登记该时点）")
+                elif not EVENT_POINT_INDEX[tv].dispatched:
+                    # 批84 · B2：合法枚举 + 无派发点 = 「静默死效果」→ 黄提示 Y-24
+                    # （**不红拦**：不阻断既有内容；**不改运行行为**：只是提示）。
+                    self._warn(module_name, path, "Y-24",
+                               rule="trigger_event_no_dispatch",
+                               event=tv, key_space=list(known),
+                               dispatched_key_space=[
+                                   p.name for p in EVENT_POINT_TABLE if p.dispatched],
+                               msg=f"触发时点「{tv}」当前无派发点（二期）：该效果不会触发。"
+                                   "请改用已有派发点的时点（如 action_end / turn_start / "
+                                   "turn_end / status_lose），或先由框架为该时点补派发点")
 
     def _check_gain_currency(
         self, module_name: str, base: str, entry: Mapping[str, object],

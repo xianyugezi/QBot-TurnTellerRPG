@@ -2239,7 +2239,12 @@ def _module_table() -> Dict[str, ModuleMeta]:
         "status": _soft_display("状态"),
         "target": _soft_display("目标"),
         "tick": _soft_display("触发时点"),
-        "trigger": _soft_display("触发条件"),
+        "trigger": _soft_display(
+            "触发条件",
+            help="战斗事件时点（effects 的 trigger）。值域与「有无派发点」见唯一源 "
+                 "data/event_points.EVENT_POINT_TABLE：dispatched=False 的时点"
+                 "（mark_gain/mark_lose/on_attack/on_hit/on_skill）当前无派发点（二期），"
+                 "写了永不触发——校验器给黄提示 Y-24（只提示，不红拦）。"),
         "turns": _soft_display("持续回合", "int"),
         "value": _soft_display("数值"),
     }
@@ -2993,7 +2998,9 @@ def _module_table() -> Dict[str, ModuleMeta]:
                     type="str", label="触发时点",
                     help="战斗事件时点（battle_start/action_start/on_hit/turn_end 等，"
                          "见 core/event_dispatcher.EVENT_POINTS）；只在该符文穿戴者一侧、"
-                         "该时点触发。**被引用的 effects 条目不要写 trigger**（否则全局限触发）。"),
+                         "该时点触发。**被引用的 effects 条目不要写 trigger**（否则全局限触发）。"
+                         "无派发点的合法时点（mark_gain/mark_lose/on_attack/on_hit/on_skill）"
+                         "写了永不触发，校验器给黄提示 Y-24（不红拦）。"),
                 "target": FieldMeta(type="str", label="目标",
                                     help="动作目标覆盖：self/enemy（缺省按被引用效果的动作）。"),
                 "overrides": FieldMeta(type="obj", soft_label=True, label="参数覆盖"),

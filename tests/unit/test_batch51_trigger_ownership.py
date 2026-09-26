@@ -469,13 +469,38 @@ def _rules(rep: Any) -> Tuple[List[str], List[str]]:
 
 
 def test_validator_known_event_point_silent() -> None:
-    """已登记时点（含新补 on_kill）→ 零红零黄。"""
+    """已登记**且有派发点**的时点（含新补 on_kill / 批81 turn_end）→ 零红零黄。
+
+    批84 · B2：`on_hit` 从本表移出——它是「合法枚举但无派发点（二期）」，
+    现由唯一源 `EVENT_POINT_TABLE.dispatched=False` 判定 → 黄提示 Y-24
+    （见 `test_validator_known_but_undispatched_yellow_y24`）。
+    """
     from qbot_rpg.content.validator import check_pack
 
-    for trig in ("on_kill", "death", "on_hit", "battle_start"):
+    for trig in ("on_kill", "death", "turn_end", "battle_start", "status_lose"):
         rep = check_pack({"effects": [{"id": "a", "type": "special",
                                        "trigger": trig, "actions": []}]})
         assert _rules(rep) == ([], []), (trig, _rules(rep))
+
+
+def test_validator_known_but_undispatched_yellow_y24() -> None:
+    """合法枚举但**无派发点（二期）** → 黄提示 Y-24（不红拦；批84 · B2）。"""
+    from qbot_rpg.content.validator import check_pack
+    from qbot_rpg.data.event_points import undispatched_points
+
+    for trig in undispatched_points():
+        rep = check_pack({"effects": [{"id": "a", "type": "special",
+                                       "trigger": trig, "actions": []}]})
+        errs, warns = _rules(rep)
+        assert errs == [], (trig, errs)
+        assert warns == ["trigger_event_no_dispatch"], (trig, warns)
+        d = rep.warnings[0].detail
+        assert d.get("event") == trig
+        assert "派发点" in str(d.get("msg") or "")
+        # 建议里只出现有派发点的时点
+        assert set(d.get("dispatched_key_space") or []) <= set(
+            d.get("key_space") or [])
+
 
 
 def test_validator_unknown_event_point_yellow() -> None:

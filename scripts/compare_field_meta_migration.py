@@ -351,7 +351,17 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #     → 字段计数 / index.total / 模块声明 count 位移（计数位移 = 硬差异，故须重定基线）；
 #   · 无既有 label/help/group/module_labels/module_tree 改值；无字段/键删除。
 #   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
-DEFAULT_BASELINE_REF = "fffbcab"
+# 批82（2026-09-23 手册剩余项收口）重定：fffbcab → 6de98bc（本批**字段面变更**末提交）。
+#   原因 = 本批**有意**变更（非迁移回归），删除项 = 0：
+#   · D1 `settings.pvp.mode` 补 help（严格键**新增** help，有意；mode 本身与默认值不变）；
+#   · D2 `GEAR_HELP_ZH` 两旧命中键 help 由「减益/增益概率提升」改为「通用状态命中提升」
+#     （严格键**改值**，有意）；`consumer_note` 为派生展示，新增属 soft；
+#   · D3 `deep_craft.craft_rules.cost_*`/`blueprint_cost_cap` help 补「不扣货币」区分、
+#     `forge.forge_fee` 补 help（严格键新增/改值，有意）；
+#   · D4 `proficiency.energy` 子字段 help 标 deprecated + 兜底说明（严格键改值，有意）；
+#   · B2 `module_catalog` slots `overlap_note` 措辞「不同数据空间/各自单一源」（模块声明改值，有意）。
+#   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
+DEFAULT_BASELINE_REF = "6de98bc"
 
 
 def _env(root: Path) -> dict:

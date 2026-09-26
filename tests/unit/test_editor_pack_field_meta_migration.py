@@ -255,7 +255,15 @@ SCRIPT = REPO / "scripts" / "compare_field_meta_migration.py"
 #     `control` 属派生展示键，新增记 soft）→ 字段计数 / index.total 位移（硬差异，须重定）；
 #   · 无 label/help/group/module_labels/module_tree 删除或改值；无字段/键删除。
 #   对拍实证（对旧基线 c7b5b25）：删除项 = 0；重定后基线树与当前树 diff=0。
-BASELINE_REF = "fffbcab"
+# 批82（2026-09-23 手册剩余项收口）重定：fffbcab → 6de98bc（本批**字段面变更**末提交）。
+#   原因 = 本批**有意**变更（非迁移回归），删除项 = 0：
+#   · D1 `settings.pvp.mode` 补 help（严格键新增，有意；枚举/默认值不变）；
+#   · D2 两旧命中键 help 改「通用状态命中提升」（严格键改值，有意）；
+#   · D3 打造/锻造成本 help 互注（严格键新增/改值，有意）；
+#   · D4 `proficiency.energy` 子字段 help 标 deprecated + 兜底说明（严格键改值，有意）；
+#   · B2 slots `overlap_note` 措辞纠正（模块声明改值，有意）。
+#   对拍实证（对旧基线 fffbcab）：删除项 = 0；重定后基线树与当前树 diff=0。
+BASELINE_REF = "6de98bc"
 CONTENT = REPO / "content"
 
 

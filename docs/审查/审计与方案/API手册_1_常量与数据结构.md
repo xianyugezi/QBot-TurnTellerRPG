@@ -296,7 +296,7 @@
 | `story_exploration` | 故事探索包 | 主线/任务/NPC/地图叙事 | quest, quest_board, npc, maps, enemies, dungeon, items, skills, effects, statuses, achievements, codex |
 
 > **实测提示**：36 个目录条目的 `implemented` 字段**当前全为 `True`**（本次 `python3` 实测）。因此"让作者看得见未实装能力"目前靠的是**目录条目的存在**而非 `implemented=False` 标记；若将来新增未实装模块，请用 `implemented=False` 区分（该字段类型与用途见 module_catalog.py:19-52）。
-> **重叠登记**：`slot_defs`（settings 段）vs `slots.json`（模块）功能重叠，框架已在 `overlap_with` / `overlap_note` 显式登记并给黄提示（module_catalog.py:87-108）。**这是"合理并存"，不是待清理的重复**。
+> **重叠登记（批82 · B2 更正）**：`slot_defs`（settings 段）vs `slots.json`（模块）**不是"功能重叠"**，而是**不同数据空间**——`settings.slot_defs` = 运行时装备**部位表**，`slots.json` = **珠插槽 / 镶嵌孔位**（`core/jewel.py` 消费）；二者名字相近易误写，故框架在 `overlap_with` / `overlap_note` 显式登记并给黄提示（`module_catalog.py`），文案为「不同数据空间 / 各自单一源」。**这是"合理并存"，不是待清理的重复**。
 
 ### 1.6 常量"安全改法"速查（改它的影响面）
 

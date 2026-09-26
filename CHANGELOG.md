@@ -14,6 +14,41 @@
 
 ### Added
 
+- **批82（2026-09-23）**：**手册 §六剩余项收口（用户 4 条裁决 + 可直接执行项 + Q1~Q8 入册）**。
+  依据 `/root/deliverables/手册剩余项_核清与口径.md`。
+  **① D1（pvp.mode 保留+写明暂未生效）**：`settings.pvp.mode` 零逻辑改动，仅
+  `content/field_meta.py` help 写明「CTB 下非回合制『连续输出』尚未实现（二期），当前两模式
+  行为一致」+ `core/pvp.py` 注释 + `细化_4e`/`细化_3h` 文档注；顺带更正 3h 枚举
+  `turn/realtime` → `turn_based/free`（NEW-3）。
+  **② D2（v1 不分治）**：`debuff_chance_pct`/`buff_chance_pct` = `status_chance_pct` 的
+  **通用命中同义别名**（对 buff/debuff 一视同仁，批53 有意）；`data/gear_stats.py` 两键 help
+  改「通用状态命中提升」+ `consumer_note` 登记；D-new-5 标「已裁定-2026-09-23」。
+  **③ D3（各系统自算成本）**：深度打造 `craft_rules.cost_*`（投入预算，**不扣货币**）vs
+  `forge.forge_fee` / `recipe.cost`（真扣货币）——只改 help/文档互注，**不统一**。
+  **④ D4（prof.energy 兜底落地）**：契约 P2-4「settings 为准、prof 兜底」补齐——
+  `core/energy_bar.py` 增可选 `proficiency` 注入，`settings.alchemy.energy_enabled` **缺键**
+  时回落 `proficiency.energy.enabled`（显式 false/null 仍以 settings 为准）；装配
+  （`assembly/context.py`）与指令壳（`commands/alchemy_commands.py`）接线；
+  `proficiency.energy.max_by_tier`/`regen_sec` 标 **deprecated**（与 settings 数值重复，不消费）。
+  **零行为变化**：现存 9 包逐字段对拍一致（`PACK_CALLER_MISMATCH=0`），snapshot 改前/改后
+  逐字节相同。
+  **⑤ B2（不同数据空间）**：`settings.slot_defs` ↔ `slots.json` 由「功能重叠/归口一处」
+  纠正为「**不同数据空间 / 各自单一源**」（保留黄提示；`module_catalog.py` + `web/api.py`
+  兜底文案 + 两处测试 token）。
+  **⑥ C1（B5 门槛两口径统一）**：`commands/alchemy_commands.py` 10 处 `_prof_level < IDX`
+  直比 → `_tier_index_of`（一律走 `ProficiencyEngine.tier_index_for_level`，与 `/登记`
+  同口径）；全包 `tier_names=7`+PRF-02 等长+等级封顶 ⇒ **恒等价**（250 决策对拍 mismatch=0，
+  零行为变化）。
+  **⑦ 手册补正入册**：`docs/框架扩展开发手册.md` §六逐项更新；`docs/矛盾与待裁决登记.md`
+  新增 NEW-1~9（NEW-1 = prof.energy 契约→实现未接线**真缺口**，本轮已由 D4 落地）；
+  Q1 ctx 键数改区间口径（注册 162~166 / 未注册 134~138）、Q2 三键零消费（`monster_pool`/
+  `shop_engine`/`worn_refs`）、Q3 temper 优先链补引 `core/temper.py:136-167`、Q4 N2/N3
+  登记真缺口、Q5 结案、Q6 `modules_raw` 形态表（36=24 list/3 map/9 object）、Q7
+  `_KIND_FOR_MODULE=28` + 6 项待查（NEW-6）、Q8 `ABSOLUTE_QUALITY_MAX=100` 无 settings 旁路。
+  **页脚批次串** →「批82 · 手册剩余项收口」（`web/static/index.html` + 全部批次串断言同步）；
+  迁移对拍基线重定。验收：全量 pytest 0 failed；`ruff` 干净；`verify_veinborn_smoke.py`
+  PASS 10/10；双尺子（种子 20260919）斩回不变；`git status --porcelain` 空。
+
 - **批79（2026-09-23）**：**X18 销项 · 职业继承 `inherit.mode`（替换/追加）**。
   用户 2026-09-23 对 `docs/进阶职业继承_设计口径.md` §5 四问 Q1~Q4 拍板：①继承粒度**保持传递闭包**、
   ②`skills` 白名单**保持**（空=全部）、③**新增 `mode`**（`append` 默认=现状 / `replace` 按映射替换）、

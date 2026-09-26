@@ -37,6 +37,7 @@
   - [13.2 校验器与门禁（红拦 / 黄提示 / 豁免）](#132-校验器与门禁红拦--黄提示--豁免) — 红拦必修 · 黄提示按需。
   - [13.3 权限模型（谁能做什么）](#133-权限模型谁能做什么) — 机主/GM/玩家 + 静默语义。
   - [13.4 数值预算与校准（谁拥有平衡）](#134-数值预算与校准谁拥有平衡) — 60% 装备占比 + 斩回红线。
+  - [13.5 随机与确定性（RNG）](#135-随机与确定性rng) — 锻造无随机 · 玩家随机流。
 
 ---
 
@@ -807,6 +808,30 @@
 **权责与互相影响（改一处要顺流复查）**：装备 / 特效 / 怪物**共用同一套面板与斩回基准**——动任一项都要**复跑两条尺子**。**工具尺**：`python scripts/batch45_measure.py --json`（确定性斩回 `:225-229` + MC `:231-257`；文本表含"预算占比(装备)"`:372`、"斩杀回合"`:380`）。**定稿档位尺**：`python scripts/batch55_dual_ruler.py`（工具尺 + 档位尺 + 精确翻转阈值）。**双尺子结论表**：`docs/深度打造_决策记录.md:1229-1234`。
 
 > **一条纪律（写进订单）**：**"越档只报告不擅调"**（`docs/深度打造_决策记录.md:1284`；同义 `docs/深度打造_实现说明.md:989`）——校准**越档 → 只出报告 + 建议**（范例 `docs/批55_特效强度预算_测量报告.md:90-94`），**不擅自改数值**；确要改先出方案、作者拍板。注意"面板占比 60%"与"斩回不越档"**可能同时紧张**（Boss 被生存轴压到 ≈39–41 回合是已登记实例，`:92`）。
+
+---
+
+### 13.5 随机与确定性（**RNG**）
+
+> **一句话**：**必须确定的，绝不许掷数；可以随机的，只能走"玩家随机流"。** 随机唯一入口 = `core/rng_state.py`（键 `rng_state`，`:32`）——**按玩家定种、可快照/恢复**（落档位 = 玩家 `persistent_state`，随档、包无关，`:11`）。
+
+| 系统 | 允许随机吗 | 唯一做法 / 证据 |
+|---|---|---|
+| **锻造** forge | ⛔ **必须无随机（铁律）** | `forge_tree.py`/`forge_cascade.py`/`forge_commands.py`/`equipment.py` **零 `random`**（grep 实测）；铁律 `docs/规划/规划_路2c2_锻造.md:142`/`:146`、`docs/m9_启动包.md:95`；契约 TC-04 `细化_2c2b_锻造流程契约.md:250` |
+| **炼金 / 深度打造** | ✅ 可随机 | **只经 `ctx["rng"]`**、不读全局（`core/deep_craft.py:7`）；掷数 `:363-366`、加权/品质 `:768-775`；相性抽取 `alchemy_affinity.py:159`/`:180` |
+| **强化** | ✅ 可随机 | 成功率 roll（`commands/enhance_commands.py:8-10`、`_roll_unit:520-540`、成功判定 `:879-880`） |
+| **掉落** | ✅ 可随机 | count 区间 `rng.randint`（`core/battle_reward.py:105`）；逐条独立 roll `:132-140`；结算 `world/battle_boundary.py:454-460` |
+
+**随机流（按玩家定种 · 可快照/恢复）**：`player_rng` 取存档态、否则注入 fallback（`rng_state.py:68-81`）；`snapshot_rng_state:35` / `restore_rng_state:57`；`persist_player_rng_if_advanced:100` **只在已推进时才写档**（消费门控，`:100-117`）。战斗侧同形态：`list(self._rng.getstate())`（`core/battle.py:5672`）；单测 `tests/unit/test_batch40_rng_stream.py`。
+
+**正例 vs 反例（改前先查 `core/rng_state.py`）**
+
+| | 写法 | 证据 |
+|---|---|---|
+| ✅ **正例** | 判定走**注入的 rng**：`self._rng.random()` | `core/battle.py:945-946`；`core/gathering.py:251-255`（`_resolve_rng` 注入源优先）→ 消费 `:331` |
+| ❌ **反例** | 在判定逻辑里**裸用 `random`** 兜底：`rng.random() if rng is not None else random.random()` | `core/effects.py:620`；同类 `core/npc.py:309`/`:322`、`commands/enhance_commands.py:540`。纪律明写禁裸 `random`：`core/deep_craft.py:7`、`core/fishing.py:78`、`core/fishing_cast.py:28` |
+
+> **"确定性差分 = 0"现状（如实标）**：它是**文档契约 + 重放门禁**——TC-04/TC-17（见上）与 e2e 两次运行摘要逐字一致（`scripts/e2e_m3_smoke.py:591-595`、`scripts/e2e_m4_smoke.py:774-778`）；引用见《手册·3》§4（`API手册_3_权责与勿当bug修.md:401`）。**待查**：全仓**未发现**名为"确定性差分=0"的独立**架构门禁脚本**——`check_architecture.py` 只查 import/分层（TC-01~04），**不含随机项**；锻造"同输入 1000 次差分=0"目前**只有文档契约、未见对应实现测试**（若你见到该门禁，请把它登记到本节）。
 
 ---
 

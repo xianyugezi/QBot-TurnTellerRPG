@@ -18,9 +18,19 @@
   "desc": "前庭之外的荒原小径，噬脉蜥与岩背兽在此出没。",
   "monsters": [
    {
+    "enemy": "dust_rat",
+    "count": 4,
+    "respawn_minutes": 8
+   },
+   {
     "enemy": "fang_lizard",
     "count": 3,
     "respawn_minutes": 10
+   },
+   {
+    "enemy": "ridge_hound",
+    "count": 2,
+    "respawn_minutes": 12
    },
    {
     "enemy": "rockback_beast",
@@ -31,6 +41,309 @@
   "exits": {
    "left": {
     "to": "trial_court",
+    "mode": "bidirectional"
+   },
+   "right": {
+    "to": "slash_ground",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "slash_ground",
+  "name": "斩脉试炼场",
+  "desc": "立满断刃的试炼场，刃甲虫与守卫在此游荡。",
+  "monsters": [
+   {
+    "enemy": "blade_beetle",
+    "count": 3,
+    "respawn_minutes": 12
+   },
+   {
+    "enemy": "blade_warden",
+    "count": 1,
+    "respawn_minutes": 25
+   },
+   {
+    "enemy": "sky_raider",
+    "count": 1,
+    "respawn_minutes": 25
+   }
+  ],
+  "exits": {
+   "left": {
+    "to": "wild_ridge",
+    "mode": "bidirectional"
+   },
+   "up": {
+    "to": "vein_hill",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "vein_hill",
+  "name": "脉源丘陵",
+  "desc": "起伏的丘陵地带，脉纹从土里透出微光，脉纹蛾成群。",
+  "monsters": [
+   {
+    "enemy": "vein_moth",
+    "count": 3,
+    "respawn_minutes": 12
+   },
+   {
+    "enemy": "gravel_boar",
+    "count": 2,
+    "respawn_minutes": 15
+   }
+  ],
+  "exits": {
+   "down": {
+    "to": "slash_ground",
+    "mode": "bidirectional"
+   },
+   "right": {
+    "to": "quarry_pit",
+    "mode": "bidirectional"
+   },
+   "up": {
+    "to": "broken_canyon",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "quarry_pit",
+  "name": "采石坑",
+  "desc": "被掘开的巨大石坑，砾灵与石壳蟹藏在石堆间。",
+  "monsters": [
+   {
+    "enemy": "stone_crab",
+    "count": 3,
+    "respawn_minutes": 15
+   },
+   {
+    "enemy": "gravel_sprite",
+    "count": 2,
+    "respawn_minutes": 15
+   },
+   {
+    "enemy": "quarry_titan",
+    "count": 1,
+    "respawn_minutes": 30
+   }
+  ],
+  "exits": {
+   "left": {
+    "to": "vein_hill",
+    "mode": "bidirectional"
+   },
+   "down": {
+    "to": "rift_mouth",
+    "mode": "one_way"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "broken_canyon",
+  "name": "破脉峡谷",
+  "desc": "被远古之战劈开的峡谷，断崖山羊在崖壁间跳跃。",
+  "monsters": [
+   {
+    "enemy": "cliff_goat",
+    "count": 3,
+    "respawn_minutes": 12
+   },
+   {
+    "enemy": "canyon_stalker",
+    "count": 1,
+    "respawn_minutes": 25
+   }
+  ],
+  "exits": {
+   "down": {
+    "to": "vein_hill",
+    "mode": "bidirectional"
+   },
+   "right": {
+    "to": "rift_mouth",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "rift_mouth",
+  "name": "裂谷口",
+  "desc": "深脉裂谷的入口，裂谷蝠在头顶盘旋，亚龙盘踞不去。",
+  "monsters": [
+   {
+    "enemy": "rift_bat",
+    "count": 3,
+    "respawn_minutes": 12
+   },
+   {
+    "enemy": "rift_wyrm",
+    "count": 1,
+    "respawn_minutes": 35
+   }
+  ],
+  "exits": {
+   "left": {
+    "to": "broken_canyon",
+    "mode": "bidirectional"
+   },
+   "right": {
+    "to": "gloom_cave",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "gloom_cave",
+  "name": "幽脉洞窟",
+  "desc": "不见天日的洞窟，幽菌兽与穴蛛在暗处等待。",
+  "monsters": [
+   {
+    "enemy": "gloom_shroom",
+    "count": 3,
+    "respawn_minutes": 15
+   },
+   {
+    "enemy": "cave_spider",
+    "count": 3,
+    "respawn_minutes": 15
+   },
+   {
+    "enemy": "gloom_warden",
+    "count": 1,
+    "respawn_minutes": 35
+   }
+  ],
+  "exits": {
+   "left": {
+    "to": "rift_mouth",
+    "mode": "bidirectional"
+   },
+   "up": {
+    "to": "fault_ledge",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "fault_ledge",
+  "name": "断层平台",
+  "desc": "裂谷中段的巨大平台，断崖狼巡行，暴君居其上。",
+  "monsters": [
+   {
+    "enemy": "ledge_wolf",
+    "count": 3,
+    "respawn_minutes": 15
+   },
+   {
+    "enemy": "fault_tyrant",
+    "count": 1,
+    "respawn_minutes": 60
+   }
+  ],
+  "exits": {
+   "down": {
+    "to": "gloom_cave",
+    "mode": "bidirectional"
+   },
+   "right": {
+    "to": "sanctum_outskirt",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "sanctum_outskirt",
+  "name": "禁地外围",
+  "desc": "脉心禁地的外墙与残骸，巡守石像按固定路线走动。",
+  "monsters": [
+   {
+    "enemy": "sentry_golem",
+    "count": 3,
+    "respawn_minutes": 18
+   },
+   {
+    "enemy": "ruin_hound",
+    "count": 2,
+    "respawn_minutes": 15
+   },
+   {
+    "enemy": "sanctum_guardian",
+    "count": 1,
+    "respawn_minutes": 60
+   }
+  ],
+  "exits": {
+   "left": {
+    "to": "fault_ledge",
+    "mode": "bidirectional"
+   },
+   "up": {
+    "to": "four_veins_cross",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "four_veins_cross",
+  "name": "四脉交汇",
+  "desc": "斩、打、突、魔四条脉在此交汇，脉光游灵漂浮其间。",
+  "monsters": [
+   {
+    "enemy": "vein_wisp",
+    "count": 3,
+    "respawn_minutes": 18
+   }
+  ],
+  "exits": {
+   "down": {
+    "to": "sanctum_outskirt",
+    "mode": "bidirectional"
+   },
+   "right": {
+    "to": "trial_hall",
+    "mode": "bidirectional"
+   },
+   "left": {
+    "to": "trial_hall",
+    "mode": "hidden",
+    "condition": {
+     "var": "codex_done",
+     "op": "eq",
+     "param": "four_veins"
+    }
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "trial_hall",
+  "name": "试炼终殿",
+  "desc": "四脉试炼的终点，影卫静立，等着下一位挑战者。",
+  "monsters": [
+   {
+    "enemy": "trial_shade",
+    "count": 3,
+    "respawn_minutes": 20
+   }
+  ],
+  "exits": {
+   "left": {
+    "to": "four_veins_cross",
     "mode": "bidirectional"
    }
   },

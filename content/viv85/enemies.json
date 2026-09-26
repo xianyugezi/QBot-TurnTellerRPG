@@ -27,9 +27,6 @@
   },
   "pv": 20,
   "pv_recover": "battle_end",
-  "resistance": {
-   "stun": 20
-  },
   "rewards": {
    "exp": 40,
    "currencies": {
@@ -95,6 +92,252 @@
   ]
  },
  {
+  "id": "dust_rat",
+  "name": "尘沙鼠",
+  "tier": "normal",
+  "area": "荒原径",
+  "desc": "成群结队在沙地里翻找食物的鼠类，单个不足为惧。",
+  "stats": {
+   "hp": 110,
+   "mp": 10,
+   "str": 10,
+   "int": 6,
+   "con": 10,
+   "spr": 6,
+   "foc": 8,
+   "agi": 14,
+   "luk": 10
+  },
+  "weakness": {
+   "types": [
+    "打",
+    "突"
+   ],
+   "elements": {
+    "wind": 1.3
+   }
+  },
+  "pv": 12,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 28,
+   "currencies": {
+    "coins": 15
+   }
+  },
+  "actions": [
+   {
+    "action": "en_bite",
+    "probability": 1,
+    "weight": 55
+   },
+   {
+    "action": "en_pounce",
+    "probability": 1,
+    "weight": 30
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_common_hide",
+     "chance": 70,
+     "count": [
+      1,
+      2
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "尘沙鼠成群出没，个体很弱。"
+   },
+   {
+    "unlock": 50,
+    "desc": "速度偏快，常先手。"
+   },
+   {
+    "unlock": 100,
+    "desc": "只会掉荒兽皮。"
+   }
+  ]
+ },
+ {
+  "id": "ridge_hound",
+  "name": "脊背猎犬",
+  "tier": "normal",
+  "area": "荒原径",
+  "desc": "脊背隆起如刀锋的猎犬，成群狩猎。",
+  "stats": {
+   "hp": 160,
+   "mp": 20,
+   "str": 14,
+   "int": 8,
+   "con": 14,
+   "spr": 8,
+   "foc": 12,
+   "agi": 16,
+   "luk": 8
+  },
+  "weakness": {
+   "types": [
+    "魔",
+    "突"
+   ],
+   "elements": {
+    "water": 1.3
+   }
+  },
+  "pv": 24,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 55,
+   "currencies": {
+    "coins": 32
+   }
+  },
+  "actions": [
+   {
+    "action": "en_claw",
+    "probability": 1,
+    "weight": 50
+   },
+   {
+    "action": "en_pounce",
+    "probability": 1,
+    "weight": 35
+   },
+   {
+    "action": "en_roar",
+    "probability": 1,
+    "weight": 20
+   }
+  ],
+  "drops": {
+   "battle": [
+    {
+     "item": "mat_pierce_bone",
+     "chance": 40,
+     "count": 1
+    }
+   ],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_pierce_bone",
+     "chance": 70,
+     "count": [
+      1,
+      2
+     ]
+    },
+    {
+     "item": "mat_common_hide",
+     "chance": 60,
+     "count": 1
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "脊背猎犬弱法术与突刺。"
+   },
+   {
+    "unlock": 50,
+    "desc": "会咆哮强化自己，别拖太久。"
+   },
+   {
+    "unlock": 100,
+    "desc": "掉落尖脊骨。"
+   }
+  ]
+ },
+ {
+  "id": "blade_beetle",
+  "name": "刃甲虫",
+  "tier": "normal",
+  "area": "斩脉试炼场",
+  "desc": "甲壳薄而锋利、行动迟缓的大型甲虫。",
+  "stats": {
+   "hp": 190,
+   "mp": 10,
+   "str": 15,
+   "int": 6,
+   "con": 20,
+   "spr": 6,
+   "foc": 10,
+   "agi": 8,
+   "luk": 6
+  },
+  "weakness": {
+   "types": [
+    "打",
+    "魔"
+   ],
+   "elements": {
+    "thunder": 1.3
+   }
+  },
+  "pv": 30,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 70,
+   "currencies": {
+    "coins": 40
+   }
+  },
+  "actions": [
+   {
+    "action": "en_claw",
+    "probability": 1,
+    "weight": 50
+   },
+   {
+    "action": "en_hardbody",
+    "probability": 1,
+    "weight": 25
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_slash_ore",
+     "chance": 70,
+     "count": [
+      1,
+      2
+     ]
+    },
+    {
+     "item": "mat_common_hide",
+     "chance": 40,
+     "count": 1
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "刃甲虫甲壳坚硬，打击类最有效。"
+   },
+   {
+    "unlock": 50,
+    "desc": "会硬化自己，防御会提高。"
+   },
+   {
+    "unlock": 100,
+    "desc": "必掉锋利矿砂。"
+   }
+  ]
+ },
+ {
   "id": "rockback_beast",
   "name": "岩背兽",
   "tier": "elite",
@@ -127,9 +370,6 @@
    "currencies": {
     "coins": 180
    }
-  },
-  "resistance": {
-   "stun": 30
   },
   "actions": [
    {
@@ -196,6 +436,1807 @@
    {
     "unlock": 100,
     "desc": "死亡必掉沉岩碎块。"
+   }
+  ]
+ },
+ {
+  "id": "blade_warden",
+  "name": "刃脉守卫",
+  "tier": "elite",
+  "area": "斩脉试炼场",
+  "desc": "立于试炼场的石躯守卫，双臂生刃。",
+  "stats": {
+   "hp": 380,
+   "mp": 60,
+   "str": 22,
+   "int": 10,
+   "con": 22,
+   "spr": 12,
+   "foc": 18,
+   "agi": 18,
+   "luk": 8
+  },
+  "weakness": {
+   "types": [
+    "突",
+    "魔"
+   ],
+   "elements": {
+    "water": 1.3
+   }
+  },
+  "pv": 70,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 300,
+   "currencies": {
+    "coins": 210
+   }
+  },
+  "actions": [
+   {
+    "action": "en_claw",
+    "probability": 1,
+    "weight": 45
+   },
+   {
+    "action": "en_stone",
+    "probability": 1,
+    "weight": 30
+   },
+   {
+    "action": "en_howl",
+    "probability": 1,
+    "weight": 20
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_slash_ore",
+     "chance": 100,
+     "count": [
+      1,
+      3
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "刃脉守卫守在试炼场，弱突刺与法术。"
+   },
+   {
+    "unlock": 50,
+    "desc": "会喷石远程压制。"
+   },
+   {
+    "unlock": 100,
+    "desc": "必掉锋利矿砂。"
+   }
+  ]
+ },
+ {
+  "id": "sky_raider",
+  "name": "掠空兽",
+  "tier": "elite",
+  "area": "斩脉试炼场",
+  "desc": "翼膜轻薄、俯冲如箭的荒原掠食者。",
+  "stats": {
+   "hp": 360,
+   "mp": 40,
+   "str": 24,
+   "int": 8,
+   "con": 20,
+   "spr": 8,
+   "foc": 16,
+   "agi": 22,
+   "luk": 6
+  },
+  "weakness": {
+   "types": [
+    "斩",
+    "突"
+   ],
+   "elements": {
+    "thunder": 1.3
+   }
+  },
+  "pv": 65,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 280,
+   "currencies": {
+    "coins": 200
+   }
+  },
+  "actions": [
+   {
+    "action": "en_pounce",
+    "probability": 1,
+    "weight": 45
+   },
+   {
+    "action": "en_wind",
+    "probability": 1,
+    "weight": 30
+   },
+   {
+    "action": "en_charge",
+    "probability": 1,
+    "weight": 25
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_pierce_bone",
+     "chance": 100,
+     "count": [
+      1,
+      2
+     ]
+    },
+    {
+     "item": "mat_slash_ore",
+     "chance": 50,
+     "count": 1
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "掠空兽速度极快，弱斩击与突刺。"
+   },
+   {
+    "unlock": 50,
+    "desc": "会以裂风远程攻击。"
+   },
+   {
+    "unlock": 100,
+    "desc": "必掉尖脊骨。"
+   }
+  ]
+ },
+ {
+  "id": "vein_moth",
+  "name": "脉纹蛾",
+  "tier": "normal",
+  "area": "脉源丘陵",
+  "desc": "翅上生有脉纹、飞行无声的巨蛾。",
+  "stats": {
+   "hp": 520,
+   "mp": 90,
+   "str": 30,
+   "int": 12,
+   "con": 28,
+   "spr": 10,
+   "foc": 20,
+   "agi": 22,
+   "luk": 10
+  },
+  "weakness": {
+   "types": [
+    "斩",
+    "突"
+   ],
+   "elements": {
+    "fire": 1.3
+   }
+  },
+  "pv": 90,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 320,
+   "currencies": {
+    "coins": 210
+   }
+  },
+  "actions": [
+   {
+    "action": "en_wind",
+    "probability": 1,
+    "weight": 45
+   },
+   {
+    "action": "en_spore",
+    "probability": 1,
+    "weight": 30
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_magic_crystal",
+     "chance": 70,
+     "count": [
+      1,
+      2
+     ]
+    },
+    {
+     "item": "viv_herb",
+     "chance": 50,
+     "count": [
+      1,
+      2
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "脉纹蛾弱斩击与突刺，火属性更痛。"
+   },
+   {
+    "unlock": 50,
+    "desc": "会撒孢粉造成持续伤害。"
+   },
+   {
+    "unlock": 100,
+    "desc": "常掉灵晶屑。"
+   }
+  ]
+ },
+ {
+  "id": "gravel_boar",
+  "name": "砾石野猪",
+  "tier": "normal",
+  "area": "脉源丘陵",
+  "desc": "皮糙肉厚的野猪，冲撞时可撞碎石砾。",
+  "stats": {
+   "hp": 680,
+   "mp": 40,
+   "str": 34,
+   "int": 8,
+   "con": 34,
+   "spr": 8,
+   "foc": 14,
+   "agi": 16,
+   "luk": 6
+  },
+  "weakness": {
+   "types": [
+    "魔",
+    "突"
+   ],
+   "elements": {
+    "water": 1.3
+   }
+  },
+  "pv": 110,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 420,
+   "currencies": {
+    "coins": 260
+   }
+  },
+  "actions": [
+   {
+    "action": "en_charge",
+    "probability": 1,
+    "weight": 45
+   },
+   {
+    "action": "en_slam",
+    "probability": 1,
+    "weight": 30
+   },
+   {
+    "action": "en_roar",
+    "probability": 1,
+    "weight": 20
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_common_hide",
+     "chance": 100,
+     "count": [
+      1,
+      3
+     ]
+    },
+    {
+     "item": "mat_blunt_rock",
+     "chance": 50,
+     "count": 1
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "砾石野猪弱法术与突刺，血厚力大。"
+   },
+   {
+    "unlock": 50,
+    "desc": "冲撞后会接重砸。"
+   },
+   {
+    "unlock": 100,
+    "desc": "必掉荒兽皮。"
+   }
+  ]
+ },
+ {
+  "id": "stone_crab",
+  "name": "石壳蟹",
+  "tier": "normal",
+  "area": "采石坑",
+  "desc": "背着石质硬壳、行动缓慢的蟹状荒兽。",
+  "stats": {
+   "hp": 760,
+   "mp": 30,
+   "str": 30,
+   "int": 6,
+   "con": 42,
+   "spr": 6,
+   "foc": 12,
+   "agi": 10,
+   "luk": 6
+  },
+  "weakness": {
+   "types": [
+    "打",
+    "魔"
+   ],
+   "elements": {
+    "thunder": 1.3
+   }
+  },
+  "pv": 130,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 460,
+   "currencies": {
+    "coins": 280
+   }
+  },
+  "actions": [
+   {
+    "action": "en_claw",
+    "probability": 1,
+    "weight": 45
+   },
+   {
+    "action": "en_stone",
+    "probability": 1,
+    "weight": 30
+   },
+   {
+    "action": "en_hardbody",
+    "probability": 1,
+    "weight": 25
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_blunt_rock",
+     "chance": 100,
+     "count": [
+      1,
+      3
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "石壳蟹防御极高，打击类破防最快。"
+   },
+   {
+    "unlock": 50,
+    "desc": "会缩壳硬化，拖久了很难打。"
+   },
+   {
+    "unlock": 100,
+    "desc": "必掉沉岩碎块。"
+   }
+  ]
+ },
+ {
+  "id": "cliff_goat",
+  "name": "断崖山羊",
+  "tier": "normal",
+  "area": "破脉峡谷",
+  "desc": "能在断崖上直上直下的野山羊，头角坚硬。",
+  "stats": {
+   "hp": 600,
+   "mp": 60,
+   "str": 32,
+   "int": 10,
+   "con": 26,
+   "spr": 10,
+   "foc": 18,
+   "agi": 24,
+   "luk": 8
+  },
+  "weakness": {
+   "types": [
+    "斩",
+    "打"
+   ],
+   "elements": {
+    "wind": 1.3
+   }
+  },
+  "pv": 100,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 400,
+   "currencies": {
+    "coins": 250
+   }
+  },
+  "actions": [
+   {
+    "action": "en_pounce",
+    "probability": 1,
+    "weight": 45
+   },
+   {
+    "action": "en_charge",
+    "probability": 1,
+    "weight": 30
+   },
+   {
+    "action": "en_howl",
+    "probability": 1,
+    "weight": 20
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_pierce_bone",
+     "chance": 100,
+     "count": [
+      1,
+      2
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "断崖山羊弱斩击与打击，速度很快。"
+   },
+   {
+    "unlock": 50,
+    "desc": "战嚎后会命中更高。"
+   },
+   {
+    "unlock": 100,
+    "desc": "必掉尖脊骨。"
+   }
+  ]
+ },
+ {
+  "id": "gravel_sprite",
+  "name": "砾灵",
+  "tier": "normal",
+  "area": "采石坑",
+  "desc": "由碎岩与灵能凝成的小型灵体，飘忽不定。",
+  "stats": {
+   "hp": 480,
+   "mp": 140,
+   "str": 24,
+   "int": 16,
+   "con": 24,
+   "spr": 18,
+   "foc": 22,
+   "agi": 20,
+   "luk": 12
+  },
+  "weakness": {
+   "types": [
+    "打",
+    "突"
+   ],
+   "elements": {
+    "thunder": 1.3
+   }
+  },
+  "pv": 85,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 380,
+   "currencies": {
+    "coins": 240
+   }
+  },
+  "actions": [
+   {
+    "action": "en_wind",
+    "probability": 1,
+    "weight": 40
+   },
+   {
+    "action": "en_web",
+    "probability": 1,
+    "weight": 25
+   },
+   {
+    "action": "en_wail",
+    "probability": 1,
+    "weight": 20
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_magic_crystal",
+     "chance": 80,
+     "count": [
+      1,
+      2
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "砾灵是灵晶凝成的小灵体，弱打击与突刺。"
+   },
+   {
+    "unlock": 50,
+    "desc": "会缠网减速。"
+   },
+   {
+    "unlock": 100,
+    "desc": "必掉灵晶屑。"
+   }
+  ]
+ },
+ {
+  "id": "quarry_titan",
+  "name": "采石巨像",
+  "tier": "elite",
+  "area": "采石坑",
+  "desc": "采石坑深处的巨型石像，脚步震地。",
+  "stats": {
+   "hp": 1500,
+   "mp": 120,
+   "str": 52,
+   "int": 12,
+   "con": 62,
+   "spr": 12,
+   "foc": 20,
+   "agi": 12,
+   "luk": 6
+  },
+  "weakness": {
+   "types": [
+    "打",
+    "魔"
+   ],
+   "elements": {
+    "thunder": 1.3
+   }
+  },
+  "pv": 260,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 1500,
+   "currencies": {
+    "coins": 900
+   }
+  },
+  "actions": [
+   {
+    "action": "en_slam",
+    "probability": 1,
+    "weight": 45
+   },
+   {
+    "action": "en_quake",
+    "probability": 1,
+    "weight": 30
+   },
+   {
+    "action": "en_hardbody",
+    "probability": 1,
+    "weight": 25
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_blunt_rock",
+     "chance": 100,
+     "count": [
+      2,
+      4
+     ]
+    },
+    {
+     "item": "mat_slash_ore",
+     "chance": 60,
+     "count": [
+      1,
+      2
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "采石巨像防御奇高，打击破防后收益巨大。"
+   },
+   {
+    "unlock": 50,
+    "desc": "震地是范围重击，注意血量。"
+   },
+   {
+    "unlock": 100,
+    "desc": "必掉大量沉岩碎块。"
+   }
+  ]
+ },
+ {
+  "id": "canyon_stalker",
+  "name": "峡谷潜行者",
+  "tier": "elite",
+  "area": "破脉峡谷",
+  "desc": "藏在峡谷阴影里、出手极快的猎手。",
+  "stats": {
+   "hp": 1100,
+   "mp": 160,
+   "str": 46,
+   "int": 20,
+   "con": 40,
+   "spr": 18,
+   "foc": 30,
+   "agi": 34,
+   "luk": 10
+  },
+  "weakness": {
+   "types": [
+    "斩",
+    "突"
+   ],
+   "elements": {
+    "fire": 1.3
+   }
+  },
+  "pv": 200,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 1200,
+   "currencies": {
+    "coins": 720
+   }
+  },
+  "actions": [
+   {
+    "action": "en_claw",
+    "probability": 1,
+    "weight": 40
+   },
+   {
+    "action": "en_pounce",
+    "probability": 1,
+    "weight": 30
+   },
+   {
+    "action": "en_wail",
+    "probability": 1,
+    "weight": 20
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_pierce_bone",
+     "chance": 100,
+     "count": [
+      2,
+      3
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "峡谷潜行者弱斩击与突刺，攻击快而狠。"
+   },
+   {
+    "unlock": 50,
+    "desc": "哀嚎会削弱你的攻击。"
+   },
+   {
+    "unlock": 100,
+    "desc": "必掉尖脊骨。"
+   }
+  ]
+ },
+ {
+  "id": "rift_bat",
+  "name": "裂谷蝠",
+  "tier": "normal",
+  "area": "裂谷口",
+  "desc": "裂谷口成群倒挂的巨蝠，飞行轨迹诡谲。",
+  "stats": {
+   "hp": 1600,
+   "mp": 180,
+   "str": 54,
+   "int": 18,
+   "con": 46,
+   "spr": 16,
+   "foc": 30,
+   "agi": 36,
+   "luk": 10
+  },
+  "weakness": {
+   "types": [
+    "斩",
+    "突"
+   ],
+   "elements": {
+    "thunder": 1.3
+   }
+  },
+  "pv": 280,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 1800,
+   "currencies": {
+    "coins": 1000
+   }
+  },
+  "actions": [
+   {
+    "action": "en_wind",
+    "probability": 1,
+    "weight": 40
+   },
+   {
+    "action": "en_pounce",
+    "probability": 1,
+    "weight": 30
+   },
+   {
+    "action": "en_web",
+    "probability": 1,
+    "weight": 20
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_magic_crystal",
+     "chance": 80,
+     "count": [
+      1,
+      3
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "裂谷蝠弱斩击与突刺。"
+   },
+   {
+    "unlock": 50,
+    "desc": "缠网会降低你的速度。"
+   },
+   {
+    "unlock": 100,
+    "desc": "常掉灵晶屑。"
+   }
+  ]
+ },
+ {
+  "id": "gloom_shroom",
+  "name": "幽菌兽",
+  "tier": "normal",
+  "area": "幽脉洞窟",
+  "desc": "菌盖厚重、靠孢粉攻击的洞穴荒兽。",
+  "stats": {
+   "hp": 2100,
+   "mp": 220,
+   "str": 48,
+   "int": 22,
+   "con": 60,
+   "spr": 20,
+   "foc": 26,
+   "agi": 18,
+   "luk": 8
+  },
+  "weakness": {
+   "types": [
+    "斩",
+    "打"
+   ],
+   "elements": {
+    "fire": 1.3
+   }
+  },
+  "pv": 340,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 2300,
+   "currencies": {
+    "coins": 1300
+   }
+  },
+  "actions": [
+   {
+    "action": "en_spore",
+    "probability": 1,
+    "weight": 40
+   },
+   {
+    "action": "en_slam",
+    "probability": 1,
+    "weight": 30
+   },
+   {
+    "action": "en_hardbody",
+    "probability": 1,
+    "weight": 20
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "viv_herb",
+     "chance": 100,
+     "count": [
+      2,
+      4
+     ]
+    },
+    {
+     "item": "mat_magic_crystal",
+     "chance": 50,
+     "count": 1
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "幽菌兽弱斩击与打击，火属性更有效。"
+   },
+   {
+    "unlock": 50,
+    "desc": "孢子弹会造成持续伤害，尽早结束。"
+   },
+   {
+    "unlock": 100,
+    "desc": "必掉青脉草。"
+   }
+  ]
+ },
+ {
+  "id": "cave_spider",
+  "name": "穴蛛",
+  "tier": "normal",
+  "area": "幽脉洞窟",
+  "desc": "洞穴顶层结网的大型蛛类，毒性不轻。",
+  "stats": {
+   "hp": 1800,
+   "mp": 160,
+   "str": 56,
+   "int": 16,
+   "con": 48,
+   "spr": 16,
+   "foc": 32,
+   "agi": 30,
+   "luk": 10
+  },
+  "weakness": {
+   "types": [
+    "打",
+    "魔"
+   ],
+   "elements": {
+    "thunder": 1.3
+   }
+  },
+  "pv": 300,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 2000,
+   "currencies": {
+    "coins": 1150
+   }
+  },
+  "actions": [
+   {
+    "action": "en_bite",
+    "probability": 1,
+    "weight": 40
+   },
+   {
+    "action": "en_web",
+    "probability": 1,
+    "weight": 30
+   },
+   {
+    "action": "en_spit",
+    "probability": 1,
+    "weight": 25
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_common_hide",
+     "chance": 100,
+     "count": [
+      2,
+      4
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "穴蛛弱打击与法术。"
+   },
+   {
+    "unlock": 50,
+    "desc": "毒液会造成出血。"
+   },
+   {
+    "unlock": 100,
+    "desc": "必掉荒兽皮。"
+   }
+  ]
+ },
+ {
+  "id": "ledge_wolf",
+  "name": "断崖狼",
+  "tier": "normal",
+  "area": "断层平台",
+  "desc": "在断层平台游荡的独狼，领地意识极强。",
+  "stats": {
+   "hp": 1900,
+   "mp": 180,
+   "str": 60,
+   "int": 16,
+   "con": 50,
+   "spr": 16,
+   "foc": 34,
+   "agi": 34,
+   "luk": 10
+  },
+  "weakness": {
+   "types": [
+    "魔",
+    "突"
+   ],
+   "elements": {
+    "water": 1.3
+   }
+  },
+  "pv": 320,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 2200,
+   "currencies": {
+    "coins": 1250
+   }
+  },
+  "actions": [
+   {
+    "action": "en_claw",
+    "probability": 1,
+    "weight": 40
+   },
+   {
+    "action": "en_charge",
+    "probability": 1,
+    "weight": 30
+   },
+   {
+    "action": "en_howl",
+    "probability": 1,
+    "weight": 20
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_pierce_bone",
+     "chance": 100,
+     "count": [
+      2,
+      3
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "断崖狼弱法术与突刺。"
+   },
+   {
+    "unlock": 50,
+    "desc": "战嚎后命中提升，注意格挡。"
+   },
+   {
+    "unlock": 100,
+    "desc": "必掉尖脊骨。"
+   }
+  ]
+ },
+ {
+  "id": "rift_wyrm",
+  "name": "裂谷亚龙",
+  "tier": "elite",
+  "area": "裂谷口",
+  "desc": "盘踞裂谷口、体型尚幼的亚龙，脾气极坏。",
+  "stats": {
+   "hp": 5200,
+   "mp": 420,
+   "str": 78,
+   "int": 40,
+   "con": 76,
+   "spr": 34,
+   "foc": 44,
+   "agi": 30,
+   "luk": 12
+  },
+  "weakness": {
+   "types": [
+    "斩",
+    "突"
+   ],
+   "elements": {
+    "water": 1.3
+   }
+  },
+  "pv": 900,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 6500,
+   "currencies": {
+    "coins": 3600
+   }
+  },
+  "actions": [
+   {
+    "action": "en_bite",
+    "probability": 1,
+    "weight": 35
+   },
+   {
+    "action": "en_tail",
+    "probability": 1,
+    "weight": 30
+   },
+   {
+    "action": "en_wind",
+    "probability": 1,
+    "weight": 25
+   },
+   {
+    "action": "en_roar",
+    "probability": 1,
+    "weight": 20
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_magic_crystal",
+     "chance": 100,
+     "count": [
+      2,
+      4
+     ]
+    },
+    {
+     "item": "mat_pierce_bone",
+     "chance": 60,
+     "count": [
+      2,
+      3
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "裂谷亚龙弱斩击与突刺，水属性更痛。"
+   },
+   {
+    "unlock": 50,
+    "desc": "咆哮会提升它自己的攻击。"
+   },
+   {
+    "unlock": 100,
+    "desc": "必掉大量灵晶屑。"
+   }
+  ]
+ },
+ {
+  "id": "gloom_warden",
+  "name": "幽脉守望者",
+  "tier": "elite",
+  "area": "幽脉洞窟",
+  "desc": "守在幽脉深处的石躯守望者，掌心灵光不灭。",
+  "stats": {
+   "hp": 6000,
+   "mp": 520,
+   "str": 70,
+   "int": 46,
+   "con": 84,
+   "spr": 40,
+   "foc": 46,
+   "agi": 28,
+   "luk": 12
+  },
+  "weakness": {
+   "types": [
+    "打",
+    "魔"
+   ],
+   "elements": {
+    "fire": 1.3
+   }
+  },
+  "pv": 1000,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 7200,
+   "currencies": {
+    "coins": 4000
+   }
+  },
+  "actions": [
+   {
+    "action": "en_slam",
+    "probability": 1,
+    "weight": 35
+   },
+   {
+    "action": "en_quake",
+    "probability": 1,
+    "weight": 30
+   },
+   {
+    "action": "en_wail",
+    "probability": 1,
+    "weight": 20
+   },
+   {
+    "action": "en_hardbody",
+    "probability": 1,
+    "weight": 20
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_blunt_rock",
+     "chance": 100,
+     "count": [
+      3,
+      5
+     ]
+    },
+    {
+     "item": "mat_magic_crystal",
+     "chance": 60,
+     "count": [
+      2,
+      3
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "幽脉守望者防御很高，打击破防收益最大。"
+   },
+   {
+    "unlock": 50,
+    "desc": "震地范围重击，血线要留足。"
+   },
+   {
+    "unlock": 100,
+    "desc": "必掉大量沉岩碎块。"
+   }
+  ]
+ },
+ {
+  "id": "sentry_golem",
+  "name": "巡守石像",
+  "tier": "normal",
+  "area": "禁地外围",
+  "desc": "在禁地外围巡逻的石像，动作呆板但势大力沉。",
+  "stats": {
+   "hp": 4200,
+   "mp": 260,
+   "str": 82,
+   "int": 22,
+   "con": 74,
+   "spr": 20,
+   "foc": 36,
+   "agi": 24,
+   "luk": 10
+  },
+  "weakness": {
+   "types": [
+    "打",
+    "魔"
+   ],
+   "elements": {
+    "thunder": 1.3
+   }
+  },
+  "pv": 700,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 7000,
+   "currencies": {
+    "coins": 3800
+   }
+  },
+  "actions": [
+   {
+    "action": "en_slam",
+    "probability": 1,
+    "weight": 40
+   },
+   {
+    "action": "en_stone",
+    "probability": 1,
+    "weight": 30
+   },
+   {
+    "action": "en_hardbody",
+    "probability": 1,
+    "weight": 20
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_blunt_rock",
+     "chance": 100,
+     "count": [
+      3,
+      5
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "巡守石像按固定路线巡逻，弱打击。"
+   },
+   {
+    "unlock": 50,
+    "desc": "硬化后防御很高，优先破防。"
+   },
+   {
+    "unlock": 100,
+    "desc": "必掉沉岩碎块。"
+   }
+  ]
+ },
+ {
+  "id": "ruin_hound",
+  "name": "残骸猎犬",
+  "tier": "normal",
+  "area": "禁地外围",
+  "desc": "啃食残骸为生的猎犬，牙齿泛着灰白。",
+  "stats": {
+   "hp": 3900,
+   "mp": 300,
+   "str": 90,
+   "int": 24,
+   "con": 68,
+   "spr": 22,
+   "foc": 40,
+   "agi": 42,
+   "luk": 12
+  },
+  "weakness": {
+   "types": [
+    "魔",
+    "突"
+   ],
+   "elements": {
+    "water": 1.3
+   }
+  },
+  "pv": 650,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 6600,
+   "currencies": {
+    "coins": 3600
+   }
+  },
+  "actions": [
+   {
+    "action": "en_claw",
+    "probability": 1,
+    "weight": 40
+   },
+   {
+    "action": "en_pounce",
+    "probability": 1,
+    "weight": 30
+   },
+   {
+    "action": "en_howl",
+    "probability": 1,
+    "weight": 20
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_pierce_bone",
+     "chance": 100,
+     "count": [
+      3,
+      5
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "残骸猎犬弱法术与突刺。"
+   },
+   {
+    "unlock": 50,
+    "desc": "成群时威胁更大。"
+   },
+   {
+    "unlock": 100,
+    "desc": "必掉尖脊骨。"
+   }
+  ]
+ },
+ {
+  "id": "vein_wisp",
+  "name": "脉光游灵",
+  "tier": "normal",
+  "area": "四脉交汇",
+  "desc": "四脉交汇处凝成的游灵，光带缠绕。",
+  "stats": {
+   "hp": 3400,
+   "mp": 480,
+   "str": 76,
+   "int": 40,
+   "con": 62,
+   "spr": 44,
+   "foc": 46,
+   "agi": 38,
+   "luk": 14
+  },
+  "weakness": {
+   "types": [
+    "打",
+    "突"
+   ],
+   "elements": {
+    "thunder": 1.3
+   }
+  },
+  "pv": 560,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 6400,
+   "currencies": {
+    "coins": 3500
+   }
+  },
+  "actions": [
+   {
+    "action": "en_wind",
+    "probability": 1,
+    "weight": 35
+   },
+   {
+    "action": "en_beamblast",
+    "probability": 1,
+    "weight": 25
+   },
+   {
+    "action": "en_web",
+    "probability": 1,
+    "weight": 20
+   },
+   {
+    "action": "en_wail",
+    "probability": 1,
+    "weight": 20
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_magic_crystal",
+     "chance": 100,
+     "count": [
+      3,
+      5
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "脉光游灵弱打击与突刺。"
+   },
+   {
+    "unlock": 50,
+    "desc": "灵光炮伤害很高，注意护盾。"
+   },
+   {
+    "unlock": 100,
+    "desc": "必掉大量灵晶屑。"
+   }
+  ]
+ },
+ {
+  "id": "trial_shade",
+  "name": "试炼影卫",
+  "tier": "normal",
+  "area": "试炼终殿",
+  "desc": "终殿中的影卫，形貌与其他影卫一致，看不出差别。",
+  "stats": {
+   "hp": 4600,
+   "mp": 380,
+   "str": 94,
+   "int": 30,
+   "con": 70,
+   "spr": 28,
+   "foc": 44,
+   "agi": 40,
+   "luk": 12
+  },
+  "weakness": {
+   "types": [
+    "斩",
+    "打"
+   ],
+   "elements": {
+    "crystal": 1.3
+   }
+  },
+  "pv": 760,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 7600,
+   "currencies": {
+    "coins": 4200
+   }
+  },
+  "actions": [
+   {
+    "action": "en_claw",
+    "probability": 1,
+    "weight": 40
+   },
+   {
+    "action": "en_charge",
+    "probability": 1,
+    "weight": 30
+   },
+   {
+    "action": "en_roar",
+    "probability": 1,
+    "weight": 20
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_slash_ore",
+     "chance": 100,
+     "count": [
+      3,
+      5
+     ]
+    },
+    {
+     "item": "mat_pierce_bone",
+     "chance": 60,
+     "count": [
+      2,
+      4
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "试炼影卫是终殿的看门人，弱斩击与打击。"
+   },
+   {
+    "unlock": 50,
+    "desc": "会强化自身，速战速决。"
+   },
+   {
+    "unlock": 100,
+    "desc": "必掉锋利矿砂。"
+   }
+  ]
+ },
+ {
+  "id": "fault_tyrant",
+  "name": "断层暴君",
+  "tier": "boss",
+  "area": "断层平台",
+  "desc": "断层平台上的独居暴君，一击可裂地。",
+  "stats": {
+   "hp": 14000,
+   "mp": 900,
+   "str": 120,
+   "int": 60,
+   "con": 108,
+   "spr": 50,
+   "foc": 60,
+   "agi": 38,
+   "luk": 14
+  },
+  "weakness": {
+   "types": [
+    "斩",
+    "魔"
+   ],
+   "elements": {
+    "water": 1.3,
+    "void": 1.5
+   }
+  },
+  "pv": 2400,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 26000,
+   "currencies": {
+    "coins": 15000
+   }
+  },
+  "actions": [
+   {
+    "action": "en_slam",
+    "probability": 1,
+    "weight": 30
+   },
+   {
+    "action": "en_quake",
+    "probability": 1,
+    "weight": 28
+   },
+   {
+    "action": "en_charge",
+    "probability": 1,
+    "weight": 26
+   },
+   {
+    "action": "en_roar",
+    "probability": 1,
+    "weight": 22
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_blunt_rock",
+     "chance": 100,
+     "count": [
+      5,
+      8
+     ]
+    },
+    {
+     "item": "mat_magic_crystal",
+     "chance": 100,
+     "count": [
+      3,
+      6
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "断层暴君守在三区出口，弱斩击与水/虚空属性。"
+   },
+   {
+    "unlock": 50,
+    "desc": "半血以下会蓄力玄脉射线，务必打断或防御。"
+   },
+   {
+    "unlock": 100,
+    "desc": "首次击破可解锁通往禁地的路。"
+   }
+  ],
+  "special_actions": [
+   {
+    "id": "tyrant_enrage",
+    "action": "en_heavy_charge",
+    "trigger": {
+     "type": "hp_below",
+     "value": 50,
+     "timing": "current_turn"
+    },
+    "once": true,
+    "priority": 20,
+    "trigger_cooldown": 5
+   }
+  ]
+ },
+ {
+  "id": "sanctum_guardian",
+  "name": "禁地守卫",
+  "tier": "boss",
+  "area": "禁地外围",
+  "desc": "守着禁地入口的巨像，胸口灵光如脉。",
+  "stats": {
+   "hp": 16000,
+   "mp": 1000,
+   "str": 112,
+   "int": 66,
+   "con": 116,
+   "spr": 56,
+   "foc": 62,
+   "agi": 36,
+   "luk": 14
+  },
+  "weakness": {
+   "types": [
+    "打",
+    "突"
+   ],
+   "elements": {
+    "thunder": 1.3,
+    "void": 1.5
+   }
+  },
+  "pv": 2600,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 30000,
+   "currencies": {
+    "coins": 17000
+   }
+  },
+  "actions": [
+   {
+    "action": "en_slam",
+    "probability": 1,
+    "weight": 30
+   },
+   {
+    "action": "en_beamblast",
+    "probability": 1,
+    "weight": 26
+   },
+   {
+    "action": "en_quake",
+    "probability": 1,
+    "weight": 24
+   },
+   {
+    "action": "en_hardbody",
+    "probability": 1,
+    "weight": 20
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_blunt_rock",
+     "chance": 100,
+     "count": [
+      5,
+      8
+     ]
+    },
+    {
+     "item": "mat_magic_crystal",
+     "chance": 100,
+     "count": [
+      4,
+      7
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "禁地守卫是四区门神，弱打击与突刺。"
+   },
+   {
+    "unlock": 50,
+    "desc": "灵光炮穿透力强，建议带护盾。"
+   },
+   {
+    "unlock": 100,
+    "desc": "击破后可进入四脉交汇。"
+   }
+  ],
+  "special_actions": [
+   {
+    "id": "guardian_beam",
+    "action": "en_black_ray",
+    "trigger": {
+     "type": "hp_below",
+     "value": 40,
+     "timing": "current_turn"
+    },
+    "once": true,
+    "priority": 25,
+    "trigger_cooldown": 6
    }
   ]
  }

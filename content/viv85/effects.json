@@ -43,7 +43,8 @@
   "type": "stat_modifier",
   "stat": "atk",
   "value": 20,
-  "pct": true
+  "pct": true,
+  "target": "self"
  },
  {
   "id": "fx_def_down",
@@ -51,7 +52,8 @@
   "type": "stat_modifier",
   "stat": "dfn",
   "value": -25,
-  "pct": true
+  "pct": true,
+  "target": "enemy"
  },
  {
   "id": "fx_spd_up",
@@ -59,7 +61,8 @@
   "type": "stat_modifier",
   "stat": "spd",
   "value": 20,
-  "pct": true
+  "pct": true,
+  "target": "self"
  },
  {
   "id": "fx_spd_down",
@@ -67,7 +70,8 @@
   "type": "stat_modifier",
   "stat": "spd",
   "value": -25,
-  "pct": true
+  "pct": true,
+  "target": "enemy"
  },
  {
   "id": "guard_stance2",
@@ -101,7 +105,8 @@
   "type": "stat_modifier",
   "stat": "atk",
   "value": -20,
-  "pct": true
+  "pct": true,
+  "target": "enemy"
  },
  {
   "id": "fx_dfn_up",
@@ -109,7 +114,8 @@
   "type": "stat_modifier",
   "stat": "dfn",
   "value": 25,
-  "pct": true
+  "pct": true,
+  "target": "self"
  },
  {
   "id": "fx_mag_up",
@@ -117,7 +123,8 @@
   "type": "stat_modifier",
   "stat": "mag",
   "value": 20,
-  "pct": true
+  "pct": true,
+  "target": "self"
  },
  {
   "id": "fx_foc_up",
@@ -125,7 +132,8 @@
   "type": "stat_modifier",
   "stat": "foc",
   "value": 20,
-  "pct": true
+  "pct": true,
+  "target": "self"
  },
  {
   "id": "fx_lck_up",
@@ -133,6 +141,35 @@
   "type": "stat_modifier",
   "stat": "lck",
   "value": 20,
-  "pct": true
+  "pct": true,
+  "target": "self"
+ },
+ {
+  "id": "fx_bleed_apply",
+  "name": "施加出血",
+  "type": "status_apply",
+  "target": "enemy",
+  "status_id": "st_bleed"
+ },
+ {
+  "id": "fx_burn_apply",
+  "name": "施加灼烧",
+  "type": "status_apply",
+  "target": "enemy",
+  "status_id": "st_burn"
+ },
+ {
+  "id": "fx_slow_apply",
+  "name": "施加减速",
+  "type": "status_apply",
+  "target": "enemy",
+  "status_id": "st_slow"
+ },
+ {
+  "id": "fx_atkdown_apply",
+  "name": "施加剧弱",
+  "type": "status_apply",
+  "target": "enemy",
+  "status_id": "st_atk_down"
  }
 ]

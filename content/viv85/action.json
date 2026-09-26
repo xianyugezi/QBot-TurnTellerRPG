@@ -8,14 +8,32 @@
   "element": "wind",
   "effects": [],
   "weight": 60,
-  "probability": 0.5,
   "intent": "伤害",
   "cooldown": 0,
   "hungry": 0,
   "tags": [
    "物理",
    "近战"
-  ]
+  ],
+  "probability": 1.0
+ },
+ {
+  "id": "en_claw",
+  "name": "爪击",
+  "kind": "basic",
+  "power": 1.0,
+  "attack_type": "斩",
+  "element": "wind",
+  "effects": [],
+  "weight": 55,
+  "intent": "伤害",
+  "cooldown": 0,
+  "hungry": 0,
+  "tags": [
+   "物理",
+   "近战"
+  ],
+  "probability": 1.0
  },
  {
   "id": "en_tail",
@@ -26,14 +44,217 @@
   "element": "earth",
   "effects": [],
   "weight": 35,
-  "probability": 0.5,
   "intent": "伤害",
   "cooldown": 1,
   "hungry": 0,
   "tags": [
    "物理",
    "范围"
-  ]
+  ],
+  "probability": 1.0
+ },
+ {
+  "id": "en_slam",
+  "name": "重砸",
+  "kind": "active",
+  "power": 1.25,
+  "attack_type": "打",
+  "element": "earth",
+  "effects": [],
+  "weight": 30,
+  "intent": "伤害",
+  "cooldown": 1,
+  "hungry": 0,
+  "tags": [
+   "物理",
+   "重击"
+  ],
+  "probability": 1.0
+ },
+ {
+  "id": "en_charge",
+  "name": "冲撞",
+  "kind": "active",
+  "power": 1.35,
+  "attack_type": "突",
+  "element": "earth",
+  "effects": [],
+  "weight": 30,
+  "intent": "伤害",
+  "cooldown": 2,
+  "hungry": 0,
+  "tags": [
+   "物理",
+   "突进"
+  ],
+  "probability": 1.0
+ },
+ {
+  "id": "en_pounce",
+  "name": "扑击",
+  "kind": "active",
+  "power": 1.2,
+  "attack_type": "突",
+  "element": "wind",
+  "effects": [],
+  "weight": 35,
+  "intent": "伤害",
+  "cooldown": 1,
+  "hungry": 0,
+  "tags": [
+   "物理",
+   "突进"
+  ],
+  "probability": 1.0
+ },
+ {
+  "id": "en_stone",
+  "name": "喷石",
+  "kind": "active",
+  "power": 1.15,
+  "attack_type": "突",
+  "element": "earth",
+  "effects": [],
+  "weight": 30,
+  "intent": "伤害",
+  "cooldown": 1,
+  "hungry": 0,
+  "tags": [
+   "远程"
+  ],
+  "probability": 1.0
+ },
+ {
+  "id": "en_spit",
+  "name": "毒液",
+  "kind": "active",
+  "power": 0.9,
+  "attack_type": "魔",
+  "element": "water",
+  "effects": [
+   "fx_bleed_apply"
+  ],
+  "weight": 25,
+  "intent": "伤害",
+  "cooldown": 2,
+  "hungry": 0,
+  "tags": [
+   "远程",
+   "持续"
+  ],
+  "probability": 1.0
+ },
+ {
+  "id": "en_spore",
+  "name": "孢子弹",
+  "kind": "active",
+  "power": 0.95,
+  "attack_type": "魔",
+  "element": "water",
+  "effects": [
+   "fx_burn_apply"
+  ],
+  "weight": 25,
+  "intent": "伤害",
+  "cooldown": 2,
+  "hungry": 0,
+  "tags": [
+   "远程",
+   "持续"
+  ],
+  "probability": 1.0
+ },
+ {
+  "id": "en_web",
+  "name": "缠网",
+  "kind": "active",
+  "power": 0.7,
+  "attack_type": "魔",
+  "element": "wind",
+  "effects": [
+   "fx_slow_apply"
+  ],
+  "weight": 20,
+  "intent": "伤害",
+  "cooldown": 3,
+  "hungry": 0,
+  "tags": [
+   "控制"
+  ],
+  "probability": 1.0
+ },
+ {
+  "id": "en_wail",
+  "name": "哀嚎",
+  "kind": "active",
+  "power": 0.0,
+  "attack_type": "魔",
+  "element": "wind",
+  "effects": [
+   "fx_atkdown_apply"
+  ],
+  "weight": 18,
+  "intent": "weak",
+  "cooldown": 3,
+  "hungry": 0,
+  "tags": [
+   "弱化"
+  ],
+  "probability": 1.0
+ },
+ {
+  "id": "en_wind",
+  "name": "裂风",
+  "kind": "active",
+  "power": 1.3,
+  "attack_type": "魔",
+  "element": "wind",
+  "effects": [],
+  "weight": 28,
+  "intent": "伤害",
+  "cooldown": 2,
+  "hungry": 0,
+  "tags": [
+   "元素",
+   "远程"
+  ],
+  "probability": 1.0
+ },
+ {
+  "id": "en_quake",
+  "name": "震地",
+  "kind": "active",
+  "power": 1.45,
+  "attack_type": "打",
+  "element": "earth",
+  "effects": [],
+  "weight": 22,
+  "intent": "伤害",
+  "cooldown": 3,
+  "hungry": 0,
+  "tags": [
+   "物理",
+   "范围"
+  ],
+  "probability": 1.0
+ },
+ {
+  "id": "en_beamblast",
+  "name": "灵光炮",
+  "kind": "active",
+  "power": 1.5,
+  "attack_type": "魔",
+  "element": "crystal",
+  "effects": [],
+  "weight": 22,
+  "intent": "伤害",
+  "cooldown": 3,
+  "hungry": 0,
+  "tags": [
+   "元素",
+   "远程"
+  ],
+  "probability": 1.0
  },
  {
   "id": "en_roar",
@@ -46,30 +267,86 @@
    "fx_atk_up"
   ],
   "weight": 25,
-  "probability": 0.5,
   "intent": "buff",
   "cooldown": 3,
   "hungry": 0,
   "tags": [
    "威压"
-  ]
+  ],
+  "probability": 1.0
  },
  {
-  "id": "en_charge",
-  "name": "冲撞",
+  "id": "en_hardbody",
+  "name": "硬化",
   "kind": "active",
-  "power": 1.35,
-  "attack_type": "突",
+  "power": 0.0,
+  "attack_type": "none",
   "element": "earth",
-  "effects": [],
-  "weight": 30,
-  "probability": 0.5,
-  "intent": "伤害",
-  "cooldown": 2,
+  "effects": [
+   "fx_dfn_up"
+  ],
+  "weight": 20,
+  "intent": "buff",
+  "cooldown": 3,
   "hungry": 0,
   "tags": [
-   "物理",
-   "突进"
-  ]
+   "防御"
+  ],
+  "probability": 1.0
+ },
+ {
+  "id": "en_howl",
+  "name": "战嚎",
+  "kind": "active",
+  "power": 0.0,
+  "attack_type": "魔",
+  "element": "wind",
+  "effects": [
+   "fx_foc_up"
+  ],
+  "weight": 18,
+  "intent": "buff",
+  "cooldown": 4,
+  "hungry": 0,
+  "tags": [
+   "威压"
+  ],
+  "probability": 1.0
+ },
+ {
+  "id": "en_heavy_charge",
+  "name": "蓄势重击",
+  "kind": "active",
+  "power": 2.2,
+  "attack_type": "打",
+  "element": "earth",
+  "effects": [],
+  "weight": 0,
+  "intent": "蓄力",
+  "cooldown": 4,
+  "hungry": 0,
+  "tags": [
+   "蓄力",
+   "重击"
+  ],
+  "armor": true
+ },
+ {
+  "id": "en_black_ray",
+  "name": "玄脉射线",
+  "kind": "active",
+  "power": 2.6,
+  "attack_type": "魔",
+  "element": "void",
+  "effects": [],
+  "weight": 0,
+  "intent": "蓄力",
+  "cooldown": 5,
+  "hungry": 0,
+  "tags": [
+   "蓄力",
+   "元素"
+  ],
+  "armor": true
  }
 ]

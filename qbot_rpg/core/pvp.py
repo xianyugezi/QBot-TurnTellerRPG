@@ -35,7 +35,8 @@ PVP_SETTINGS_KEYS: tuple = (
 )
 PVP_SETTINGS_DEFAULTS: dict = {
     "enabled": False,
-    "mode": "turn_based",       # turn_based 回合制 / free 非回合制
+    # 批82 · D1：CTB 下 free 的「连续输出」未实现（二期），本键仅登记、不据此分支。
+    "mode": "turn_based",       # turn_based 回合制 / free 非回合制（暂未生效，见二期）
     "level_gate": 10,           # 等级门槛
     "kill_penalty": "none",     # 击杀惩罚 none / respawn 回城
     "loot": None,               # 战斗掉落（无/货币/物品；None=无）

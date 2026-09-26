@@ -300,7 +300,10 @@ EFFECT_AXIS_SPECS: Tuple[Mapping[str, Any], ...] = (
         "consumer_note": "批53 已接线：唯一收口 = `apply_status` 命中判定处（source 侧取值）；"
                          "同批归并两个悬空旧键 debuff_chance_pct / buff_chance_pct（经 pct 层"
                          "→ 同一轴，各折一次）；`>100%` 溢出按每满 100% 折 1 层（溢出转层，"
-                         "仅 stack 框架）。",
+                         "仅 stack 框架）。"
+                         "批82 · D2（用户 2026-09-23 裁决 B）：两旧键登记为**通用命中同义别名**"
+                         "——当前不分 buff/debuff（一视同仁）；`scope={debuff,buff}` 分治"
+                         "为 v1 不做，待真出现「只提减益/只提增益命中」需求再开。",
     },
     {
         "axis": "stack_gain_pct", "doc_id": "X23", "priority": "P0",
@@ -542,8 +545,12 @@ GEAR_HELP_ZH: Dict[str, str] = {
     "mag_pierce_pct": "魔法攻击按比例无视目标防御（%）。",
     # 批43 强化特殊词条族（语义/上限/承载口径；上限=0-500 百分点，同既有 _pct 档）。
     "heal_amp_pct": "回复强化：治疗/回复效果按该比例提升（百分点，0-500）。",
-    "debuff_chance_pct": "减益概率提升：对敌方施加减益的基础概率上浮（百分点，0-500）。",
-    "buff_chance_pct": "增益概率提升：对己方施加增益的基础概率上浮（百分点，0-500）。",
+    # 批82 · D2（用户 2026-09-23 裁决 B：v1 不分治）：两旧键 = `status_chance_pct` 的
+    # **通用命中同义别名**，对 buff/debuff 一视同仁（批53 有意归并，effects 消费点无分支）。
+    "debuff_chance_pct": "通用状态命中提升（当前不分 buff/debuff；"
+                         "与 buff_chance_pct 同义别名，百分点，0-500）。",
+    "buff_chance_pct": "通用状态命中提升（当前不分 buff/debuff；"
+                       "与 debuff_chance_pct 同义别名，百分点，0-500）。",
     "weakness_dmg_pct": "弱点伤害增加：命中目标弱点时伤害按该比例提升（百分点，0-500）。",
     # 占位键（原案 §7；批53 起作为 cooldown_pct 的兼容别名**生效**）
     "cooldown_reduction_pct": "冷却缩减（百分点）：作为「冷却时长修正」的兼容别名，只换算一次。",

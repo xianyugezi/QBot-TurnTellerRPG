@@ -203,7 +203,9 @@
 ```jsonc
 "pvp": {
   "enabled": false,          // bool，默认 false；false = 拒绝发起决斗（4e CMD-A1 校验②）
-  "mode": "turn",            // enum: turn（回合制）| realtime（非回合制），编辑器 PVP 卡片二选一
+  "mode": "turn_based",      // enum: turn_based（回合制）| free（非回合制），编辑器 PVP 卡片二选一
+                             // 批82 · D1/NEW-3：枚举名以实现为准（原写 turn/realtime 为文档错）；
+                             // free「连续输出」尚未实现（二期），当前两模式行为一致。
   "level_gate": 10,          // int ≥1，默认 10；发起/接受双向校验（4e FR-R3）
   "invite_timeout_sec": 60,  // int ≥10，默认 60；邀请等待超时（4e ST-T1/CFG-03）
   "turn_timeout_sec": 60,    // int ≥10，默认 60；回合制离线方每回合自动防御等待（4e ST-T2/CFG-04）

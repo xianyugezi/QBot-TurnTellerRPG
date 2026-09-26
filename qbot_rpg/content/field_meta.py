@@ -3170,8 +3170,12 @@ def _module_table() -> Dict[str, ModuleMeta]:
         # settings.pvp（core/pvp.py PVP_SETTINGS_KEYS 8 键 + 3h §4.1）
         "pvp": _soft_display("PVP", "obj", {
             "enabled": FieldMeta(type="bool", default=False, label="启用 PVP"),
+            # 批82 · D1（用户 2026-09-23 裁决 C：保留键 + 写明"暂未生效"）：CTB 下两模式
+            # 行为一致，仅登记不分支；「非回合制连续输出」属二期，勿当 bug 修。
             "mode": FieldMeta(type="enum", enum=("turn_based", "free"),
-                              default="turn_based", label="战斗模式"),
+                              default="turn_based", label="战斗模式",
+                              help="回合制/非回合制二选一；CTB 下非回合制『连续输出』"
+                                   "尚未实现（二期），当前两模式行为一致（本键仅登记）。"),
             "level_gate": FieldMeta(type="int", range_min=0, default=10, label="等级门槛"),
             "kill_penalty": FieldMeta(type="enum", enum=("none", "respawn"),
                                       default="none", label="击杀惩罚"),

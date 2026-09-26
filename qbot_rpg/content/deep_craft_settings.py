@@ -181,11 +181,18 @@ DEEP_CRAFT_RULE_FIELDS: Dict[str, FieldMeta] = {
         help="每多 1 种材料的品质经验倍率（广度奖励）。"),
     "global_decay": FieldMeta(
         type="number", range_min=0.0, default=1.0, label="全局衰减"),
-    "cost_base": FieldMeta(type="int", range_min=0, default=60, label="固定工费"),
-    "cost_per_kind": FieldMeta(type="int", range_min=0, default=20, label="每种材料附加费"),
+    # 批82 · D3（用户 2026-09-23 裁决 A：登记"各系统自算成本"）：本族是深度打造的
+    # **材料投入预算（不扣货币）**，与 `settings.forge.forge_fee`（锻造工序费，真扣 coins）
+    # 及配方 `recipe.cost`（合成费，真扣 coins/gem）**不是同一口径**，不统一。
+    "cost_base": FieldMeta(
+        type="int", range_min=0, default=60, label="固定工费（不扣货币）",
+        help="深度打造的固定投入预算，不扣货币；与 forge.forge_fee（真扣 coins）不同口径。"),
+    "cost_per_kind": FieldMeta(
+        type="int", range_min=0, default=20, label="每种材料附加费（不扣货币）",
+        help="深度打造每多 1 种材料的投入预算，不扣货币；各系统自算成本。"),
     "cost_floor_ratio": FieldMeta(
         type="number", range_min=0.0, range_max=1.0, default=0.0, label="cost 下限比例",
-        help="总 cost 下限 = 该档上限 × 本比例（0 = 不设下限）。"),
+        help="总 cost 下限 = 该档上限 × 本比例（0 = 不设下限）；cost 为投入预算（不扣货币）。"),
     "interaction": FieldMeta(
         type="obj", label="互动经验系数",
         children={
@@ -405,7 +412,7 @@ ITEMS_BLUEPRINT_FIELDS: Dict[str, FieldMeta] = {
         help="学习该图纸的条件；学习后持久化到玩家 learned_blueprints（换包同 id 保留）。"),
     "blueprint_cost_cap": FieldMeta(
         type="int", range_min=0, label="cost 上限覆盖",
-        help="覆盖图纸档的 cost_cap（0/缺省 = 用档位值）。"),
+        help="覆盖图纸档的 cost_cap（0/缺省 = 用档位值）；cost 为投入预算，不扣货币。"),
 }
 
 # =====================================================================================

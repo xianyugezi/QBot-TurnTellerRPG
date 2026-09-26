@@ -131,8 +131,13 @@ ITEMS_FORGE_FIELDS: Dict[str, FieldMeta] = {
 # =====================================================================================
 FORGE_SETTINGS_FIELD_DEFS: Dict[str, FieldMeta] = {
     # S-01 forge_fee（定稿 L353）：str|int 联合（"节点等级×10" 或整数金币）——soft_label
-    # 永不红拦（【工程补白 F-2】，防 int 合法值被 R-1 type=str 误拦）
-    "forge_fee": FieldMeta(type="str", soft_label=True),
+    # 永不红拦（【工程补白 F-2】，防 int 合法值被 R-1 type=str 误拦）。
+    # 批82 · D3：本键 = 锻造工序费（**真扣 coins**）；与 deep_craft.craft_rules.cost_*
+    # （投入预算，不扣货币）不同口径，各系统自算，不统一。
+    "forge_fee": FieldMeta(
+        type="str", soft_label=True,
+        help="每次锻造工序的真实金币费（真扣 currencies.coins）；"
+             "与 deep_craft 的投入预算不同口径。"),
     # S-02 synth_ratio_3to1（定稿 L354）：P1 3:1 合成开关
     "synth_ratio_3to1": FieldMeta(type="bool", default=True),
     # S-03 straight_forge（定稿 L355）：直锻模式（小白 1 步 / 深度预览 2 步）

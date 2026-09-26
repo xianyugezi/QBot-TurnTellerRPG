@@ -1,30 +1,66 @@
 [
-  {
-    "healing_received_pct": 0.0,
-    "healing_done_pct": 0.0,
-    "damage_taken_pct": 0.0,
-    "damage_dealt_pct": 0.0,
-    "cooldown_pct": 0.0,
-    "status_chance_pct": 0.0,
-    "stack_gain_pct": 0.0,
-    "stack_cap_delta": 0.0,
-    "status_duration_pct": 0.0,
-    "status_duration_taken_pct": 0.0,
-    "status_resist_pct": 0.0,
-    "action_bar_shift": 0.0,
-    "resource_cost_pct": 0.0,
-    "resource_gain_pct": 0.0,
-    "crit_damage_pct": 0.0,
-    "action_speed_pct": 0.0,
-    "reward_mult_pct": 0.0,
-    "quality": "common",
-    "awaken": false,
-    "seed": false,
-    "material_tier": "normal",
-    "id": "viv_herb",
-    "name": "青脉草",
-    "type": "material",
-    "price": 10,
-    "desc": "四脉常见的药草，炼药与合成的基本材料。"
-  }
+ {
+  "id": "viv_herb",
+  "name": "青脉草",
+  "type": "material",
+  "price": 10,
+  "desc": "四脉常见的药草，炼药与合成的基本材料。"
+ },
+ {
+  "id": "mat_slash_ore",
+  "name": "锋利矿砂",
+  "type": "material",
+  "price": 24,
+  "desc": "斩脉矿脉的砂砾，打磨刃口的上品。"
+ },
+ {
+  "id": "mat_blunt_rock",
+  "name": "沉岩碎块",
+  "type": "material",
+  "price": 24,
+  "desc": "打脉地脉的重岩碎块，沉重而坚韧。"
+ },
+ {
+  "id": "mat_pierce_bone",
+  "name": "尖脊骨",
+  "type": "material",
+  "price": 24,
+  "desc": "突脉荒兽的脊骨，天然尖锐。"
+ },
+ {
+  "id": "mat_magic_crystal",
+  "name": "灵晶屑",
+  "type": "material",
+  "price": 30,
+  "desc": "魔脉凝出的晶屑，蕴含微弱灵能。"
+ },
+ {
+  "id": "mat_common_hide",
+  "name": "荒兽皮",
+  "type": "material",
+  "price": 18,
+  "desc": "荒原野兽的皮革，制甲常用。"
+ },
+ {
+  "id": "pot_small",
+  "name": "小回春散",
+  "type": "consumable",
+  "price": 60,
+  "usable": true,
+  "effects": [
+   "heal_small"
+  ],
+  "desc": "恢复 60 点生命。"
+ },
+ {
+  "id": "pot_mid",
+  "name": "中回春散",
+  "type": "consumable",
+  "price": 180,
+  "usable": true,
+  "effects": [
+   "heal_mid"
+  ],
+  "desc": "恢复 220 点生命。"
+ }
 ]

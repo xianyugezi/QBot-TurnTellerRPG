@@ -1,1 +1,72 @@
-[]
+[
+ {
+  "id": "heal_small",
+  "name": "小回复",
+  "type": "heal",
+  "power": 60
+ },
+ {
+  "id": "heal_mid",
+  "name": "中回复",
+  "type": "heal",
+  "power": 220
+ },
+ {
+  "id": "guard_stance",
+  "name": "防御姿态",
+  "type": "mitigation",
+  "power": 40,
+  "duration": 1,
+  "target": "self",
+  "desc": "本次行动所受伤害 -40%"
+ },
+ {
+  "id": "spirit_shield",
+  "name": "灵盾",
+  "type": "shield",
+  "power": 120,
+  "target": "self",
+  "desc": "获得 120 点护盾，吸收伤害后消失"
+ },
+ {
+  "id": "burn_dot",
+  "name": "灼烧",
+  "type": "dot",
+  "power": 25,
+  "duration": 3,
+  "target": "enemy",
+  "desc": "每回合扣 25 点生命，持续 3 回合"
+ },
+ {
+  "id": "fx_atk_up",
+  "name": "攻击提升",
+  "type": "stat_modifier",
+  "stat": "atk",
+  "value": 20,
+  "pct": true
+ },
+ {
+  "id": "fx_def_down",
+  "name": "防御下降",
+  "type": "stat_modifier",
+  "stat": "dfn",
+  "value": -25,
+  "pct": true
+ },
+ {
+  "id": "fx_spd_up",
+  "name": "速度提升",
+  "type": "stat_modifier",
+  "stat": "spd",
+  "value": 20,
+  "pct": true
+ },
+ {
+  "id": "fx_spd_down",
+  "name": "速度下降",
+  "type": "stat_modifier",
+  "stat": "spd",
+  "value": -25,
+  "pct": true
+ }
+]

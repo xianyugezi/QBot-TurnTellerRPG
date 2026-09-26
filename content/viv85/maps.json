@@ -1,1 +1,39 @@
-[]
+[
+ {
+  "id": "trial_court",
+  "name": "试炼前庭",
+  "desc": "四脉试炼的入口庭院，四条石径分别通往斩、打、突、魔的试炼场。",
+  "monsters": [],
+  "exits": {
+   "right": {
+    "to": "wild_ridge",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ },
+ {
+  "id": "wild_ridge",
+  "name": "荒原径",
+  "desc": "前庭之外的荒原小径，噬脉蜥与岩背兽在此出没。",
+  "monsters": [
+   {
+    "enemy": "fang_lizard",
+    "count": 3,
+    "respawn_minutes": 10
+   },
+   {
+    "enemy": "rockback_beast",
+    "count": 1,
+    "respawn_minutes": 30
+   }
+  ],
+  "exits": {
+   "left": {
+    "to": "trial_court",
+    "mode": "bidirectional"
+   }
+  },
+  "mechanics": []
+ }
+]

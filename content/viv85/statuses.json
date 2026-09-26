@@ -1,1 +1,102 @@
-[]
+[
+ {
+  "id": "st_atk_up",
+  "name": "气盛",
+  "type": "buff",
+  "max_stack": 1,
+  "duration": {
+   "turns": 3,
+   "charges": 0
+  },
+  "decay": "per_turn",
+  "actions": [
+   {
+    "type": "stat_modifier",
+    "stat": "atk",
+    "value": 20,
+    "pct": true
+   }
+  ],
+  "effects": [],
+  "desc": "攻击 +20%，持续 3 回合"
+ },
+ {
+  "id": "st_def_down",
+  "name": "破甲",
+  "type": "debuff",
+  "max_stack": 1,
+  "duration": {
+   "turns": 3,
+   "charges": 0
+  },
+  "decay": "per_turn",
+  "actions": [
+   {
+    "type": "stat_modifier",
+    "stat": "dfn",
+    "value": -25,
+    "pct": true
+   }
+  ],
+  "effects": [],
+  "desc": "防御 -25%，持续 3 回合"
+ },
+ {
+  "id": "st_spd_up",
+  "name": "疾风",
+  "type": "buff",
+  "max_stack": 1,
+  "duration": {
+   "turns": 3,
+   "charges": 0
+  },
+  "decay": "per_turn",
+  "actions": [
+   {
+    "type": "stat_modifier",
+    "stat": "spd",
+    "value": 20,
+    "pct": true
+   }
+  ],
+  "effects": [],
+  "desc": "速度 +20%，持续 3 回合"
+ },
+ {
+  "id": "st_slow",
+  "name": "冰缚",
+  "type": "debuff",
+  "max_stack": 1,
+  "duration": {
+   "turns": 3,
+   "charges": 0
+  },
+  "decay": "per_turn",
+  "actions": [
+   {
+    "type": "stat_modifier",
+    "stat": "spd",
+    "value": -25,
+    "pct": true
+   }
+  ],
+  "effects": [],
+  "desc": "速度 -25%，持续 3 回合"
+ },
+ {
+  "id": "st_burn",
+  "name": "灼烧",
+  "type": "debuff",
+  "max_stack": 3,
+  "duration": {
+   "turns": 3,
+   "charges": 0
+  },
+  "decay": "per_turn",
+  "on_tick": "burn_dot",
+  "effects": [
+   "burn_dot"
+  ],
+  "desc": "每回合结束受 25 点伤害，可叠 3 层"
+ }
+]

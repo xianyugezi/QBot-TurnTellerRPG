@@ -1,1 +1,75 @@
-[]
+[
+ {
+  "id": "en_bite",
+  "name": "撕咬",
+  "kind": "basic",
+  "power": 1.0,
+  "attack_type": "斩",
+  "element": "wind",
+  "effects": [],
+  "weight": 60,
+  "probability": 0.5,
+  "intent": "伤害",
+  "cooldown": 0,
+  "hungry": 0,
+  "tags": [
+   "物理",
+   "近战"
+  ]
+ },
+ {
+  "id": "en_tail",
+  "name": "尾扫",
+  "kind": "active",
+  "power": 1.1,
+  "attack_type": "打",
+  "element": "earth",
+  "effects": [],
+  "weight": 35,
+  "probability": 0.5,
+  "intent": "伤害",
+  "cooldown": 1,
+  "hungry": 0,
+  "tags": [
+   "物理",
+   "范围"
+  ]
+ },
+ {
+  "id": "en_roar",
+  "name": "咆哮",
+  "kind": "active",
+  "power": 0.0,
+  "attack_type": "魔",
+  "element": "wind",
+  "effects": [
+   "fx_atk_up"
+  ],
+  "weight": 25,
+  "probability": 0.5,
+  "intent": "buff",
+  "cooldown": 3,
+  "hungry": 0,
+  "tags": [
+   "威压"
+  ]
+ },
+ {
+  "id": "en_charge",
+  "name": "冲撞",
+  "kind": "active",
+  "power": 1.35,
+  "attack_type": "突",
+  "element": "earth",
+  "effects": [],
+  "weight": 30,
+  "probability": 0.5,
+  "intent": "伤害",
+  "cooldown": 2,
+  "hungry": 0,
+  "tags": [
+   "物理",
+   "突进"
+  ]
+ }
+]

@@ -1,1 +1,100 @@
-[]
+[
+ {
+  "id": "jian_swordsman",
+  "name": "剑士",
+  "difficulty": "simple",
+  "playstyle": "连斩压制，会心走高",
+  "recommended_newbie": true,
+  "is_basic": true,
+  "mechanic_tags": [
+   "斩脉"
+  ],
+  "weapon_types": [
+   "sword"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "str": 3.0,
+   "con": 1.5,
+   "agi": 1.5,
+   "hp": 1.2,
+   "mp": 0.4
+  },
+  "description": "斩脉入门：以连击与会心见长，攻守均衡。"
+ },
+ {
+  "id": "quan_fist",
+  "name": "拳僧",
+  "difficulty": "simple",
+  "playstyle": "重击破防，越打越硬",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "打脉"
+  ],
+  "weapon_types": [
+   "hammer"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "str": 2.6,
+   "con": 2.2,
+   "hp": 1.6,
+   "mp": 0.4
+  },
+  "description": "打脉入门：打击自带破防，血厚耐打。"
+ },
+ {
+  "id": "qiang_lancer",
+  "name": "枪兵",
+  "difficulty": "simple",
+  "playstyle": "多段突刺，出手最快",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "突脉"
+  ],
+  "weapon_types": [
+   "spear"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "str": 2.4,
+   "agi": 2.4,
+   "foc": 1.6,
+   "hp": 1.1,
+   "mp": 0.5
+  },
+  "description": "突脉入门：段数与机动见长，擅长抢节奏。"
+ },
+ {
+  "id": "fa_mage",
+  "name": "法徒",
+  "difficulty": "simple",
+  "playstyle": "远程法术，状态控场",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "魔脉"
+  ],
+  "weapon_types": [
+   "staff"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "spr": 3.0,
+   "int": 2.2,
+   "mp": 1.8,
+   "hp": 0.8
+  },
+  "description": "魔脉入门：法术无视格挡，附带状态。"
+ }
+]

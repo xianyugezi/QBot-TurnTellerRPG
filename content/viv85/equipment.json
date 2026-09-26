@@ -1,1 +1,131 @@
-[]
+[
+ {
+  "id": "wp_sword_1",
+  "name": "试炼短剑",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 120,
+  "atk": 12,
+  "desc": "斩脉入门武器。"
+ },
+ {
+  "id": "wp_sword_2",
+  "name": "青锋剑",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 480,
+  "atk": 30,
+  "desc": "斩脉正式武器。"
+ },
+ {
+  "id": "wp_hammer_1",
+  "name": "试炼铁锤",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 120,
+  "atk": 12,
+  "desc": "打脉入门武器，破防更快。"
+ },
+ {
+  "id": "wp_hammer_2",
+  "name": "沉岩战锤",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 480,
+  "atk": 30,
+  "desc": "打脉正式武器。"
+ },
+ {
+  "id": "wp_spear_1",
+  "name": "试炼长枪",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 120,
+  "atk": 12,
+  "desc": "突脉入门武器。"
+ },
+ {
+  "id": "wp_spear_2",
+  "name": "尖脊枪",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 480,
+  "atk": 30,
+  "desc": "突脉正式武器。"
+ },
+ {
+  "id": "wp_staff_1",
+  "name": "试炼法杖",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 120,
+  "atk": 10,
+  "spr": 6,
+  "desc": "魔脉入门武器。"
+ },
+ {
+  "id": "wp_staff_2",
+  "name": "灵晶法杖",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 480,
+  "atk": 18,
+  "spr": 18,
+  "desc": "魔脉正式武器。"
+ },
+ {
+  "id": "ar_head_1",
+  "name": "皮兜帽",
+  "type": "armor",
+  "slot": "head",
+  "price": 80,
+  "dfn": 6,
+  "hp": 30
+ },
+ {
+  "id": "ar_body_1",
+  "name": "荒兽皮甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 160,
+  "dfn": 12,
+  "hp": 80
+ },
+ {
+  "id": "ar_hand_1",
+  "name": "皮护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 80,
+  "dfn": 6,
+  "hp": 30
+ },
+ {
+  "id": "ar_leg_1",
+  "name": "皮护腿",
+  "type": "armor",
+  "slot": "leg",
+  "price": 100,
+  "dfn": 8,
+  "hp": 40
+ },
+ {
+  "id": "ar_foot_1",
+  "name": "皮靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 80,
+  "dfn": 5,
+  "hp": 20,
+  "agi": 2
+ },
+ {
+  "id": "ar_acc_1",
+  "name": "护心符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 200,
+  "hp": 100,
+  "lck": 3
+ }
+]

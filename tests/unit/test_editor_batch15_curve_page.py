@@ -297,10 +297,10 @@ def test_frontend_curve_page_wiring_and_no_layout_regression() -> None:
 
 
 def test_footer_batch_note_current_and_stale_note_absent() -> None:
-    """页脚批次串 →「批82 · 手册剩余项收口」；旧批次串不得残留。"""
+    """页脚批次串 →「批83 · 真缺口收敛」；旧批次串不得残留。"""
     html = HTML.read_text(encoding="utf-8")
     m = re.search(r'<div class="panel-ft"><span>(.*?)</span></div>', html)
-    assert m and m.group(1) == "批82 · 手册剩余项收口", m and m.group(1)
+    assert m and m.group(1) == "批83 · 真缺口收敛", m and m.group(1)
     assert "批79 · 职业继承 mode" not in html
     assert "批55 · 特效强度预算" not in html
     assert "批50 · 特效轴地基" not in html

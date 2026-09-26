@@ -618,6 +618,7 @@
 | BUG-4 | **`forge.decompose_rate` 死键** | 批 70 已删除（`CHANGELOG.md:99-102`；`qbot_rpg/content/forge_settings.py:30-31` 记载删除） | ✅ **已修**（批 70）；唯一源 = `settings.alchemy.decompose_rate` |
 | BUG-5 | **文档与实现不一致（覆盖率目录、旧分层名）** | §2.3 G-5/G-6 | ✅ **已修（批81，文档侧）**：G-5 覆盖率 → core + content 两目录；G-6 旧分层名 → 实际 `qbot_rpg/{commands,core,world,storage,content,data,web}`；代码以脚本为准，未动代码逻辑（见 §2.3 G-5/G-6 行 + 手册 §六） |
 | BUG-6 | **批 71 两份依据文档缺失** | §2.3 G-7；`CHANGELOG.md:66` | **仓外存在**（`/root/deliverables/`）；建议回填仓库，否则 CHANGELOG 悬空 |
+| BUG-7 | **N2/N3/N5：`ItemInstance` 写路径归一静默丢字段**——N2 `/装备` dict 归一丢 `effect_refs` **且写回背包**；N3 `stack_max` 在两条归一链路均丢（回落默认 99）；N5 两条内联归一（17/18 字段）与读档 codec（20/20）不一致 | N2 `commands/basic_commands.py:1567-1597`（17/20）→ `:1616-1618` 写回 `player["inventory"]`；N3 `assembly/runner.py:720`、`commands/basic_commands.py:1567`；**同族对照**：读档侧已修 `storage/repository.py:219-222`、`runner.py:751-753` 保留 `effect_refs`；**判据（§3.7.2）**：`CHANGELOG` **零** `stack_max` 裁决、无"保留/接受"裁定（Q4）→ **真缺口，非"故意设计"**（《手册·1》§6.2 N2/N3/N5） | ✅ **已修（批83）**：收敛为**公共归一函数** `qbot_rpg/data/item.py::item_instance_from_mapping`（20/20 唯一源），两条链路改为调用它（`assembly/runner.py`、`commands/basic_commands.py`）；**修前实测** `effect_refs=()` / `stack_max=99` → **修后** `('moon_bless','frost_bite')` / `1`；正常流程逐字段对拍一致（仅 N2/N3 + `cooldown_until` 由丢变保）；回归 `tests/unit/test_batch83_instance_normalize.py` |
 
 ### 3.7.2 判定原则（写进本章，供后人复用）
 

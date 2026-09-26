@@ -661,6 +661,34 @@
 
 ### Fixed
 
+- **批83（2026-09-23）**：**真缺口收敛（N2/N3/N5 字段静默丢失 + 3 ctx 键标注 + NEW 文档错）**。
+  依据 `/root/deliverables/手册剩余项_核清与口径.md` Q2/Q4/Q5/NEW-1~9 + 《手册·1》§3.1/§3.4。
+  **① N2/N3/N5（真缺口，§3.7.1 BUG-7）**：`ItemInstance` 写路径两条**内联**归一
+  （`assembly/runner.py` 的 ctx dict 行归一、`commands/basic_commands.py` 的 `/装备` dict 归一）
+  与读档 codec（20/20）不一致，导致 `effect_refs`（`/装备` 链路丢且**写回背包**）、
+  `stack_max`（两条链路均丢 → 回落 99）、`cooldown_until` 静默丢失。**修复 = 收敛为公共归一
+  函数** `qbot_rpg/data/item.py::item_instance_from_mapping`（20/20 唯一源），两条链路改为调用它。
+  修前实测 `effect_refs=()` / `stack_max=99` → 修后 `('moon_bless','frost_bite')` / `1`；
+  正常流程逐字段对拍一致（仅上述三字段由丢变保）。回归
+  `tests/unit/test_batch83_instance_normalize.py`；`test_batch42/43/46` 构造点静态守卫同步到
+  「公共函数 + 读档 codec」。
+  **② 3 个零消费 ctx 键（Q2/NEW-9）**：`monster_pool`/`worn_refs` 标「**当前无框架消费方**」，
+  `shop_engine` 标「**恒 None · 准死键 · 待收敛**」（消费口径已被 `shops`/`current_shop_ref`
+  取代）——《手册·1》§2.7.3 逐键表；**`content/**/ext/**` 包自持代码零读取**（grep 证据）；
+  **不删键**（先确认无包依赖）。
+  **③ NEW 文档错**：NEW-2 `core/jewel.py:41` ctx 键来源改 `settings.slot_defs`（对齐 `:365`）；
+  NEW-4 `API手册_编撰前盘点.md` 的悬空路径改引**仓库根** `审查_M8实现_批次E2_jspace.md`；
+  NEW-7 《手册·1》§2.6.3 补注 `templates` map 不进注册表**属有意**；NEW-8 草案
+  `floor_ratio 0.25→0.0` 并注明以实现为准；NEW-3/5/1 核对无需改动（批82 已处置）。
+  **④ NEW-6（勾选门禁口径）**：查实 `web/editor_ops.py::set_module_enabled` **会写入
+  `manifest.modules`**（实测 demo_blank 勾 `farming` → modules 含 farming、`farming.json={}`）；
+  6 个能力标记条目（`assistant/codex/contest/farming/gathering/quest_board`）是配置落
+  settings/maps 段的**文档化能力标记**，故 `check_manifest_modules_registered` 对其豁免
+  （`module_catalog.py::CAPABILITY_MARKER_MODULES`），仍拦真正未登记模块。
+  **页脚批次串** →「批83 · 真缺口收敛」（`web/static/index.html` + 全部批次串断言同步）。
+  验收：全量 pytest 0 failed；`ruff` 干净；全量对拍 + 双尺子（种子 20260919）斩回不变；
+  `verify_veinborn_smoke.py` PASS 10/10；`git status --porcelain` 空。
+
 - **批81（2026-09-23）**：**手册 §六真功能缺口修复（A1/A2）+ 文档不一致（B1）**。
   **A1（框架真功能失效）**：CTB 全量替换后战斗不再派发 `turn_end` 事件 →
   `content/veinborn` 的 `surge_tick`（`trigger=turn_end`）从不触发、「困斗蓄能」恒 0。

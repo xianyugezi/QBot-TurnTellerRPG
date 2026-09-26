@@ -1419,6 +1419,11 @@ def tick_turn_end(snapshot: Mapping[str, Any], runtime: EffectRuntime) -> List[D
             log.append({"type": "status_expired", "side": side,
                         "status": str(_exp.get("status_id") or ""),
                         "name": str(_exp.get("name") or "")})
+            # 批84 · B3：tick 到期（持续双维归零）派发 status_lose（on_expire/on_lose
+            # 生效；无声明 → []，既有内容逐字段零变化）。与批81 turn_end 同口径：
+            # 在既有到期处理处**并列**补一枪，不动既有 log/移除逻辑。
+            _dispatch_status_expire(side, str(_exp.get("status_id") or ""),
+                                    snapshot, runtime)
         runtime.marks_manager().tick_turn(side)
         # ⑤ 每次行动触发计数重置
         runtime.reset_turn_triggers(side)
@@ -1427,8 +1432,17 @@ def tick_turn_end(snapshot: Mapping[str, Any], runtime: EffectRuntime) -> List[D
 
 
 def tick_after_action(snapshot: Mapping[str, Any], runtime: EffectRuntime, actor: str) -> List[Dict[str, Any]]:
-    """携带者行动结算后衰减（细化_1b §0/§4.2 D5，H8：携带者每次行动结算后衰减一次，非双方）。"""
-    return runtime.decay_carrier(actor)
+    """携带者行动结算后衰减（细化_1b §0/§4.2 D5，H8：携带者每次行动结算后衰减一次，非双方）。
+
+    批84 · B3：衰减归零移除（`status_expired`）在既有处理处**并列**补派发 `status_lose`
+    （on_expire/on_lose 生效；无声明 → []，既有内容逐字段零变化）。返回值与既有逐字段一致。
+    """
+    removed = runtime.decay_carrier(actor)
+    for _entry in removed:
+        if _entry.get("type") == "status_expired":
+            _dispatch_status_expire(actor, str(_entry.get("status_id") or ""),
+                                    snapshot, runtime)
+    return removed
 
 
 # ---------------------------------------------------------------------------
@@ -2062,6 +2076,34 @@ def _dispatch_status_event(event: str, status_id: str, side: str,
         )
     except Exception:  # noqa: BLE001 —— 状态事件异常不阻断主动作（安全失败）
         return []
+
+
+def _dispatch_status_expire(side: str, status_id: str,
+                            snapshot: Mapping[str, Any],
+                            runtime: EffectRuntime) -> List[Dict[str, Any]]:
+    """批84 · B3：tick **到期**（衰减 / 持续双维归零）派发 `status_lose`。
+
+    依据（设计口径明确「该触发」）：
+      · `docs/细化/细化_1b_效果系统契约.md:106`：statuses 的 `on_gain`/`on_lose`/
+        `on_expire` 字段「状态获得/**消失**/**过期**时触发」；
+      · `docs/框架_功能三_通用效果事件分派器_设计.md:100`（§2.4 接线表）：
+        `_remove_status / dispel / tick 过期 → 补 dispatch status_lose/on_expire（新能力）`；
+        §三 批3（`:120`）列 `_remove_status/dispel/tick` 为接线批次；
+      · `docs/深度打造_实现说明.md:736`：`status_lose` =「状态获得 / 消失（**含过期**）」。
+
+    修前现状：tick 过期路径只写 `status_expired` log、**不派发**，`on_expire`/`on_lose`
+    声明的效果永不触发（待查 P-1）。本函数在**既有到期处理处**补一枪（不动其它逻辑）——
+    无声明 / 未注册分派器 / resolver 缺失 → `[]`（安全失败，**零行为变化**）。
+
+    返回的 side_effects 与批81 `turn_end` 派发同口径（调用方按需消费；效果副作用已在
+    `execute_action` 内直接落到 `snapshot`）。
+    """
+    if _STATUS_EVENT_DISPATCHER is None or not status_id:
+        return []
+    ctx = DamageCtx(raw_damage=0, attack_type="status", attacker=side,
+                    target=side, snapshot=snapshot)
+    return _dispatch_status_event("status_lose", status_id, side, ctx, runtime)
+
 
 
 def execute_action(

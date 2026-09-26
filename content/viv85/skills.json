@@ -293,7 +293,7 @@
  },
  {
   "id": "sw3_slash",
-  "name": "圣裁斩",
+  "name": "圣锋斩",
   "type": "basic",
   "kind": "damage",
   "power": 100,
@@ -318,7 +318,7 @@
    "per_round": 10,
    "per_battle": 99
   },
-  "desc": "圣裁起手，简洁而致命。",
+  "desc": "圣锋起手，简洁而致命。",
   "hit_mod": 1.0,
   "crit_mod": 1.0,
   "block_mode": "auto",
@@ -327,8 +327,8 @@
   }
  },
  {
-  "id": "sw3_iai",
-  "name": "一之太刀",
+  "id": "sw3_peakcut",
+  "name": "断岳斩",
   "type": "active",
   "kind": "damage",
   "power": 150,
@@ -353,7 +353,7 @@
    "per_round": 10,
    "per_battle": 99
   },
-  "desc": "一刀定胜负，出手即收招。",
+  "desc": "一剑断岳，出手即定胜负。",
   "hit_mod": 1.0,
   "crit_mod": 1.0,
   "block_mode": "auto",
@@ -362,8 +362,8 @@
   }
  },
  {
-  "id": "sw3_zen",
-  "name": "心刃",
+  "id": "sw3_intent",
+  "name": "剑意",
   "type": "active",
   "kind": "utility",
   "power": 0,
@@ -394,7 +394,7 @@
    "per_round": 10,
    "per_battle": 99
   },
-  "desc": "心刃澄明：幸运 +20%，持续 3 回合。",
+  "desc": "剑意通明：幸运 +20%，持续 3 回合。",
   "hit_mod": 1.0,
   "crit_mod": 1.0,
   "block_mode": "auto",
@@ -403,8 +403,8 @@
   }
  },
  {
-  "id": "sw3_flash",
-  "name": "无明一闪",
+  "id": "sw3_twin",
+  "name": "两仪斩",
   "type": "active",
   "kind": "damage",
   "power": 75,
@@ -429,7 +429,7 @@
    "per_round": 10,
    "per_battle": 99
   },
-  "desc": "两段极速斩，专破残血。",
+  "desc": "两仪分光，双斩连出。",
   "hit_mod": 1.0,
   "crit_mod": 1.0,
   "block_mode": "auto",

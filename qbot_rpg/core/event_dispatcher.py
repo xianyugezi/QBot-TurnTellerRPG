@@ -48,10 +48,20 @@ from qbot_rpg.core.effect_types import DamageCtx, chance_roll
 # 2026-09-10 环打破：本模块 → effects 为单向依赖（effects 已改为回调注入，不再
 # reverse import 本模块），故此处可由原「函数内 lazy import」提升为顶层 import。
 from qbot_rpg.core.effects import execute_action, register_event_dispatcher
-from qbot_rpg.data.event_points import EVENT_POINTS as EVENT_POINTS_SOURCE
+from qbot_rpg.data.event_points import (
+    EVENT_POINT_INDEX,
+    EVENT_POINT_TABLE,
+    EVENT_POINTS as EVENT_POINTS_SOURCE,
+    is_dispatched,
+    undispatched_points,
+)
 
 __all__ = [
     "EVENT_POINTS",
+    "EVENT_POINT_TABLE",
+    "EVENT_POINT_INDEX",
+    "is_dispatched",
+    "undispatched_points",
     "dispatch_event",
 ]
 

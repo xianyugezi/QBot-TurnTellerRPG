@@ -26,7 +26,7 @@
   "type": "shield",
   "power": 120,
   "target": "self",
-  "desc": "获得 120 点护盾，吸收伤害后消失"
+  "desc": "获得 120 点护盾"
  },
  {
   "id": "burn_dot",
@@ -67,6 +67,72 @@
   "type": "stat_modifier",
   "stat": "spd",
   "value": -25,
+  "pct": true
+ },
+ {
+  "id": "guard_stance2",
+  "name": "铁壁姿态",
+  "type": "mitigation",
+  "power": 60,
+  "duration": 1,
+  "target": "self",
+  "desc": "本次行动所受伤害 -60%"
+ },
+ {
+  "id": "spirit_shield2",
+  "name": "大灵盾",
+  "type": "shield",
+  "power": 260,
+  "target": "self",
+  "desc": "获得 260 点护盾"
+ },
+ {
+  "id": "bleed_dot",
+  "name": "出血",
+  "type": "dot",
+  "power": 30,
+  "duration": 3,
+  "target": "enemy",
+  "desc": "每回合扣 30 点生命，持续 3 回合"
+ },
+ {
+  "id": "fx_atk_down",
+  "name": "攻击下降",
+  "type": "stat_modifier",
+  "stat": "atk",
+  "value": -20,
+  "pct": true
+ },
+ {
+  "id": "fx_dfn_up",
+  "name": "防御提升",
+  "type": "stat_modifier",
+  "stat": "dfn",
+  "value": 25,
+  "pct": true
+ },
+ {
+  "id": "fx_mag_up",
+  "name": "法强提升",
+  "type": "stat_modifier",
+  "stat": "mag",
+  "value": 20,
+  "pct": true
+ },
+ {
+  "id": "fx_foc_up",
+  "name": "专注提升",
+  "type": "stat_modifier",
+  "stat": "foc",
+  "value": 20,
+  "pct": true
+ },
+ {
+  "id": "fx_lck_up",
+  "name": "幸运提升",
+  "type": "stat_modifier",
+  "stat": "lck",
+  "value": 20,
   "pct": true
  }
 ]

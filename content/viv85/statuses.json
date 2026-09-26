@@ -98,5 +98,142 @@
    "burn_dot"
   ],
   "desc": "每回合结束受 25 点伤害，可叠 3 层"
+ },
+ {
+  "id": "st_atk_down",
+  "name": "力竭",
+  "type": "debuff",
+  "max_stack": 1,
+  "duration": {
+   "turns": 3,
+   "charges": 0
+  },
+  "decay": "per_turn",
+  "actions": [
+   {
+    "type": "stat_modifier",
+    "stat": "atk",
+    "value": -20,
+    "pct": true
+   }
+  ],
+  "effects": [],
+  "desc": "攻击 -20%，持续 3 回合"
+ },
+ {
+  "id": "st_dfn_up",
+  "name": "守势",
+  "type": "buff",
+  "max_stack": 1,
+  "duration": {
+   "turns": 3,
+   "charges": 0
+  },
+  "decay": "per_turn",
+  "actions": [
+   {
+    "type": "stat_modifier",
+    "stat": "dfn",
+    "value": 25,
+    "pct": true
+   }
+  ],
+  "effects": [],
+  "desc": "防御 +25%，持续 3 回合"
+ },
+ {
+  "id": "st_mag_up",
+  "name": "法涌",
+  "type": "buff",
+  "max_stack": 1,
+  "duration": {
+   "turns": 3,
+   "charges": 0
+  },
+  "decay": "per_turn",
+  "actions": [
+   {
+    "type": "stat_modifier",
+    "stat": "mag",
+    "value": 20,
+    "pct": true
+   }
+  ],
+  "effects": [],
+  "desc": "法强 +20%，持续 3 回合"
+ },
+ {
+  "id": "st_foc_up",
+  "name": "凝神",
+  "type": "buff",
+  "max_stack": 1,
+  "duration": {
+   "turns": 3,
+   "charges": 0
+  },
+  "decay": "per_turn",
+  "actions": [
+   {
+    "type": "stat_modifier",
+    "stat": "foc",
+    "value": 20,
+    "pct": true
+   }
+  ],
+  "effects": [],
+  "desc": "专注 +20%，持续 3 回合"
+ },
+ {
+  "id": "st_lck_up",
+  "name": "鸿运",
+  "type": "buff",
+  "max_stack": 1,
+  "duration": {
+   "turns": 3,
+   "charges": 0
+  },
+  "decay": "per_turn",
+  "actions": [
+   {
+    "type": "stat_modifier",
+    "stat": "lck",
+    "value": 20,
+    "pct": true
+   }
+  ],
+  "effects": [],
+  "desc": "幸运 +20%，持续 3 回合"
+ },
+ {
+  "id": "st_bleed",
+  "name": "出血",
+  "type": "debuff",
+  "max_stack": 3,
+  "duration": {
+   "turns": 3,
+   "charges": 0
+  },
+  "decay": "per_turn",
+  "on_tick": "bleed_dot",
+  "effects": [
+   "bleed_dot"
+  ],
+  "desc": "每回合结束受 30 点伤害，可叠 3 层"
+ },
+ {
+  "id": "st_regen",
+  "name": "回春",
+  "type": "buff",
+  "max_stack": 1,
+  "duration": {
+   "turns": 3,
+   "charges": 0
+  },
+  "decay": "per_turn",
+  "on_tick": "heal_small",
+  "effects": [
+   "heal_small"
+  ],
+  "desc": "每回合结束恢复 60 点生命，持续 3 回合"
  }
 ]

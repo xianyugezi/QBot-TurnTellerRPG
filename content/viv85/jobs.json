@@ -25,12 +25,210 @@
   "description": "斩脉入门：以连击与会心见长，攻守均衡。"
  },
  {
+  "id": "jian_bladelord",
+  "name": "剑豪",
+  "difficulty": "advanced",
+  "playstyle": "蓄势一击，刀走一线",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "斩脉",
+   "1转"
+  ],
+  "weapon_types": [
+   "sword"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "str": 3.4,
+   "con": 1.6,
+   "agi": 1.8,
+   "hp": 1.2,
+   "mp": 0.5
+  },
+  "description": "斩脉一转：以「蓄」换「斩」，单发倍率冠绝斩脉。",
+  "advance": {
+   "from": "jian_swordsman",
+   "level": 20
+  },
+  "inherit": {
+   "from": "jian_swordsman"
+  }
+ },
+ {
+  "id": "jian_saint",
+  "name": "剑圣",
+  "difficulty": "complex",
+  "playstyle": "一刀定局",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "斩脉",
+   "2转"
+  ],
+  "weapon_types": [
+   "sword"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "str": 3.8,
+   "con": 1.8,
+   "agi": 2.0,
+   "hp": 1.3,
+   "mp": 0.6
+  },
+  "description": "斩脉二转：一之太刀——以最少的出手换最大的收益。",
+  "advance": {
+   "from": "jian_bladelord",
+   "level": 60
+  },
+  "inherit": {
+   "from": "jian_bladelord"
+  }
+ },
+ {
+  "id": "jian_oni",
+  "name": "剑鬼",
+  "difficulty": "complex",
+  "playstyle": "狂乱连斩",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "斩脉",
+   "2转"
+  ],
+  "weapon_types": [
+   "sword"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "str": 3.7,
+   "con": 1.5,
+   "agi": 2.2,
+   "hp": 1.1,
+   "mp": 0.5
+  },
+  "description": "斩脉二转：弃守狂攻，以出血与连斩淹没对手。",
+  "advance": {
+   "from": "jian_bladelord",
+   "level": 60
+  },
+  "inherit": {
+   "from": "jian_bladelord"
+  }
+ },
+ {
+  "id": "jian_guardian",
+  "name": "剑卫",
+  "difficulty": "advanced",
+  "playstyle": "守势反击",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "斩脉",
+   "1转"
+  ],
+  "weapon_types": [
+   "sword"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "str": 2.4,
+   "con": 3.0,
+   "agi": 1.0,
+   "hp": 1.6,
+   "mp": 0.5
+  },
+  "description": "斩脉一转：以守为攻，格挡反击的稳剑。",
+  "advance": {
+   "from": "jian_swordsman",
+   "level": 20
+  },
+  "inherit": {
+   "from": "jian_swordsman"
+  }
+ },
+ {
+  "id": "jian_emperor",
+  "name": "剑帝",
+  "difficulty": "complex",
+  "playstyle": "王权守护",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "斩脉",
+   "2转"
+  ],
+  "weapon_types": [
+   "sword"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "str": 2.8,
+   "con": 3.6,
+   "agi": 1.2,
+   "hp": 1.9,
+   "mp": 0.6
+  },
+  "description": "斩脉二转：以王权之剑护住阵线，守中带攻。",
+  "advance": {
+   "from": "jian_guardian",
+   "level": 60
+  },
+  "inherit": {
+   "from": "jian_guardian"
+  }
+ },
+ {
+  "id": "jian_dancer",
+  "name": "剑舞者",
+  "difficulty": "complex",
+  "playstyle": "闪避流转",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "斩脉",
+   "2转"
+  ],
+  "weapon_types": [
+   "sword"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "str": 3.0,
+   "con": 1.8,
+   "agi": 3.0,
+   "hp": 1.2,
+   "mp": 0.6
+  },
+  "description": "斩脉二转：以身法流转取势，快得看不清。",
+  "advance": {
+   "from": "jian_guardian",
+   "level": 60
+  },
+  "inherit": {
+   "from": "jian_guardian"
+  }
+ },
+ {
   "id": "quan_fist",
   "name": "拳僧",
   "difficulty": "simple",
   "playstyle": "重击破防，越打越硬",
   "recommended_newbie": false,
-  "is_basic": false,
+  "is_basic": true,
   "mechanic_tags": [
    "打脉"
   ],
@@ -49,12 +247,206 @@
   "description": "打脉入门：打击自带破防，血厚耐打。"
  },
  {
+  "id": "quan_hammer",
+  "name": "铁锤卫",
+  "difficulty": "advanced",
+  "playstyle": "重型压制",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "打脉",
+   "1转"
+  ],
+  "weapon_types": [
+   "hammer"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "str": 3.0,
+   "con": 2.6,
+   "hp": 1.8,
+   "mp": 0.4
+  },
+  "description": "打脉一转：以巨锤压制，出手慢但破防更狠。",
+  "advance": {
+   "from": "quan_fist",
+   "level": 20
+  },
+  "inherit": {
+   "from": "quan_fist"
+  }
+ },
+ {
+  "id": "quan_pojun",
+  "name": "破军",
+  "difficulty": "complex",
+  "playstyle": "崩山破阵",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "打脉",
+   "2转"
+  ],
+  "weapon_types": [
+   "hammer"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "str": 3.4,
+   "con": 2.8,
+   "hp": 1.9,
+   "mp": 0.5
+  },
+  "description": "打脉二转：一击崩山，阵型为之一空。",
+  "advance": {
+   "from": "quan_hammer",
+   "level": 60
+  },
+  "inherit": {
+   "from": "quan_hammer"
+  }
+ },
+ {
+  "id": "quan_artisan",
+  "name": "巨匠",
+  "difficulty": "complex",
+  "playstyle": "匠魂锻打",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "打脉",
+   "2转"
+  ],
+  "weapon_types": [
+   "hammer"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "str": 3.0,
+   "con": 3.2,
+   "hp": 2.0,
+   "mp": 0.5
+  },
+  "description": "打脉二转：以锻打之法锤击人身，攻守兼备。",
+  "advance": {
+   "from": "quan_hammer",
+   "level": 60
+  },
+  "inherit": {
+   "from": "quan_hammer"
+  }
+ },
+ {
+  "id": "quan_monk",
+  "name": "武僧",
+  "difficulty": "advanced",
+  "playstyle": "拳法连击",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "打脉",
+   "1转"
+  ],
+  "weapon_types": [
+   "hammer"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "str": 2.6,
+   "con": 2.0,
+   "agi": 1.6,
+   "hp": 1.4,
+   "mp": 0.6
+  },
+  "description": "打脉一转：弃重锤而练拳，以段数取势。",
+  "advance": {
+   "from": "quan_fist",
+   "level": 20
+  },
+  "inherit": {
+   "from": "quan_fist"
+  }
+ },
+ {
+  "id": "quan_rakshasa",
+  "name": "罗刹",
+  "difficulty": "complex",
+  "playstyle": "拳劲爆发",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "打脉",
+   "2转"
+  ],
+  "weapon_types": [
+   "hammer"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "str": 3.2,
+   "con": 1.8,
+   "agi": 2.2,
+   "hp": 1.4,
+   "mp": 0.6
+  },
+  "description": "打脉二转：拳劲外放，一击多段。",
+  "advance": {
+   "from": "quan_monk",
+   "level": 60
+  },
+  "inherit": {
+   "from": "quan_monk"
+  }
+ },
+ {
+  "id": "quan_vajra",
+  "name": "金刚",
+  "difficulty": "complex",
+  "playstyle": "不坏之身",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "打脉",
+   "2转"
+  ],
+  "weapon_types": [
+   "hammer"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "str": 2.6,
+   "con": 3.6,
+   "hp": 2.2,
+   "mp": 0.6
+  },
+  "description": "打脉二转：身如金刚，久战不衰。",
+  "advance": {
+   "from": "quan_monk",
+   "level": 60
+  },
+  "inherit": {
+   "from": "quan_monk"
+  }
+ },
+ {
   "id": "qiang_lancer",
   "name": "枪兵",
   "difficulty": "simple",
   "playstyle": "多段突刺，出手最快",
   "recommended_newbie": false,
-  "is_basic": false,
+  "is_basic": true,
   "mechanic_tags": [
    "突脉"
   ],
@@ -74,12 +466,210 @@
   "description": "突脉入门：段数与机动见长，擅长抢节奏。"
  },
  {
+  "id": "qiang_drake",
+  "name": "龙骑枪手",
+  "difficulty": "advanced",
+  "playstyle": "冲锋突刺",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "突脉",
+   "1转"
+  ],
+  "weapon_types": [
+   "spear"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "str": 2.8,
+   "agi": 2.2,
+   "con": 1.6,
+   "hp": 1.4,
+   "mp": 0.5
+  },
+  "description": "突脉一转：骑乘冲锋，撞开一条血路。",
+  "advance": {
+   "from": "qiang_lancer",
+   "level": 20
+  },
+  "inherit": {
+   "from": "qiang_lancer"
+  }
+ },
+ {
+  "id": "qiang_heaven",
+  "name": "天枪圣",
+  "difficulty": "complex",
+  "playstyle": "贯穿苍穹",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "突脉",
+   "2转"
+  ],
+  "weapon_types": [
+   "spear"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "str": 3.2,
+   "agi": 2.6,
+   "con": 1.8,
+   "hp": 1.5,
+   "mp": 0.6
+  },
+  "description": "突脉二转：一枪贯天，无可阻其锋。",
+  "advance": {
+   "from": "qiang_drake",
+   "level": 60
+  },
+  "inherit": {
+   "from": "qiang_drake"
+  }
+ },
+ {
+  "id": "qiang_draconic",
+  "name": "龙枪皇",
+  "difficulty": "complex",
+  "playstyle": "龙威压制",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "突脉",
+   "2转"
+  ],
+  "weapon_types": [
+   "spear"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "str": 3.4,
+   "agi": 2.0,
+   "con": 2.0,
+   "hp": 1.6,
+   "mp": 0.6
+  },
+  "description": "突脉二转：以龙威压敌，长枪即龙牙。",
+  "advance": {
+   "from": "qiang_drake",
+   "level": 60
+  },
+  "inherit": {
+   "from": "qiang_drake"
+  }
+ },
+ {
+  "id": "qiang_hunter",
+  "name": "猎矛手",
+  "difficulty": "advanced",
+  "playstyle": "投掷远击",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "突脉",
+   "1转"
+  ],
+  "weapon_types": [
+   "spear"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "str": 2.2,
+   "agi": 2.6,
+   "foc": 2.0,
+   "hp": 1.0,
+   "mp": 0.5
+  },
+  "description": "突脉一转：以投矛取远，先手压制。",
+  "advance": {
+   "from": "qiang_lancer",
+   "level": 20
+  },
+  "inherit": {
+   "from": "qiang_lancer"
+  }
+ },
+ {
+  "id": "qiang_shadow",
+  "name": "影矛",
+  "difficulty": "complex",
+  "playstyle": "潜袭暗杀",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "突脉",
+   "2转"
+  ],
+  "weapon_types": [
+   "spear"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "str": 2.6,
+   "agi": 3.2,
+   "foc": 2.2,
+   "hp": 1.0,
+   "mp": 0.6
+  },
+  "description": "突脉二转：出没于暗处，一矛封喉。",
+  "advance": {
+   "from": "qiang_hunter",
+   "level": 60
+  },
+  "inherit": {
+   "from": "qiang_hunter"
+  }
+ },
+ {
+  "id": "qiang_gale",
+  "name": "风矛",
+  "difficulty": "complex",
+  "playstyle": "连刺如风",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "突脉",
+   "2转"
+  ],
+  "weapon_types": [
+   "spear"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "str": 2.4,
+   "agi": 3.4,
+   "foc": 1.8,
+   "hp": 1.1,
+   "mp": 0.6
+  },
+  "description": "突脉二转：出手快过风声，以量取胜。",
+  "advance": {
+   "from": "qiang_hunter",
+   "level": 60
+  },
+  "inherit": {
+   "from": "qiang_hunter"
+  }
+ },
+ {
   "id": "fa_mage",
   "name": "法徒",
   "difficulty": "simple",
   "playstyle": "远程法术，状态控场",
   "recommended_newbie": false,
-  "is_basic": false,
+  "is_basic": true,
   "mechanic_tags": [
    "魔脉"
   ],
@@ -96,5 +686,197 @@
    "hp": 0.8
   },
   "description": "魔脉入门：法术无视格挡，附带状态。"
+ },
+ {
+  "id": "fa_elementalist",
+  "name": "元素使",
+  "difficulty": "advanced",
+  "playstyle": "四元素轮转",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "魔脉",
+   "1转"
+  ],
+  "weapon_types": [
+   "staff"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "spr": 3.2,
+   "int": 2.6,
+   "mp": 2.0,
+   "hp": 0.9
+  },
+  "description": "魔脉一转：掌四元素，攻守自便。",
+  "advance": {
+   "from": "fa_mage",
+   "level": 20
+  },
+  "inherit": {
+   "from": "fa_mage"
+  }
+ },
+ {
+  "id": "fa_archmage",
+  "name": "大魔导",
+  "difficulty": "complex",
+  "playstyle": "万法归元",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "魔脉",
+   "2转"
+  ],
+  "weapon_types": [
+   "staff"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "spr": 3.8,
+   "int": 3.2,
+   "mp": 2.4,
+   "hp": 1.0
+  },
+  "description": "魔脉二转：以一身法力驾驭万法。",
+  "advance": {
+   "from": "fa_elementalist",
+   "level": 60
+  },
+  "inherit": {
+   "from": "fa_elementalist"
+  }
+ },
+ {
+  "id": "fa_summoner",
+  "name": "咏灵师",
+  "difficulty": "complex",
+  "playstyle": "灵体协战",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "魔脉",
+   "2转"
+  ],
+  "weapon_types": [
+   "staff"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "spr": 3.6,
+   "int": 3.0,
+   "mp": 2.6,
+   "hp": 1.0
+  },
+  "description": "魔脉二转：召灵助战，自身转为策应。",
+  "advance": {
+   "from": "fa_elementalist",
+   "level": 60
+  },
+  "inherit": {
+   "from": "fa_elementalist"
+  }
+ },
+ {
+  "id": "fa_warlock",
+  "name": "术士",
+  "difficulty": "advanced",
+  "playstyle": "咒术减益",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "魔脉",
+   "1转"
+  ],
+  "weapon_types": [
+   "staff"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "spr": 2.8,
+   "int": 2.4,
+   "mp": 2.0,
+   "hp": 1.0
+  },
+  "description": "魔脉一转：以咒术削敌，越打越弱。",
+  "advance": {
+   "from": "fa_mage",
+   "level": 20
+  },
+  "inherit": {
+   "from": "fa_mage"
+  }
+ },
+ {
+  "id": "fa_curseking",
+  "name": "咒王",
+  "difficulty": "complex",
+  "playstyle": "诅咒支配",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "魔脉",
+   "2转"
+  ],
+  "weapon_types": [
+   "staff"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "spr": 3.4,
+   "int": 3.0,
+   "mp": 2.4,
+   "hp": 1.1
+  },
+  "description": "魔脉二转：咒术之主，令敌人自我衰败。",
+  "advance": {
+   "from": "fa_warlock",
+   "level": 60
+  },
+  "inherit": {
+   "from": "fa_warlock"
+  }
+ },
+ {
+  "id": "fa_oracle",
+  "name": "神谕者",
+  "difficulty": "complex",
+  "playstyle": "增益祝福",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "魔脉",
+   "2转"
+  ],
+  "weapon_types": [
+   "staff"
+  ],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "spr": 3.6,
+   "int": 2.8,
+   "mp": 2.6,
+   "hp": 1.1
+  },
+  "description": "魔脉二转：转而护佑自身与同伴，越战越稳。",
+  "advance": {
+   "from": "fa_warlock",
+   "level": 60
+  },
+  "inherit": {
+   "from": "fa_warlock"
+  }
  }
 ]

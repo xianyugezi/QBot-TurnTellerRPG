@@ -146,6 +146,894 @@
   }
  },
  {
+  "id": "sw2_slash",
+  "name": "破风斩",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "斩",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "jian_bladelord"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "破风起手，承袭斩脉根基。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "sw2_iaido",
+  "name": "居合斩",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "斩",
+  "element": null,
+  "effects": [],
+  "mp_cost": 10,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "jian_bladelord"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "拔刀即斩，蓄势一瞬。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "sw2_edge",
+  "name": "锋锐",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "st_atk_up"
+   }
+  ],
+  "mp_cost": 5,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "jian_bladelord"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "磨砺刃意：攻击 +20%，持续 3 回合。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "sw2_cleave",
+  "name": "断空斩",
+  "type": "active",
+  "kind": "damage",
+  "power": 58,
+  "recovery": 60,
+  "attack_type": "斩",
+  "element": null,
+  "effects": [],
+  "mp_cost": 12,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "jian_bladelord"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 2,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "两段断空，破阵之技。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "sw3_slash",
+  "name": "圣裁斩",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "斩",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "jian_saint"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "圣裁起手，简洁而致命。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "sw3_iai",
+  "name": "一之太刀",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "斩",
+  "element": null,
+  "effects": [],
+  "mp_cost": 14,
+  "cooldown": 2,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "jian_saint"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "一刀定胜负，出手即收招。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "sw3_zen",
+  "name": "心刃",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "st_lck_up"
+   }
+  ],
+  "mp_cost": 6,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "jian_saint"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "心刃澄明：幸运 +20%，持续 3 回合。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "sw3_flash",
+  "name": "无明一闪",
+  "type": "active",
+  "kind": "damage",
+  "power": 75,
+  "recovery": 60,
+  "attack_type": "斩",
+  "element": null,
+  "effects": [],
+  "mp_cost": 16,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "jian_saint"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 2,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "两段极速斩，专破残血。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "sw3b_slash",
+  "name": "鬼斩",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "斩",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "jian_oni"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "鬼气森然的起手斩。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "sw3b_rage",
+  "name": "狂乱斩",
+  "type": "active",
+  "kind": "damage",
+  "power": 52,
+  "recovery": 60,
+  "attack_type": "斩",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "enemy",
+    "status_id": "st_bleed"
+   }
+  ],
+  "mp_cost": 14,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "jian_oni"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 3,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "三段狂乱斩，段段带血。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "sw3b_lunge",
+  "name": "鬼突",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "斩",
+  "element": null,
+  "effects": [],
+  "mp_cost": 12,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "jian_oni"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "借势突进，直取要害。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "sw3b_thirst",
+  "name": "血渴",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "st_atk_up"
+   }
+  ],
+  "mp_cost": 5,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "jian_oni"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "血渴入狂：攻击 +20%，持续 3 回合。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "swg_slash",
+  "name": "铁壁斩",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "斩",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "jian_guardian"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "护住中线的稳斩。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "swg_brace",
+  "name": "立盾",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "effect": "guard_stance"
+   }
+  ],
+  "mp_cost": 4,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "jian_guardian"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "立柱守势：本次行动所受伤害 -40%。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "swg_counter",
+  "name": "反击斩",
+  "type": "active",
+  "kind": "damage",
+  "power": 140,
+  "recovery": 60,
+  "attack_type": "斩",
+  "element": null,
+  "effects": [],
+  "mp_cost": 8,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "jian_guardian"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "承伤之后的反手一击。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "swg_wall",
+  "name": "剑壁",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "effect": "spirit_shield"
+   }
+  ],
+  "mp_cost": 8,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "jian_guardian"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "剑气成壁：获得 120 点护盾。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "swe_slash",
+  "name": "王剑斩",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "斩",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "jian_emperor"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "王权之剑的起手式。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "swe_aegis",
+  "name": "剑壁·御",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "effect": "spirit_shield2"
+   }
+  ],
+  "mp_cost": 12,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "jian_emperor"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "王权壁垒：获得 260 点护盾。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "swe_decree",
+  "name": "剑令",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "斩",
+  "element": null,
+  "effects": [],
+  "mp_cost": 12,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "jian_emperor"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "一剑成令，威压全场。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "swe_crown",
+  "name": "加冕",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "st_dfn_up"
+   }
+  ],
+  "mp_cost": 8,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "jian_emperor"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "加冕守势：防御 +25%，持续 3 回合。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "swd_slash",
+  "name": "舞斩",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "斩",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "jian_dancer"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "身随剑动的起手。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "swd_dance",
+  "name": "剑舞",
+  "type": "active",
+  "kind": "damage",
+  "power": 50,
+  "recovery": 60,
+  "attack_type": "斩",
+  "element": null,
+  "effects": [],
+  "mp_cost": 14,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "jian_dancer"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 3,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "三段剑舞，连绵不绝。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "swd_step",
+  "name": "幻步",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "st_spd_up"
+   }
+  ],
+  "mp_cost": 5,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "jian_dancer"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "踏幻步抢速：速度 +20%，持续 3 回合。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "swd_blade",
+  "name": "千刃",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "斩",
+  "element": null,
+  "effects": [],
+  "mp_cost": 16,
+  "cooldown": 2,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "jian_dancer"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "刃影成千，收束为斩。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
   "id": "bm_punch",
   "name": "铁拳",
   "type": "basic",
@@ -248,7 +1136,7 @@
    "per_round": 10,
    "per_battle": 99
   },
-  "desc": "击碎护甲：目标防御 -25%，持续 3 回合。",
+  "desc": "击碎护甲：目标防御 -25%。",
   "hit_mod": 1.0,
   "crit_mod": 1.0,
   "block_mode": "auto",
@@ -288,6 +1176,906 @@
    "per_battle": 99
   },
   "desc": "架势护体：本次行动所受伤害 -40%。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "bmh_punch",
+  "name": "锤击",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "打",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "quan_hammer"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "重锤起手式。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "bmh_quake",
+  "name": "震地",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "打",
+  "element": null,
+  "effects": [],
+  "mp_cost": 8,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "quan_hammer"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "砸地引发震荡，贯穿防线。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "bmh_crush",
+  "name": "碎骨",
+  "type": "active",
+  "kind": "status",
+  "power": 80,
+  "recovery": 60,
+  "attack_type": "打",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "enemy",
+    "status_id": "st_def_down"
+   }
+  ],
+  "mp_cost": 10,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "quan_hammer"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "碎其骨甲：目标防御 -25%。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "bmh_iron",
+  "name": "铁壁",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "effect": "guard_stance2"
+   }
+  ],
+  "mp_cost": 6,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "quan_hammer"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "横锤为壁：本次行动所受伤害 -60%。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "qpo_punch",
+  "name": "破军锤",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "打",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "quan_pojun"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "破军起手，锤势沉重。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "qpo_mountain",
+  "name": "崩山",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "打",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "enemy",
+    "status_id": "st_def_down"
+   }
+  ],
+  "mp_cost": 14,
+  "cooldown": 2,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "quan_pojun"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "全力崩山一击，破防叠加。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "qpo_ruin",
+  "name": "破阵",
+  "type": "active",
+  "kind": "damage",
+  "power": 68,
+  "recovery": 60,
+  "attack_type": "打",
+  "element": null,
+  "effects": [],
+  "mp_cost": 12,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "quan_pojun"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 2,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "两段破阵锤，扫平杂兵。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "qpo_roar",
+  "name": "战吼",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "st_atk_up"
+   }
+  ],
+  "mp_cost": 6,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "quan_pojun"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "战吼壮威：攻击 +20%，持续 3 回合。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "qar_punch",
+  "name": "锻锤",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "打",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "quan_artisan"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "匠人起手锤，节奏沉稳。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "qar_soul",
+  "name": "锻魂锤",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "打",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "enemy",
+    "status_id": "st_bleed"
+   }
+  ],
+  "mp_cost": 12,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "quan_artisan"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "锤锤入魂，破防更甚。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "qar_temper",
+  "name": "淬火",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "st_dfn_up"
+   }
+  ],
+  "mp_cost": 6,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "quan_artisan"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "淬火自守：防御 +25%，持续 3 回合。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "qar_master",
+  "name": "匠魂",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "effect": "guard_stance2"
+   }
+  ],
+  "mp_cost": 6,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "quan_artisan"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "凝匠魂：本次行动所受伤害 -60%。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "bmm_punch",
+  "name": "掌击",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "打",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "quan_monk"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "掌法起手，轻快连打。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "bmm_flurry",
+  "name": "连环拳",
+  "type": "active",
+  "kind": "damage",
+  "power": 50,
+  "recovery": 60,
+  "attack_type": "打",
+  "element": null,
+  "effects": [],
+  "mp_cost": 10,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "quan_monk"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 3,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "三段连环拳。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "bmm_breath",
+  "name": "调息",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "st_regen"
+   }
+  ],
+  "mp_cost": 6,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "quan_monk"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "调息回气：每回合恢复 60 点生命，持续 3 回合。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "bmm_palm",
+  "name": "碎掌",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "打",
+  "element": null,
+  "effects": [],
+  "mp_cost": 8,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "quan_monk"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "一记重掌，破防见骨。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "qra_punch",
+  "name": "罗刹拳",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "打",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "quan_rakshasa"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "罗刹起手，拳劲迸发。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "qra_burst",
+  "name": "劲爆",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "打",
+  "element": null,
+  "effects": [],
+  "mp_cost": 14,
+  "cooldown": 2,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "quan_rakshasa"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "拳劲蓄满，一爆发力。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "qra_multi",
+  "name": "百裂拳",
+  "type": "active",
+  "kind": "damage",
+  "power": 48,
+  "recovery": 60,
+  "attack_type": "打",
+  "element": null,
+  "effects": [],
+  "mp_cost": 16,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "quan_rakshasa"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 4,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "四段百裂拳。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "qra_howl",
+  "name": "罗刹吼",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "st_atk_up"
+   }
+  ],
+  "mp_cost": 6,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "quan_rakshasa"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "怒吼壮胆：攻击 +20%，持续 3 回合。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "qva_punch",
+  "name": "金刚拳",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "打",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "quan_vajra"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "金刚起手，沉而不滞。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "qva_body",
+  "name": "金刚身",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "effect": "guard_stance2"
+   }
+  ],
+  "mp_cost": 6,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "quan_vajra"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "金刚护体：本次行动所受伤害 -60%。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "qva_pure",
+  "name": "净心",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "st_regen"
+   }
+  ],
+  "mp_cost": 8,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "quan_vajra"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "净心自愈：每回合恢复 60 点生命，持续 3 回合。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "qva_retal",
+  "name": "不坏反击",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "打",
+  "element": null,
+  "effects": [],
+  "mp_cost": 12,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "quan_vajra"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "不坏之身蓄力反打。",
   "hit_mod": 1.0,
   "crit_mod": 1.0,
   "block_mode": "auto",
@@ -434,6 +2222,904 @@
    "per_battle": 99
   },
   "desc": "踏步抢速：速度 +20%，持续 3 回合。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "psd_thrust",
+  "name": "龙骑突",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "突",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "qiang_drake"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "骑枪起手，冲势十足。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "psd_dive",
+  "name": "俯冲突",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "突",
+  "element": null,
+  "effects": [],
+  "mp_cost": 10,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "qiang_drake"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "自高处俯冲穿刺。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "psd_charge",
+  "name": "龙骑冲锋",
+  "type": "active",
+  "kind": "damage",
+  "power": 62,
+  "recovery": 60,
+  "attack_type": "突",
+  "element": null,
+  "effects": [],
+  "mp_cost": 12,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "qiang_drake"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 2,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "两段冲锋，撞开阵型。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "psd_banner",
+  "name": "战旗",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "st_atk_up"
+   }
+  ],
+  "mp_cost": 6,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "qiang_drake"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "竖起战旗：攻击 +20%，持续 3 回合。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "psh_thrust",
+  "name": "天枪刺",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "突",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "qiang_heaven"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "天枪起手，锋锐无匹。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "psh_sky",
+  "name": "贯穿苍穹",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "突",
+  "element": null,
+  "effects": [],
+  "mp_cost": 16,
+  "cooldown": 2,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "qiang_heaven"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "一枪贯天，无视防线。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "psh_rain",
+  "name": "天枪雨",
+  "type": "active",
+  "kind": "damage",
+  "power": 46,
+  "recovery": 60,
+  "attack_type": "突",
+  "element": null,
+  "effects": [],
+  "mp_cost": 18,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "qiang_heaven"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 4,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "四段天枪雨。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "psh_judge",
+  "name": "裁决枪",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "突",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "enemy",
+    "status_id": "st_bleed"
+   }
+  ],
+  "mp_cost": 14,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "qiang_heaven"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "以枪代判，专戳要害。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "psr_thrust",
+  "name": "龙牙刺",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "突",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "qiang_draconic"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "龙牙起手，威压先至。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "psr_press",
+  "name": "龙威压",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "enemy",
+    "status_id": "st_atk_down"
+   }
+  ],
+  "mp_cost": 8,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "qiang_draconic"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "龙威压制：目标攻击 -20%。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "psr_breath",
+  "name": "龙息枪",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "突",
+  "element": "fire",
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "enemy",
+    "status_id": "st_burn"
+   }
+  ],
+  "mp_cost": 16,
+  "cooldown": 2,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "qiang_draconic"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "枪化龙息，贯穿+灼烧。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "psr_scale",
+  "name": "龙鳞",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "st_dfn_up"
+   }
+  ],
+  "mp_cost": 6,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "qiang_draconic"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "凝出龙鳞：防御 +25%，持续 3 回合。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "pss_thrust",
+  "name": "投矛",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "突",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "qiang_hunter"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "短矛投掷，射程优先。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "pss_aim",
+  "name": "瞄准",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "st_foc_up"
+   }
+  ],
+  "mp_cost": 5,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "qiang_hunter"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "屏息瞄准：专注 +20%，持续 3 回合。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "pss_throw",
+  "name": "贯骨投矛",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "突",
+  "element": null,
+  "effects": [],
+  "mp_cost": 10,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "qiang_hunter"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "瞄准要害的一记重投。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "pss_trap",
+  "name": "布桩",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "effect": "spirit_shield"
+   }
+  ],
+  "mp_cost": 8,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "qiang_hunter"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "布下尖桩：获得 120 点护盾。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "psy_thrust",
+  "name": "影刺",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "突",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "qiang_shadow"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "无形影矛，出手无声。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "psy_assassin",
+  "name": "暗杀突",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "突",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "enemy",
+    "status_id": "st_bleed"
+   }
+  ],
+  "mp_cost": 14,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "qiang_shadow"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "自暗处贯入，创口难合。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "psy_veil",
+  "name": "隐匿",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "st_spd_up"
+   }
+  ],
+  "mp_cost": 6,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "qiang_shadow"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "隐入暗影：速度 +20%，持续 3 回合。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "psy_shadow",
+  "name": "影袭",
+  "type": "active",
+  "kind": "damage",
+  "power": 50,
+  "recovery": 60,
+  "attack_type": "突",
+  "element": null,
+  "effects": [],
+  "mp_cost": 16,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "qiang_shadow"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 3,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "三段影袭，来去无踪。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "psg_thrust",
+  "name": "风刺",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "突",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "qiang_gale"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "快若轻风的起手。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "psg_gale",
+  "name": "疾风连刺",
+  "type": "active",
+  "kind": "damage",
+  "power": 45,
+  "recovery": 60,
+  "attack_type": "突",
+  "element": null,
+  "effects": [],
+  "mp_cost": 16,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "qiang_gale"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 4,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "四段疾风刺。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "psg_swift",
+  "name": "迅风",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "st_spd_up"
+   }
+  ],
+  "mp_cost": 5,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "qiang_gale"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "借风疾行：速度 +20%，持续 3 回合。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "psg_vortex",
+  "name": "风卷",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "突",
+  "element": null,
+  "effects": [],
+  "mp_cost": 14,
+  "cooldown": 2,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "qiang_gale"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "枪走风卷，收束一线。",
   "hit_mod": 1.0,
   "crit_mod": 1.0,
   "block_mode": "auto",
@@ -590,6 +3276,926 @@
    "per_battle": 99
   },
   "desc": "凝聚灵盾（吸收 120 点伤害）。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "mge_bolt",
+  "name": "元素弹",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "魔",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "fa_elementalist"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "基础元素弹，随念而变。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "mge_fire2",
+  "name": "烈火球",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "魔",
+  "element": "fire",
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "enemy",
+    "status_id": "st_burn"
+   }
+  ],
+  "mp_cost": 14,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "fa_elementalist"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "凝练火球，附带灼烧。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "mge_ice2",
+  "name": "冰枪",
+  "type": "active",
+  "kind": "damage",
+  "power": 130,
+  "recovery": 60,
+  "attack_type": "魔",
+  "element": "water",
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "enemy",
+    "status_id": "st_slow"
+   }
+  ],
+  "mp_cost": 12,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "fa_elementalist"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "冰枪穿刺，冻结步调。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "mge_storm",
+  "name": "元素风暴",
+  "type": "active",
+  "kind": "damage",
+  "power": 52,
+  "recovery": 60,
+  "attack_type": "魔",
+  "element": "thunder",
+  "effects": [],
+  "mp_cost": 16,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "fa_elementalist"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 2,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "两段元素风暴，扫场之技。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "mga_bolt",
+  "name": "奥术弹",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "魔",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "fa_archmage"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "大魔导的基础弹。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "mga_meteor",
+  "name": "陨星",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "魔",
+  "element": "fire",
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "enemy",
+    "status_id": "st_burn"
+   }
+  ],
+  "mp_cost": 18,
+  "cooldown": 2,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "fa_archmage"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "召落陨星，范围灼烧。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "mga_abyss",
+  "name": "深渊之焰",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "魔",
+  "element": "void",
+  "effects": [],
+  "mp_cost": 16,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "fa_archmage"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "深渊之火，穿透护甲。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "mga_mana",
+  "name": "法力洪流",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "st_mag_up"
+   }
+  ],
+  "mp_cost": 8,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "fa_archmage"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "引导洪流：法强 +20%，持续 3 回合。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "mgs_bolt",
+  "name": "灵体弹",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "魔",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "fa_summoner"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "灵体代击的基础弹。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "mgs_summon",
+  "name": "召唤灵体",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "magic",
+  "element": "crystal",
+  "effects": [],
+  "mp_cost": 16,
+  "cooldown": 2,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "fa_summoner"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "灵体显形，代主一击。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "mgs_wisp",
+  "name": "精灵弹",
+  "type": "active",
+  "kind": "damage",
+  "power": 48,
+  "recovery": 60,
+  "attack_type": "魔",
+  "element": null,
+  "effects": [],
+  "mp_cost": 14,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "fa_summoner"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 3,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "三枚精灵弹连发。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "mgs_blessing",
+  "name": "灵佑",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "st_mag_up"
+   }
+  ],
+  "mp_cost": 8,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "fa_summoner"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "灵体护佑：法强 +20%，持续 3 回合。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "mgw_bolt",
+  "name": "咒弹",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "魔",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "fa_warlock"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "缠着咒纹的基础弹。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "mgw_curse",
+  "name": "诅咒术",
+  "type": "active",
+  "kind": "status",
+  "power": 90,
+  "recovery": 60,
+  "attack_type": "魔",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "enemy",
+    "status_id": "st_atk_down"
+   }
+  ],
+  "mp_cost": 10,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "fa_warlock"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "咒缚其身：目标攻击 -20%。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "mgw_drain",
+  "name": "吸魂",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "魔",
+  "element": "void",
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "enemy",
+    "status_id": "st_bleed"
+   }
+  ],
+  "mp_cost": 12,
+  "cooldown": 1,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "fa_warlock"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "抽取魂力，深可入骨。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "mgw_hex",
+  "name": "妖术",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "enemy",
+    "status_id": "st_slow"
+   }
+  ],
+  "mp_cost": 8,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "fa_warlock"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "施妖术乱敌：目标速度 -25%。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "mck_bolt",
+  "name": "咒王弹",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "魔",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "fa_curseking"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "咒王之弹，自带侵蚀。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "mck_domain",
+  "name": "诅咒领域",
+  "type": "active",
+  "kind": "status",
+  "power": 95,
+  "recovery": 60,
+  "attack_type": "魔",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "enemy",
+    "status_id": "st_atk_down"
+   }
+  ],
+  "mp_cost": 14,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "fa_curseking"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "展开领域：目标攻击 -20%。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "mck_doom",
+  "name": "终焉咒",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "魔",
+  "element": "void",
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "enemy",
+    "status_id": "st_bleed"
+   }
+  ],
+  "mp_cost": 18,
+  "cooldown": 2,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "fa_curseking"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "终焉之咒，创口不愈。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "mck_pact",
+  "name": "契约",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "effect": "spirit_shield2"
+   }
+  ],
+  "mp_cost": 14,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "fa_curseking"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "以契约护身：获得 260 点护盾。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "mor_bolt",
+  "name": "圣言弹",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "魔",
+  "element": null,
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "fa_oracle"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "携祝福之力的弹击。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "mor_grace",
+  "name": "恩典",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "st_regen"
+   }
+  ],
+  "mp_cost": 10,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "fa_oracle"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "受恩典：每回合恢复 60 点生命，持续 3 回合。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "mor_purify",
+  "name": "净化",
+  "type": "active",
+  "kind": "utility",
+  "power": 0,
+  "recovery": 60,
+  "attack_type": "none",
+  "element": null,
+  "effects": [
+   {
+    "effect": "heal_mid"
+   }
+  ],
+  "mp_cost": 12,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "fa_oracle"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "净化自身负面，回 220 点生命。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "mor_bless",
+  "name": "神谕祝福",
+  "type": "active",
+  "kind": "damage",
+  "power": 150,
+  "recovery": 60,
+  "attack_type": "魔",
+  "element": "crystal",
+  "effects": [
+   {
+    "type": "status_apply",
+    "target": "self",
+    "status_id": "st_mag_up"
+   }
+  ],
+  "mp_cost": 16,
+  "cooldown": 2,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "fa_oracle"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "以祝福之力贯敌。",
   "hit_mod": 1.0,
   "crit_mod": 1.0,
   "block_mode": "auto",

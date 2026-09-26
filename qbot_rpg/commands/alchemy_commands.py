@@ -336,6 +336,16 @@ def _prof_level(player: Mapping[str, Any]) -> int:
         return 0
 
 
+def _tier_index_of(ctx: Mapping[str, Any], player: Mapping[str, Any]) -> int:
+    """炼金职业**档位索引**（B5 两口径统一 · 批82 · C1）。
+
+    一律走 `ProficiencyEngine.tier_index_for_level`（与 `/登记` cmd_register 同口径），
+    对非法/遗留数据钳制到 `tier_names` 长度；在 PRF-02「两表等长 + 等级按
+    `job_rank_levels` 封顶」的合法配置下，与旧写法 `level` 直比**恒等价**（零行为变化）。
+    """
+    return _prof_engine_of(ctx).tier_index_for_level(ALCHEMY_JOB_ID, _prof_level(player))
+
+
 def _find_def(
     ctx: Mapping[str, Any], reg_key: str, resolve_key: str, key: Any
 ) -> Optional[dict]:
@@ -2206,7 +2216,7 @@ async def cmd_product_merge(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         return format_tpl12(f"/{PRODUCT_MERGE_CMD}")
     a_name = str(parsed.args[0])
     b_name = str(parsed.args[1])
-    if _prof_level(_player_of(ctx)) < _GRANDMASTER_TIER_INDEX:
+    if _tier_index_of(ctx, _player_of(ctx)) < _GRANDMASTER_TIER_INDEX:
         return tpl_of(ctx, "alchemy_level_insufficient")   # CMB-02 宗师（L203/L328，TC-13）
     a_id = _resolve_item_id(ctx, a_name)
     if a_id is None:
@@ -2238,7 +2248,7 @@ async def cmd_formula_merge(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         return format_tpl12(f"/{FORMULA_MERGE_CMD}")
     a_name = str(parsed.args[0])
     b_name = str(parsed.args[1])
-    if _prof_level(_player_of(ctx)) < EXPERT_TIER_INDEX:
+    if _tier_index_of(ctx, _player_of(ctx)) < EXPERT_TIER_INDEX:
         # CMB-03 专家（L209，四类合成门槛最低，TC-16）
         return tpl_of(ctx, "alchemy_level_insufficient")
     a_id = _resolve_recipe_id(ctx, a_name)
@@ -2276,7 +2286,7 @@ async def cmd_trait_merge(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         return format_tpl12(f"/{TRAIT_MERGE_CMD}")
     a_name = str(parsed.args[0])
     b_name = str(parsed.args[1])
-    if _prof_level(_player_of(ctx)) < _GRANDMASTER_TIER_INDEX:
+    if _tier_index_of(ctx, _player_of(ctx)) < _GRANDMASTER_TIER_INDEX:
         return tpl_of(ctx, "alchemy_level_insufficient")   # CMB-04 宗师（L215/L332，TC-19）
     a_id = _resolve_trait_id(ctx, a_name)
     if a_id is None:
@@ -2333,7 +2343,7 @@ async def cmd_copy(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     target = _target_of(parsed)
     if not target:
         return format_tpl12(f"/{COPY_CMD}")
-    if _prof_level(_player_of(ctx)) < _MASTER_TIER_INDEX:
+    if _tier_index_of(ctx, _player_of(ctx)) < _MASTER_TIER_INDEX:
         return tpl_of(ctx, "alchemy_level_insufficient")   # DUP-01 大师（L208/L85，TC-07 前置）
     item_id = _resolve_item_id(ctx, target)
     if item_id is None:
@@ -2901,7 +2911,7 @@ async def cmd_challenge(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     target = _target_of(parsed)
     player = _player_of(ctx)
     # GU-47 宗师（L86/TC-23）
-    if _prof_level(player) < _GRANDMASTER_TIER_INDEX:
+    if _tier_index_of(ctx, player) < _GRANDMASTER_TIER_INDEX:
         return tpl_of(ctx, "alchemy_level_insufficient")
     session_mgr = ctx.get("session_mgr")
     if session_mgr is None:
@@ -3250,7 +3260,7 @@ async def cmd_instant(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         return tpl_of(ctx, "alchemy_instant_not_battle")
 
     # GU-51 炼金职业 ≥ 大师（proficiency.alchemy level ≥ 4；对齐 _MASTER_TIER_INDEX）
-    if _prof_level(player) < _MASTER_TIER_INDEX:
+    if _tier_index_of(ctx, player) < _MASTER_TIER_INDEX:
         return tpl_of(ctx, "alchemy_level_insufficient")
 
     recipe = _find_recipe(ctx, target)
@@ -3394,7 +3404,7 @@ async def cmd_plant(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     seed = _seed_id_of(ctx, _target_of(parsed))
     player = _player_of(ctx)
     # GU-60 炼金职业 ≥ 正式（种植解锁，熟练度 L56）
-    if _prof_level(player) < FORMAL_TIER_INDEX:
+    if _tier_index_of(ctx, player) < FORMAL_TIER_INDEX:
         return tpl_of(ctx, "alchemy_plant_level")
     engine = HarvestEngine(settings=_settings_of(ctx))
     res = engine.plant(player, ctx, seed, now=_clock_of(ctx))
@@ -3417,7 +3427,7 @@ async def cmd_harvest(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         return format_tpl12(_fragment(parsed))
     player = _player_of(ctx)
     # GU-60 炼金职业 ≥ 正式（收获解锁，熟练度 L56）
-    if _prof_level(player) < FORMAL_TIER_INDEX:
+    if _tier_index_of(ctx, player) < FORMAL_TIER_INDEX:
         return tpl_of(ctx, "alchemy_harvest_level")
     engine = HarvestEngine(settings=_settings_of(ctx))
     res = engine.harvest(player, ctx, now=_clock_of(ctx))
@@ -3445,7 +3455,7 @@ async def cmd_helper(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     assistant = str(parsed.args[0]).strip()
     player = _player_of(ctx)
     # GU-62 炼金职业 ≥ 精通（代工助手解锁，熟练度 L57）
-    if _prof_level(player) < PROFICIENT_TIER_INDEX:
+    if _tier_index_of(ctx, player) < PROFICIENT_TIER_INDEX:
         return tpl_of(ctx, "alchemy_helper_level")
     # 键值列表解析（P-22/SEP-22：parse_task_spec 模块级函数消费，见 _helper_spec）
     spec = _helper_spec(parsed)
@@ -3515,7 +3525,7 @@ async def cmd_assist(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         return format_tpl12(f"/{ASSIST_CMD}")
     player = _player_of(ctx)
     # GU-44 大师（L85/L213：炼金职业 ≥ 大师）
-    if _prof_level(player) < _MASTER_TIER_INDEX:
+    if _tier_index_of(ctx, player) < _MASTER_TIER_INDEX:
         return tpl_of(ctx, "alchemy_level_insufficient")
     session_mgr = ctx.get("session_mgr")
     if session_mgr is None:

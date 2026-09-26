@@ -661,6 +661,28 @@
 
 ### Fixed
 
+- **批84（2026-09-23）**：**「静默死效果」陷阱修复（B）+ 文档回填（C）**。依据《Vibecoding 说明书》
+  §2.3 D / §十三 + 《手册·2》§2.2 + 《玩家指令手册》§十二。
+  **① B1 派发状态唯一源**：`data/event_points.py` 新增 `EVENT_POINT_TABLE`
+  （`EventPoint(name, dispatched, note)`）+ `EVENT_POINT_INDEX` / `is_dispatched` /
+  `undispatched_points`；`EVENT_POINTS` 由其派生（值/顺序逐字不变）。逐点 grep 实测 = **12 点有
+  派发点 / 5 点二期未接**（`turn_end` 由批81·A1 补；`status_lose` 含驱散+到期）。
+  **② B2 黄提示 Y-24**：`content/validator.py` 对「值 ∈ `EVENT_POINTS` 但 `dispatched=False`」
+  发 **Y-24 `trigger_event_no_dispatch`**（文案含"无派发点（二期）…不会触发"+ 已接时点建议），
+  **只提示不红拦、零行为变化**；`field_meta` 两处 `trigger`（effects/runes）help 同步登记。
+  **③ B3 待查 P-1 裁定并修复**：设计口径明确「过期该触发」（`细化_1b:106` + `功能三设计 §2.4:100`
+  + `实现说明:736`）→ `effects._dispatch_status_expire` 在 `tick_turn_end` / `tick_after_action`
+  的既有到期处**并列补派发** `status_lose`；修前/修后对拍（未声明 on_lose/on_expire 的流程
+  **逐字段一致**，声明场景 `enemy_hp 300→270`）。
+  **④ C1/C2 文档回填**：《手册·2》§2.2 三态表 → **二态表（已接 12 / 二期未接 5）** + §2.1/§2.3/
+  §2.5/§3.2/§3.3/§3.5/§3.6/§10 行号与口径同步；《说明书》§2.3 A/D 对齐、差异备注消除；
+  《玩家指令手册》§十二补 `/广播`(≤200 字)/`/玩家查询`(脱敏)/`/解封`/`/测试`(只读)/`/调试`(开关)
+  + 「GM 无权限=静默」语义（与"被封玩家发游玩指令→人话提示"区分）。
+  回归：`tests/unit/test_batch84_event_dispatch_status.py`、
+  `test_batch84_trigger_no_dispatch_warn.py`、`test_batch84_status_expire_dispatch.py`；
+  `test_batch51_trigger_ownership` 的 `on_hit` 断言按新口径更正。
+  **页脚批次串** →「批84 · 静默死效果与文档回填」（`web/static/index.html` + 全部批次串断言同步）。
+
 - **批83（2026-09-23）**：**真缺口收敛（N2/N3/N5 字段静默丢失 + 3 ctx 键标注 + NEW 文档错）**。
   依据 `/root/deliverables/手册剩余项_核清与口径.md` Q2/Q4/Q5/NEW-1~9 + 《手册·1》§3.1/§3.4。
   **① N2/N3/N5（真缺口，§3.7.1 BUG-7）**：`ItemInstance` 写路径两条**内联**归一

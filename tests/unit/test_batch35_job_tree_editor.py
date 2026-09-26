@@ -35,7 +35,7 @@ from qbot_rpg.web import api  # noqa: E402
 
 NODE = shutil.which("node")
 HTML = Path(api.repo_root()) / "qbot_rpg" / "web" / "static" / "index.html"
-BATCH_NOTE = "批83 · 真缺口收敛"
+BATCH_NOTE = "批84 · 静默死效果与文档回填"
 STALE_BATCH = "批36 · 采集/挖掘"
 
 

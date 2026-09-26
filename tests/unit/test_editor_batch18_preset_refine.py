@@ -177,7 +177,7 @@ def test_editor_blank_pack_still_six(blank_root: Path) -> None:
 # ---------------------------------------------------------------------------
 def test_footer_batch_string_is_current() -> None:
     html = (REPO / "qbot_rpg" / "web" / "static" / "index.html").read_text(encoding="utf-8")
-    assert "批83 · 真缺口收敛" in html
+    assert "批84 · 静默死效果与文档回填" in html
     assert "批49 · 测试 flake 根治" not in html
     assert "批40 · 实例uid与随机流" not in html
     assert "批36 · 采集/挖掘" not in html

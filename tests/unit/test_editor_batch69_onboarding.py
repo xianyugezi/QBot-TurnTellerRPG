@@ -23,7 +23,7 @@ from qbot_rpg.web import api, editor_ops
 
 REPO = Path(api.repo_root())
 HTML = REPO / "qbot_rpg" / "web" / "static" / "index.html"
-NEW_NOTE = "批83 · 真缺口收敛"
+NEW_NOTE = "批84 · 静默死效果与文档回填"
 OLD_NOTE = "批68 · 新手上路打磨"
 
 

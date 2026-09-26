@@ -3057,11 +3057,24 @@ def _module_table() -> Dict[str, ModuleMeta]:
             "max_repeat": FieldMeta(type="int", range_min=1),
             "desc": FieldMeta(type="str"),
         })),
-        "energy": FieldMeta(type="obj", children={
-            "enabled": FieldMeta(type="bool"),
-            "max_by_tier": FieldMeta(type="list", element=FieldMeta(type="int", range_min=0)),
-            "regen_sec": FieldMeta(type="int", range_min=0),
-        }),
+        # 批82 · D4（用户 2026-09-23 裁决 A）：契约 P2-4「settings 为准、prof 兜底」的
+        # `enabled` 兜底已由 core/energy_bar.py 实现（settings.alchemy.energy_enabled 缺键
+        # 时回落本键）；`max_by_tier`/`regen_sec` 与 settings 数值重复，**deprecated**——
+        # 当前不被消费（legacy 副本），待收敛批删除或迁移。
+        "energy": FieldMeta(
+            type="obj",
+            help="能量条：仅 `enabled` 作 settings.alchemy.energy_enabled 缺键时的兜底；"
+                 "max_by_tier/regen_sec 已废弃（数值与 settings 重复，不消费）。",
+            children={
+                "enabled": FieldMeta(type="bool",
+                                     help="兜底开关（settings.alchemy.energy_enabled 缺键时生效）。"),
+                "max_by_tier": FieldMeta(
+                    type="list", element=FieldMeta(type="int", range_min=0),
+                    help="[deprecated] 与 settings.alchemy.energy_max 重复，当前不消费。"),
+                "regen_sec": FieldMeta(
+                    type="int", range_min=0,
+                    help="[deprecated] 与 settings.alchemy.energy_regen_sec 重复，当前不消费。"),
+            }),
         "job_tier_map": FieldMeta(type="obj"),
         "titles": FieldMeta(type="list", element=FieldMeta(type="obj", children={
             "id": FieldMeta(type="str"), "name": FieldMeta(type="str"),

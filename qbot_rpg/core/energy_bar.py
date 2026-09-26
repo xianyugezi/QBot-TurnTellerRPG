@@ -92,18 +92,31 @@ class EnergyBar:
         settings: Optional[Mapping[str, Any]] = None,
         *,
         safe_scenes: Optional[Any] = None,
+        proficiency: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """构造能量条引擎（配置注入 + 缺省默认值兜底）。
 
         - settings：settings dict（取 alchemy 段）；None/缺省 → 默认关（ENG-01 默认关）。
         - safe_scenes：安全区场景 id 集合（可覆盖 settings.alchemy.safe_scenes，工程补白 E-5）。
+        - proficiency：proficiency.json 的**炼金条目**（含 `energy` 段），仅作
+          `settings.alchemy.energy_enabled` **缺键时的兜底源**（契约 P2-4：settings 为准、
+          prof 兜底 · 批82 · D4）。`energy.max_by_tier` / `energy.regen_sec` **不消费**
+          （legacy 副本，与 settings 数值重复，标记 deprecated）。
         """
         self._settings: Mapping[str, Any] = settings if isinstance(settings, Mapping) else {}
         alchemy = self._settings.get("alchemy")
         self._alchemy: Mapping[str, Any] = alchemy if isinstance(alchemy, Mapping) else {}
+        self._proficiency: Mapping[str, Any] = (
+            proficiency if isinstance(proficiency, Mapping) else {}
+        )
 
-        # ENG-01：默认关（缺省 false）
-        self._enabled = bool(self._alchemy.get("energy_enabled", False))
+        # ENG-01/R-08 + 契约 P2-4（批82 · D4 补齐兜底）：
+        #   settings.alchemy.energy_enabled **存在** → 用它（含显式 false/null，settings 为准）；
+        #   **缺键** → 回落 proficiency.energy.enabled（prof 兜底）；两者都缺 → false。
+        if "energy_enabled" in self._alchemy:
+            self._enabled = bool(self._alchemy.get("energy_enabled"))
+        else:
+            self._enabled = self._prof_energy_enabled()
 
         # ENG-03：energy_max 7 档有序映射（E-8：档位序固定 见习→王；配置键按默认序归位，
         # 未知键按配置序追加尾部；缺键回落默认模板）
@@ -162,11 +175,26 @@ class EnergyBar:
             return default
         return iv if iv > 0 else default
 
+    def _prof_energy_enabled(self) -> bool:
+        """proficiency 条目的 `energy.enabled` 兜底值（契约 P2-4 · 批82 · D4）。
+
+        仅当 `settings.alchemy.energy_enabled` **缺键**时被调用；条目缺 `energy` 段 /
+        非 Mapping / 未注入 → False（保守默认关）。**不消费** `max_by_tier`/`regen_sec`。
+        """
+        energy = self._proficiency.get("energy")
+        if not isinstance(energy, Mapping):
+            return False
+        return bool(energy.get("enabled", False))
+
     # ------------------------------------------------------------------
     # 开关 / 上限 / 间隔（ENG-01/02/03/05/06）
     # ------------------------------------------------------------------
     def enabled(self) -> bool:
-        """能量条是否启用（ENG-01）：settings.alchemy.energy_enabled，缺省 false。"""
+        """能量条是否启用（ENG-01/R-08，批82 · D4 补 prof 兜底）。
+
+        settings.alchemy.energy_enabled 存在 → 以它为准；缺键 → proficiency.energy.enabled；
+        两者都缺 → false。
+        """
         return self._enabled
 
     def max_for_tier(self, job_tier_index: int) -> int:

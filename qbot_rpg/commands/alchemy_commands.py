@@ -505,8 +505,45 @@ def _catalyst_unlock_tier_index(settings: Any, prof_engine: Any) -> int:
     return _norm_tier_value(raw, prof_engine)
 
 
-def _energy_enabled(settings: Any) -> bool:
-    """能量条开关（ENG-01/R-08：默认关；关闭时守卫直通、不扣能量、无能量不足模板）。"""
+def _alchemy_prof_entry_of(ctx: Mapping[str, Any]) -> Optional[Mapping[str, Any]]:
+    """ctx → proficiency.json 的 **alchemy 条目**（能量开关兜底源 · 批82 · D4）。
+
+    读 `ctx["registry"].modules_raw["proficiency"]`（list 形态）按 `id=="alchemy"` 取条目；
+    缺失 / 形态异常 / 裸 ctx（单测）→ None（防御：不注入 prof 即退回旧口径，零行为变化）。
+    """
+    registry = ctx.get("registry")
+    raw = getattr(registry, "modules_raw", None)
+    if not isinstance(raw, Mapping):
+        return None
+    prof = raw.get("proficiency")
+    entries: Any = prof
+    if isinstance(prof, Mapping):
+        for key in ("entries", "jobs"):
+            if isinstance(prof.get(key), (list, tuple)):
+                entries = prof.get(key)
+                break
+    if isinstance(entries, (list, tuple)):
+        for e in entries:
+            if isinstance(e, Mapping) and e.get("id") == ALCHEMY_JOB_ID:
+                return e
+        return None
+    if isinstance(entries, Mapping) and entries.get("id") == ALCHEMY_JOB_ID:
+        return entries
+    return None
+
+
+def _energy_bar_of(ctx: Mapping[str, Any], settings: Any) -> EnergyBar:
+    """构造能量条引擎并注入 prof 兜底源（批82 · D4：settings 为准、prof 兜底）。"""
+    return EnergyBar(settings=settings, proficiency=_alchemy_prof_entry_of(ctx))
+
+
+def _energy_enabled_of(settings: Any, engine: Any = None) -> bool:
+    """能量开关判定（批82 · D4）：优先用 `engine.energy_enabled()`（真实 BattleAlchemyEngine
+    的开关含 prof 兜底）；鸭子替身缺该方法时回落纯 settings 口径（测试/防御，行为与旧版一致）。
+    """
+    fn = getattr(engine, "energy_enabled", None)
+    if callable(fn):
+        return bool(fn())
     alch = settings.get("alchemy") if isinstance(settings, Mapping) else None
     return bool(alch.get("energy_enabled", False)) if isinstance(alch, Mapping) else False
 
@@ -874,7 +911,7 @@ async def cmd_alchemy(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     player = _player_of(ctx)
     prof_engine = ProficiencyEngine(settings=settings)
     core = AlchemyCore(prof=prof_engine, settings=settings)
-    energy = EnergyBar(settings=settings)
+    energy = _energy_bar_of(ctx, settings)
     auto_engine = AutoFeed(settings=settings)
     alch = settings.get("alchemy") if isinstance(settings, Mapping) else None
     qs = QualitySystem(
@@ -899,7 +936,7 @@ async def cmd_alchemy(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         )
 
     # GU-06 能量可查（ENG-04：read 检查不扣；energy_enabled=false 直通，R-08）
-    if _energy_enabled(settings) and energy.current_of(player) < 1:
+    if energy.enabled() and energy.current_of(player) < 1:
         return _energy_message(energy, player, ctx=ctx)
 
     # GU-07 会话互斥（MUT-02：单玩家 1 调合会话，sessions.player_qid 主键全局互斥）
@@ -994,7 +1031,7 @@ def _cmd_alchemy_batch(
 
     # BATCH-03 能量 N 格（read 检查；energy_enabled=false 直通）
     energy_note = ""
-    if _energy_enabled(settings):
+    if energy.enabled():
         if energy.current_of(player) < qty:
             return _energy_message(energy, player, qty, ctx=ctx)
         energy_note = f"能量 -{qty}"
@@ -1031,7 +1068,7 @@ def _cmd_alchemy_batch(
         _remove_item(ctx, mid, ci * qty)
     if coins_need > 0:
         _currencies(player)["coins"] = max(0, _coins_of(player) - coins_need)
-    if _energy_enabled(settings):
+    if energy.enabled():
         energy.consume(player, qty)
     scores = _batch_material_scores(recipe, ctx, qs)
     bq = auto_engine.batch_quality(scores, quality=qs)
@@ -2733,7 +2770,7 @@ async def cmd_deep(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
     prof_engine = ProficiencyEngine(settings=settings)
     tier_index = prof_engine.tier_index_for_level(ALCHEMY_JOB_ID, _prof_level(player))
     deep = DeepEngine(settings=settings)
-    energy = EnergyBar(settings=settings)
+    energy = _energy_bar_of(ctx, settings)
     recipe = _find_recipe(ctx, target)
     if recipe is None:
         return tpl_of(ctx, "alchemy_recipe_not_found", {"target": target})
@@ -2743,7 +2780,7 @@ async def cmd_deep(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
         return str(eligible.get("message")
                    or tpl_of(ctx, "alchemy_deep_locked"))
     # GU-21 能量可查（read 不扣；energy_enabled=false 直通，R-08）
-    if _energy_enabled(settings) and energy.current_of(player) < 1:
+    if energy.enabled() and energy.current_of(player) < 1:
         return _energy_message(energy, player, ctx=ctx)
     # GU-22 会话互斥（MUT-02 全局互斥；同 cmd_alchemy 口径）
     session_mgr = ctx.get("session_mgr")
@@ -3282,7 +3319,7 @@ async def cmd_instant(parsed: Any, ctx: MutableMapping[str, Any]) -> str:
 
     # GU-52 能量 ≥1 格（energy_enabled=true 时 consume_energy，不足拒；R-08 关闭直通不扣）
     # ——放在所有只读校验之后、实际执行之前（消耗收尾）
-    if _energy_enabled(settings):
+    if _energy_enabled_of(settings, engine):
         econs = engine.consume_energy(player, ctx)
         if not econs.get("ok"):
             return str(econs.get("message")

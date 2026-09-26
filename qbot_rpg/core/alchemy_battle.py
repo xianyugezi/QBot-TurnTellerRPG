@@ -133,6 +133,7 @@ class BattleAlchemyEngine:
         self,
         settings: Optional[Mapping[str, Any]] = None,
         prof: Optional[ProficiencyEngine] = None,
+        proficiency: Optional[Mapping[str, Any]] = None,
     ) -> None:
         """构造战斗即时调合引擎（配置注入 + 缺省默认值兜底）。
 
@@ -140,6 +141,8 @@ class BattleAlchemyEngine:
           - settings：settings dict（读 alchemy.战斗即时调合 / alchemy.战斗道具 /
             alchemy.energy_enabled 等）；None/缺省 → 默认值兜底。
           - prof：ProficiencyEngine 实例（可选注入，用于大师档位判定；缺省兜底默认引擎）。
+          - proficiency：proficiency.json 的炼金条目（`energy` 段），作
+            `settings.alchemy.energy_enabled` 缺键时的兜底源（契约 P2-4 · 批82 · D4）。
         """
         self._settings: Mapping[str, Any] = settings if isinstance(settings, Mapping) else {}
         alchemy = self._settings.get("alchemy")
@@ -152,7 +155,8 @@ class BattleAlchemyEngine:
             prof if prof is not None else ProficiencyEngine()
         )
         # GU-52/R-08：能量引擎（energy_enabled 默认关，关时 consume 直通，ENG-01/ENG-10）
-        self._energy = EnergyBar(settings=settings)
+        # 批82 · D4：注入 prof 条目 → settings 缺键时回落 proficiency.energy.enabled。
+        self._energy = EnergyBar(settings=settings, proficiency=proficiency)
 
     # ------------------------------------------------------------------
     # 配置读取（缺省默认值兜底，防御非法配置）

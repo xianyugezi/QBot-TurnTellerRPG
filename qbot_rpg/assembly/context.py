@@ -1075,6 +1075,32 @@ def _prof_engine_of_ctx(settings: Any) -> Any:
         return None
 
 
+def _prof_entry_of(registry: Any, job_id: str) -> Any:
+    """registry → proficiency.json 中指定职业的条目（批82 · D4：能量开关 prof 兜底源）。
+
+    读 `registry.modules_raw["proficiency"]`（list 形态；兼容 {entries/jobs:[...]}）；
+    找不到 / 形态异常 → None（装配防御：不注入即退回 settings-only 旧口径）。
+    """
+    raw = getattr(registry, "modules_raw", None)
+    if not isinstance(raw, Mapping):
+        return None
+    prof = raw.get("proficiency")
+    entries: Any = prof
+    if isinstance(prof, Mapping):
+        for key in ("entries", "jobs"):
+            if isinstance(prof.get(key), (list, tuple)):
+                entries = prof.get(key)
+                break
+    if isinstance(entries, (list, tuple)):
+        for e in entries:
+            if isinstance(e, Mapping) and e.get("id") == job_id:
+                return e
+        return None
+    if isinstance(entries, Mapping) and entries.get("id") == job_id:
+        return entries
+    return None
+
+
 def _equip_hold_count(ctx: Mapping[str, Any], item_id: str) -> int:
     """批26 α2：已**穿戴**中、item_id 匹配的件数（持有计数的一部分）。
 
@@ -1988,7 +2014,8 @@ async def make_context(event: Mapping, deps: AssemblyDeps) -> dict:
             ctx["battle_snapshot"] = _be2._snap
             _ba_settings = ctx.get("settings")
             ctx["battle_alchemy_engine"] = BattleAlchemyEngine(
-                settings=_ba_settings if isinstance(_ba_settings, Mapping) else {})
+                settings=_ba_settings if isinstance(_ba_settings, Mapping) else {},
+                proficiency=_prof_entry_of(deps.registry, "alchemy"))
             _mat2: Any = _be2._snap["battle_resources"]["materials"]
             _orig_remove = ctx.get("remove_item")
 

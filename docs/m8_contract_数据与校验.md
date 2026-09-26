@@ -128,7 +128,7 @@
 | `exp_sources` | map | `{craft:1.0, gather:1.0, combat:1.0}` | 三来源经验倍率可配；子键 craft/gather/combat【补白键名】；值 ≥0 | L170 / L32 |
 | `sp_per_level` | int | `1` | ≥0；升级获得 SP 点数 | L171 |
 | `sp_panel` | list | `[]` | 分支自选解锁项；子字段 `{id,name,cost,repeatable,max_repeat,desc}`【补白：定稿仅定义 list 语义】；六类解锁项（品质上限+10/投入次数+1/特性位+1/解锁复制·进化·挑战/采集量+1/连锁上限+1） | L172 / L41-47 |
-| `energy` | obj | `{enabled:false, max_by_tier:[5,8,10,12,15,18,20], regen_sec:1800}` | 可选软节奏模块；**enabled 默认 false（非炼金职业默认关）**；regen_sec=1800（30 分钟回 1 格）；安全区/休整加速由 settings `energy_regen_sec_safe` 承接（见 §五）；**双开关优先级：settings.alchemy.energy_enabled 为准，本段 energy 作默认兜底**（防双开关打架，P2-4） | L173 / L69-70 |
+| `energy` | obj | `{enabled:false, max_by_tier:[5,8,10,12,15,18,20], regen_sec:1800}` | 可选软节奏模块；**enabled 默认 false（非炼金职业默认关）**；regen_sec=1800（30 分钟回 1 格）；安全区/休整加速由 settings `energy_regen_sec_safe` 承接（见 §五）；**双开关优先级：settings.alchemy.energy_enabled 为准，本段 energy 作默认兜底**（防双开关打架，P2-4）；**批82 · D4 已落地**：`enabled` 兜底已实现（`core/energy_bar.py`，settings 缺键时回落本段）；`max_by_tier`/`regen_sec` 标 **deprecated**（与 settings 数值重复，不消费） | L173 / L69-70 |
 | `job_tier_map` | map | `"settings"` | 称号→配方等级区间（见习 1-5 … 王 51+）；**主落点 settings.json**（本文档可选覆盖、默认继承 settings）；称号引用 tier_names 存在、区间单调 | L174 / L34 |
 | `titles` | list | `[]` | 通用称号注册表 `{id,name,icon,source,desc}`；source ∈ king/contest/achievement/custom；**king 条目自动生成**（id=职业 ID，图鉴全亮时，TTL-03） | L175 / L141-142 |
 
@@ -198,7 +198,7 @@
 | `chain_map` | obj | `{1:1,2:2,3:3,4:4,5:5,6:6}` | 可配 | 链式投料段数→效果等级 | L413 / QLT-13 |
 | `pp_cost` | obj | `{normal:1, super:2}` | 可配 | 特性继承 PP 消耗（rarity 计价唯一依据） | L414 / TSC-14 |
 | `pp_refresh` | str | `"会话重置"` | 可配 | PP 重置时机（挂起/恢复不清零，/确认 结算后随会话重置） | L415 / INH-09 |
-| `energy_enabled` | bool | `false` | 可配 | 能量条开关（**R-08：默认关**）；关闭时 /炼金 /深度炼金 /即时调合 不扣能量、不显示上限、无「能量不足」模板；**优先级：本键为准，proficiency.json energy 段作默认兜底**（双开关不打架，P2-4） | R-08 / L416 注 |
+| `energy_enabled` | bool | `false` | 可配 | 能量条开关（**R-08：默认关**）；关闭时 /炼金 /深度炼金 /即时调合 不扣能量、不显示上限、无「能量不足」模板；**优先级：本键为准，proficiency.json energy 段作默认兜底**（双开关不打架，P2-4）；**批82 · D4 已落地**：本键**缺键**时回落 `proficiency.json[].energy.enabled`（显式 false/null 仍以本键为准；`core/energy_bar.py`） | R-08 / L416 注 |
 | `energy_max` | obj | `{见习:5,正式:8,精通:10,专家:12,大师:15,宗师:18,王:20}` | 可配 | 能量上限随职业等级 7 档 | L416 |
 | `energy_regen_sec` | int | `1800` | 可配 | 每 30 分钟回 1 格（现实时间） | L417 / LVL-09 |
 | `energy_regen_sec_safe` | int | `900` | 可配 | 休整/安全区恢复加速（安全区回 1 格时长；细化_2c5a LVL-09「休整/安全区可加速」落点）【工程补白键】 | LVL-09 |

@@ -592,6 +592,21 @@
 
 **AI 应如何处置**（按顺序、不许跳）：① `grep -rn "<字段>" qbot_rpg/` 找消费点 → ② 定性：真有消费只是没配 / 无消费 / **故意未实现**（先查《手册·3》§3「勿当 bug 修」）→ ③ 按上面三选一 → ④ 给证据（`file:line` + 实跑输出）。
 
+### 12.5 示例包导览（跟着 content/zz_craft_demo 学）
+
+> `content/zz_craft_demo/` 是**教学示例包**（`manifest.json:1`）；**只用于教学，不碰你的真实包**——要动手就复制成你自己的包再改。
+
+| 模块（文件） | 一条真实数据要点 | 你照着改什么 |
+|---|---|---|
+| **相性四段**（`settings.json`） | `affinities` **4**（lunar/frost/ember/verdant，`:27`）· `affinity_pools` **11**（通用池 + 4 专属池 + link/set 池）· `affinity_linkage` **1** · `affinity_reactions` **3** | 词条池写 `requires_affinity`；联动/反应照抄段名；**别在代码里写相性**（段名见 `data/affinity_keys.py:46`） |
+| **材料与图纸**（`items.json`） | **36** 条材料，带 `material_level`/`material_quality`/`affinities`/`material_tags`（如 `vein_shard`、`mossvein_herb`） | 照抄字段结构填你的材料；图纸走 `recipe.json` |
+| **特效预设**（`effects.json` + `traits.json`） | `effects` **8** 条原子动作；`traits` **8** 条被动，含 `affinity_variants`（月蚀/炎脉变体，`traits.json:11`） | 被动用 traits 引用 effects；变体靠 `affinity_variants`，**别新建机制** |
+| **强化与淬炼**（`enhance.json`） | `max_by_quality_level`（1:3…6:18）· `temper.cap_per_level=6` · `cost_per_point.essence=1593` | 只改数值；覆盖段 `settings.forge.temper`（《说明》§2.1 D），**别改框架 `DEFAULT_*`** |
+| **基础合成**（`recipe.json`） | **6** 条 `kind=craft`（1 材料 → 1 件 `*_a_mid` 基装），字段 `materials`/`output`/`cost` | 照抄配方结构；`synth_allowed=true` 才进合成 |
+| **分解取材**（`forge.json`） | **1** 棵树（`tree_zz_demo_weapon`），节点 `materials` 决定分解取材 | 照抄树/节点；`parent` 决定前置 |
+
+> **读法**：先在 §三 表 1 找到你要做的机制 → 回本表找最接近的示例文件 → 复制结构改内容。**示例包不改框架，你也不该改示例包**。
+
 ---
 
 > **配套文档**：`docs/框架扩展开发手册.md`（框架能力与权责 · 稳定契约 · 勿当 bug 修）

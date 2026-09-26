@@ -38,6 +38,7 @@
   - [13.3 权限模型（谁能做什么）](#133-权限模型谁能做什么) — 机主/GM/玩家 + 静默语义。
   - [13.4 数值预算与校准（谁拥有平衡）](#134-数值预算与校准谁拥有平衡) — 60% 装备占比 + 斩回红线。
   - [13.5 随机与确定性（RNG）](#135-随机与确定性rng) — 锻造无随机 · 玩家随机流。
+  - [13.6 测试与验收资产（作者怎么自证）](#136-测试与验收资产作者怎么自证) — 命令 + 通过标准。
 
 ---
 
@@ -510,6 +511,10 @@
 
 验收 5 问：改动在哪？跑了没？对拍了吗？全绿+工作树干净？有没有顺手改别的？
 
+第三批（§十三）：加玩法先查 13.1 模块目录 → 红拦必修/黄提示按需（13.2）
+                权限对无权限者是「静默」不是报错（13.3）；越档只报告不擅调（13.4）
+                锻造无随机·别裸用 random（13.5）；验收命令与通过标准见 13.6
+
 出事三招：编辑器回退备份 → git checkout → 换回 .ttrpack
 绝不外传：私钥 / token / 密码
 ```
@@ -832,6 +837,33 @@
 | ❌ **反例** | 在判定逻辑里**裸用 `random`** 兜底：`rng.random() if rng is not None else random.random()` | `core/effects.py:620`；同类 `core/npc.py:309`/`:322`、`commands/enhance_commands.py:540`。纪律明写禁裸 `random`：`core/deep_craft.py:7`、`core/fishing.py:78`、`core/fishing_cast.py:28` |
 
 > **"确定性差分 = 0"现状（如实标）**：它是**文档契约 + 重放门禁**——TC-04/TC-17（见上）与 e2e 两次运行摘要逐字一致（`scripts/e2e_m3_smoke.py:591-595`、`scripts/e2e_m4_smoke.py:774-778`）；引用见《手册·3》§4（`API手册_3_权责与勿当bug修.md:401`）。**待查**：全仓**未发现**名为"确定性差分=0"的独立**架构门禁脚本**——`check_architecture.py` 只查 import/分层（TC-01~04），**不含随机项**；锻造"同输入 1000 次差分=0"目前**只有文档契约、未见对应实现测试**（若你见到该门禁，请把它登记到本节）。
+
+---
+
+### 13.6 测试与验收资产（**作者怎么自证**）
+
+> **一句话**：AI 的"改好了"**不算数**——验收看**命令 + 原始输出**。资产分五类（下表）；更全的勾选清单见 §12.9，本文只补"**哪类资产管什么**"。
+
+| 资产 | 管什么 | 唯一源 | 红线 / 判据 |
+|---|---|---|---|
+| **护栏测试** | 既有机制不被偷偷改坏 | 被指定的既有用例集（**批 67 的 27 个护栏**，`docs/审查/审计与方案/框架体检报告.md:75`） | ⛔ **不许改**（`API手册_3_权责与勿当bug修.md:703`）；**护栏红 = 动了机制层 → 停下、还原、报告**（本文 §六 第 4 条 · §12.8） |
+| **门禁测试** | 分层 / 契约 / 字段不破线 | `tests/contract/test_g0_architecture.py`（subprocess 跑 `scripts/check_architecture.py`，断言 exit 0 + `ARCH-OK`） | 红 = 必修；按改动面选跑（《手册·3》§5·③） |
+| **冒烟脚本** | 端到端还能跑 | `scripts/verify_veinborn_smoke.py`（用法见其文件头） | 看到 `PASS 10 / 10；SKIP 0` 且 exit 0；**SKIP 须写明原因** |
+| **双尺子** | 数值没偷偷漂移 / 没越档 | 工具尺 `scripts/batch45_measure.py` + 定稿档位尺 `scripts/batch55_dual_ruler.py`（§13.4） | 改前/改后 `--json` **逐字节比对**；越档**只报告不擅调** |
+| **对拍脚本** | 零行为变化 | `scripts/compare_field_meta_migration.py`（hard diff=0）；e2e 重放 `scripts/e2e_m3_smoke.py:591-595` | 硬差异 **= 0**；重放"两次运行摘要**逐字一致**" |
+
+**可直接复制的命令（本仓库实测 · 逐条已验证）**
+
+| 勾 | 命令 | 看到什么算通过 |
+|---|---|---|
+| [ ] | `pytest tests/ -q -o addopts=""` | 尾部 **`0 failed`**（本环境实测 `9145 passed / 12 skipped`）；**须用 Python 3.11 解释器**——最稳写法 `<项目 venv>/bin/python -m pytest tests/ -q -o addopts=""` |
+| [ ] | `git status --porcelain` | **无任何输出**（工作树干净是硬纪律） |
+| [ ] | `git diff --stat <基线>..HEAD -- tests/` | **无输出** = 你没动任何测试/护栏；再跑你改动面相关的测试全绿 |
+| [ ] | `python scripts/check_architecture.py` | 末行 `ARCH-OK  TC-01/TC-02/TC-03/TC-04 全部通过`（exit 0） |
+| [ ] | `python scripts/verify_veinborn_smoke.py` | `PASS 10 / 10；SKIP 0`（exit 0） |
+| [ ] | `python scripts/compare_field_meta_migration.py` | "对拍通过：删除/修改 = 0…"（exit 0） |
+
+> **一句提醒**：**跑通 ≠ 通过**——"通过"必须包含**原始输出里能指认的那一行**（`0 failed` / `ARCH-OK` / `PASS 10 / 10`）；AI 说"全绿"但不贴输出 = **未验收**（§七 第 2 问）。**全链门禁**（`python scripts/check_all.py` / `python scripts/run_all_tests.py`）需项目 venv 就位，命令与勾选见 §12.9。
 
 ---
 

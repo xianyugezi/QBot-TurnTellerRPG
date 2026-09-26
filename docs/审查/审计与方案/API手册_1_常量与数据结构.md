@@ -601,6 +601,19 @@
 
 > 可复现命令：`build_pack_deps(pack)` → `save_player` → `make_context`（注册玩家）→ `len(ctx)`；`only_reg=28` 恒定。**不要写死单一数字**（随包内模块数变化）。**3 个键框架内无生产消费方**（`monster_pool`/`shop_engine`/`worn_refs`）——登记为**结构性缺口 / 准死键**（Q2 / NEW-9，待收敛批处置，勿单删）。
 
+**3 个零消费 `ctx` 键（逐键标注 · 批83 · Q2/NEW-9 落地）**
+
+复核口径：框架内**仅注入、无生产读取**——全仓 `grep` 三个键名，命中只有「注入点 + `tests/unit/test_assembly_context.py` 断言（:218/:271/:452）」；**`content/**/ext/**` 包自持代码零命中**（唯一 ext 包 `content/zz_probe_ext/ext/` 不读三键）。**本次不删键**（先确认无包依赖；包经 `ExtContext` 读 ctx 的能力使"包外读取"无法静态穷举，故只标注 + 登记）。
+
+| ctx 键 | 注入点 `file:line` | 注册态 | 现状标注 | 处置 |
+|---|---|---|---|---|
+| `monster_pool` | `assembly/context.py:1670`（`_monster_pool(deps.game_world, ctx.get("location"))`；未注入/未实装 → `[]`） | 有 | **当前无框架消费方**（同名 `GameWorld.monster_pool` 是**世界对象的 API**，不是本 ctx 键读点） | 登记待收敛（**不删**） |
+| `shop_engine` | `assembly/context.py:1348`（引擎注入位字面 `None`） | 有（**恒 `None`**） | **恒 None · 准死键 · 待收敛**——消费口径已被 `shops` / `current_shop_ref` 取代（`core/shop.py`）；框架零读取 | 登记待收敛（**不删**） |
+| `worn_refs` | 注册态 `:1449`（`_worn_refs(player.equipment)`）/ 未注册态 `:1634`（`{}`） | 有 | **当前无框架消费方**（`core/equipment.py:681` 的 `_worn_refs` 是 `EquipmentEngine` **方法**/进程态缓存，读写 `player` 自身字段，**不读** `ctx["worn_refs"]`） | 登记待收敛（**不删**） |
+
+> 若将来确有包自持代码经 ctx 读这三键，则改判为「**仅供包自持代码经 ctx 读取**」，仍需按 S20/`ExtContext` 口径收敛为扩展面。见 `docs/矛盾与待裁决登记.md` NEW-9。
+
+
 **字段分组的"现行依据"**（= 代码怎么分的，不是设计文档写的）：
 
 | 段 | 分界依据 | file:line | 段内主题分组（示例） |

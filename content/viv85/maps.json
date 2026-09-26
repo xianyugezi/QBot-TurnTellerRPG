@@ -625,6 +625,11 @@
     "enemy": "trial_shade",
     "count": 3,
     "respawn_minutes": 20
+   },
+   {
+    "enemy": "trial_sovereign",
+    "count": 1,
+    "respawn_minutes": 180
    }
   ],
   "exits": {

@@ -4682,5 +4682,161 @@
     "trigger_cooldown": 7
    }
   ]
+ },
+ {
+  "id": "trial_sovereign",
+  "name": "试炼之主",
+  "tier": "boss",
+  "area": "试炼终殿",
+  "desc": "四脉试炼的主人，坐在终殿正中。传说它等一个能打穿它的人很久了。",
+  "stats": {
+   "hp": 1200000,
+   "mp": 20000,
+   "str": 900,
+   "int": 420,
+   "con": 900,
+   "spr": 420,
+   "foc": 520,
+   "agi": 320,
+   "luk": 60
+  },
+  "weakness": {
+   "types": [
+    "斩",
+    "打",
+    "突",
+    "魔"
+   ],
+   "elements": {
+    "crystal": 1.2
+   }
+  },
+  "pv": 20000,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 1200000,
+   "currencies": {
+    "coins": 800000
+   }
+  },
+  "actions": [
+   {
+    "action": "en_altar_wrath",
+    "probability": 1,
+    "weight": 26
+   },
+   {
+    "action": "en_bone_sweep",
+    "probability": 1,
+    "weight": 24
+   },
+   {
+    "action": "en_core_pulse",
+    "probability": 1,
+    "weight": 22
+   },
+   {
+    "action": "en_void_gaze",
+    "probability": 1,
+    "weight": 18
+   },
+   {
+    "action": "en_hardbody",
+    "probability": 1,
+    "weight": 16
+   }
+  ],
+  "special_actions": [
+   {
+    "id": "sovereign_p1",
+    "action": "en_roar",
+    "trigger": {
+     "type": "hp_below",
+     "value": 75,
+     "timing": "current_turn"
+    },
+    "once": true,
+    "priority": 30,
+    "trigger_cooldown": 4
+   },
+   {
+    "id": "sovereign_p2",
+    "action": "en_heavy_charge",
+    "trigger": {
+     "type": "hp_below",
+     "value": 45,
+     "timing": "current_turn"
+    },
+    "once": true,
+    "priority": 32,
+    "trigger_cooldown": 5
+   },
+   {
+    "id": "sovereign_p3",
+    "action": "en_black_ray",
+    "trigger": {
+     "type": "hp_below",
+     "value": 15,
+     "timing": "current_turn"
+    },
+    "once": true,
+    "priority": 34,
+    "trigger_cooldown": 6
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_core_shard",
+     "chance": 100,
+     "count": [
+      20,
+      40
+     ]
+    },
+    {
+     "item": "mat_abyss_scale",
+     "chance": 100,
+     "count": [
+      20,
+      40
+     ]
+    },
+    {
+     "item": "mat_altar_relic",
+     "chance": 100,
+     "count": [
+      15,
+      30
+     ]
+    },
+    {
+     "item": "bp_ar_body_80a",
+     "chance": 60,
+     "count": 1
+    },
+    {
+     "item": "bp_wp_sword_80",
+     "chance": 40,
+     "count": 1
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "试炼之主四脉皆通，没有明显弱点——它就是要你硬打。"
+   },
+   {
+    "unlock": 50,
+    "desc": "血量降到 75% / 45% / 15% 时会各放一次大招，注意留药与打断。"
+   },
+   {
+    "unlock": 100,
+    "desc": "击破它才算走完四脉试炼的路；满级后的秘境才是真正的开始。"
+   }
+  ]
  }
 ]

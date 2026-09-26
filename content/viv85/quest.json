@@ -1317,15 +1317,21 @@
  },
  {
   "id": "mq30",
-  "name": "四脉终试",
+  "name": "四脉终试·试炼之主",
   "type": "试炼",
   "zone": "trial_hall",
-  "desc": "抵达 85 级，完成四脉试炼，取得脉核令。",
+  "desc": "击破试炼之主，走完四脉试炼的路，取得脉核令。",
   "conditions": [
    {
     "var": "level",
     "op": "ge",
     "value": 85
+   },
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 1,
+    "param": "trial_sovereign"
    }
   ],
   "reward": [

@@ -665,6 +665,22 @@
 
 > 通用句式：**「停 → 还原 → 给证据 → 只做我要求的那一步」**。它一开始辩解，就先要**原始输出**，再谈结论。
 
+### 12.9 可打勾的验收清单（附命令）
+
+| 勾 | 检查 | 命令 | 看到什么算通过 |
+|---|---|---|---|
+| [ ] | 全量测试 | `pytest tests/ -q -o addopts=""` | 看到 `0 failed`（本批基线 **9147 passed**） |
+| [ ] | 工作树干净 | `git status --porcelain` | **无输出**（硬纪律） |
+| [ ] | 架构门禁 | `python scripts/check_architecture.py` | 末行 `ARCH-OK` |
+| [ ] | 内容包门禁 | `python scripts/check_m7_content.py --path content/<包>` | 无红项（**缺省只查一个包**） |
+| [ ] | 字段元数据对拍 | `python scripts/compare_field_meta_migration.py` | 硬差异 `diff = 0` |
+| [ ] | 换包通用性 | `python scripts/editor_verify_packs.py` | 12 包全 PASS |
+| [ ] | 冒烟 | `python scripts/verify_veinborn_smoke.py` | PASS（SKIP 须写明原因） |
+| [ ] | 全链门禁 | `python scripts/check_all.py`（发布前再 `python scripts/run_all_tests.py`） | 静态 + 架构 + 内容包 + 单测全过 |
+| [ ] | 只改了该改的 | `git diff --stat <基线>..HEAD` | 文件清单 = 你要求的那几个（对照 §七 第 5 问） |
+
+> 门禁选择口径见《手册·3》§③（`docs/审查/审计与方案/API手册_3_权责与勿当bug修.md:688`）：**按改动面选，宁多勿少**；护栏测试**不许动**（同处 `:703`）。
+
 ---
 
 > **配套文档**：`docs/框架扩展开发手册.md`（框架能力与权责 · 稳定契约 · 勿当 bug 修）

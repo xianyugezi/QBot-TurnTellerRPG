@@ -28,7 +28,72 @@
 
 ### 2.1 常量（可直接引用的）
 
-<!-- TODO 2.1 -->
+#### A. 装备键族——`items.json`/`equipment.json` 的 `stats_bonus` 里能写哪些键
+
+| 键族 | 数量 / 内容 | 唯一源 file:line | 作者写在哪 | 改了会影响谁 |
+|---|---|---|---|---|
+| 平值 `GEAR_FLAT_KEYS` | 13：atk/dfn/hp/mp/str/con/agi/foc/spr/lck/spd | `gear_stats.py:175` | 装备/物品词条 `stats_bonus` | 聚合进 `attributes.bonus.flat`（面板白值） |
+| 百分比 `GEAR_PCT_KEYS` | 8：`…_pct` | `gear_stats.py:180` | 同上 | 聚合进 `bonus.pct`；**后 4 键同时是特效轴别名源** |
+| 战斗直读 `GEAR_COMBAT_KEYS` | 10：crit/absorb_hp/pierce_*… | `gear_stats.py:186` | 同上 | 经 `COMBAT_TO_COMBATANT:502` 桥进 combatant（**封顶值写死在此**） |
+| 占位 `GEAR_PLACEHOLDER_KEYS` | 1：`cooldown_reduction_pct` | `gear_stats.py:198` | 同上 | **形似死代码、实为兼容设计**：只在一处换算（防双计） |
+| 特效键 `GEAR_EFFECT_KEYS` | 17（由轴表派生，**不可手改**） | `gear_stats.py:461`（源 `:230-447`） | 同上 | **键空间唯一源**；手改派生表会被 import 覆盖 |
+
+> **谁拥有**：键空间 = 框架 `data` 层（唯一源）；**内容包只能"用键"，不能"加键"**。**别名归并** `EFFECT_LEGACY_ALIASES`（6 条，`gear_stats.py:584`）：旧键→轴、**只换算一次**；旧键与轴符号相反**不是写错**（详见《手册·1》§1.2.4、《手册·3》§3.1 样例②）。
+
+#### B. 特效轴全集（17 轴 = **16 已接线** + 1 哨兵）
+
+**列义**：**双向** = 一条轴既能增强也能削弱（范围含负侧），**一条轴两方向**；默认全 `0.0`（= `×1.0`，未配置零变化）。
+
+| # | 轴 | 范围 min~max | 双向 | 消费点（实调点 file:line） |
+|---|---|---|---|---|
+| 1 | `healing_received_pct` | −200~300 | ✅ | `effects.py:1872`（heal_apply 内） |
+| 2 | `healing_done_pct` | −100~300 | ✅ | `effects.py:1878` |
+| 3 | `damage_taken_pct` | −100~300 | ✅ | `battle.py:4253` |
+| 4 | `damage_dealt_pct` | −100~1000 | ✅ | `battle.py:4226` |
+| 5 | `cooldown_pct` | −80~200 | ✅ | `battle.py:3438` |
+| 6 | `status_chance_pct` | −100~不限 | ✅ | `effects.py:531` |
+| 7 | `stack_gain_pct` | −100~不限 | ✅ | `effects.py:533` |
+| 8 | `stack_cap_delta` | 不限（加算差值） | ✅ | `effects.py:534`（**marks 半边未接**） |
+| 9 | `status_duration_pct` | −80~300 | ✅ | `effects.py:537` |
+| 10 | `status_duration_taken_pct` | −100~300 | ✅ | `effects.py:538` |
+| 11 | `status_resist_pct` | −100~不限 | ✅ | `effects.py:532` |
+| 12 | `action_bar_shift` | 不限（加算差值） | ✅ | `battle.py:5185` |
+| 13 | `resource_cost_pct` | −100~200 | ✅ | `battle.py:1279` |
+| 14 | `resource_gain_pct` | −100~不限 | ✅ | `battle.py:1281` |
+| 15 | `crit_damage_pct` | −100~300 | ✅ | `battle.py:4724` |
+| 16 | `action_speed_pct` | −80~400 | ✅ | `battle.py:2575` |
+| 17 | `reward_mult_pct` | 0~400 | ⛔ 单向（下钳 0） | **未接线**——哨兵 `EFFECT_CONSUMER_PENDING`（`gear_stats.py:424`），配了不生效 |
+
+> **三条口径**：① 题面"16 条"= 上表**已接线的 16 条**（第 17 条是登记未实现的哨兵）；② 轴是否生效，**唯一判据是 grep 实调点**，不能只看 `consumer_note` 的措辞；③ 攻防"两侧配对"（治疗/伤害/时长/命中抵抗，一轴两键）**别合并**——那是"装 build 能分别配两侧"的设计。**作者改哪**：要调范围写 `settings.effect_axes.<轴>.{min,max}`（引擎不写死）；**改 `EFFECT_AXIS_SPECS` 字面量属框架级评审**。详见《手册·1》§1.2。
+
+#### C. 枚举 / 时点（值域封闭，作者**不能**加值）
+
+| 常量 | 值域 / 数量 | 唯一源 file:line | 作者能改吗 |
+|---|---|---|---|
+| `EVENT_POINTS` | **17 时点**（前 16 保序） | `data/event_points.py:25` | ❌ 值域固定（见 §2.3） |
+| `STATUS_EVENT_POINTS` | `status_gain`/`status_lose` | `data/event_points.py:38` | ❌ |
+| `POOL_KINDS`/`REACTION_KINDS` | 3/3（常见/专属/联动；冲突/增幅/反转） | `data/affinity_keys.py:37`/`:43` | ❌ |
+| `AFFINITY_KEYS` | 4（settings 四个段名，**不是"6 个相性键"**） | `data/affinity_keys.py:46` | ❌ |
+| `RUNE_TIERS` | (1,2,3) 珠阶 | `data/runes.py:41` | ❌ |
+| `QUALITY_KEYS`/`DEFAULT_QUALITY_TIERS` | 四档；边界可经 settings 覆盖 | `core/quality.py:80`/`:56` | ✅ 边界可覆盖 |
+| `ABSOLUTE_QUALITY_MAX` | 100 | `core/quality.py:84` | ❌ **硬顶、无 settings 旁路（有意写死）** |
+| `MODE_*`/`CRAFT_PATHS` | full/simple/off；四条路径（含 forge） | `core/craft_paths.py:72-88` | ❌；**`MODE_*` 只描述炼金三层漏斗，别套 forge** |
+| `TEMPER_VALUE_TYPES`/`TEMPER_ROUNDINGS`/`ESSENCE_V_BASES`/`ESSENCE_SCOPES` | flat/pct；floor/round/ceil；…；… | `data/temper_stats.py:55/58/62/65` | ❌ |
+
+#### D. 阈值 / 默认值表——**作者用 `settings.*` 覆盖，别改框架 `DEFAULT_*` 常量**
+
+| 表 | 默认（节选） | 覆盖段名 | 唯一源 file:line | 改了会影响谁 |
+|---|---|---|---|---|
+| 面板预算 | white 7.0 / equip 8.0 / buff 5.0 | `settings.panel_budget` | `core/panel_budget.py:102` | 装备/白值/增益占比 → **"斩回"校准与面板占比** |
+| 怪物缩放 | hp_mult/atk_mult/def_factor/def_k 100 | `settings.monster_scaling` | `core/panel_budget.py:109` | 怪物面板强度（面板预算的配套） |
+| 深度打造 `craft_rules` | 16 键 | `settings.deep_craft.craft_rules` | `content/deep_craft_settings.py:110` | 打造成本预算/品质经验/词条数（**两件套须同步增删**） |
+| 淬炼 `temper` | 15 键（`cap_per_level=6`…） | `settings.forge.temper` | `data/temper_stats.py:70` | 淬炼上限/点数；**优先链**：`total_cap` > `total_cap_by_level[等级]` > `等级×cap_per_level`（`core/temper.py:136-167`） |
+| 精华产出 `essence_rate` | 15 键、默认 **关** | `settings.forge.essence_rate` | `data/temper_stats.py:106` | 分解回收的经济闭环 |
+| 特效强度预算 `effect_budget` | `cap_equiv_pct=8.0`、gate 默认 `warn` | `settings.effect_budget` | `data/gear_stats.py:894` | 特效等效占比与黄/红提示（默认只提示） |
+| 过量治疗 `overheal` | 默认关、`mode=discard` | `settings.overheal` | `data/gear_stats.py:1136` | **它不是特效轴**（E5 布尔开关），别搬进轴表 |
+| 模块目录 / 推荐组合 | 36 条目 / 3 组合 | **框架不覆盖**（目录不可改；预设包可整体覆盖同 id） | `content/module_catalog.py:68`、`content/module_presets.py:58` | 编辑器模块勾选树与"推荐组合"一键勾 |
+
+> **改常量的通用铁律**：**"未配置 = 既有行为"** 靠每张默认表配套的 `normalize_*()` 归一函数保证；改 `DEFAULT_*` 会让所有没配该段的包**静默变行为**。要加一条特效轴：只改 `EFFECT_AXIS_SPECS` 唯一源，六张派生表自动跟随——**要手改派生表说明走错了**。逐条安全改法见《手册·1》§1.6 / §4.1~§4.9。
 
 ### 2.2 变量（作者可以"引用"的东西）
 

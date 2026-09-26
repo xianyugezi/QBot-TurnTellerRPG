@@ -364,7 +364,7 @@
 - **类型**：`Mapping[模块名:str, object]`（顶层 dict，深拷贝；registry.py:39/56/106-108，构建 `loader.py:126`）。
 - **键来源**：`manifest.modules` 声明顺序去重（loader.py:87-93 `_ordered_declared`）+ 恒有 `"manifest"` 键（loader.py:314 `modules["manifest"]=manifest_raw`；`integrity_check` 断言时排除，registry.py:204）。
 - **值形态**：list 形态（条目表，如 skills/items/enemies）；`stats`/`formula` 为 map 形态（键=ID，loader.py:117-120）；`forge`/`enhance`/`fishing` 为顶层 obj 模块（context.py:1347-1361 注释）。
-- **已知模块名注册表**：`FIXED_REGISTER_ORDER` = effects/statuses/marks/skill_chains/action（loader.py:46）；`_KIND_FOR_MODULE` 另登记 29 个（loader.py:150-202）：effects、statuses、marks、skill_chains、action、skills、jobs、items、equipment、traits、recipe、proficiency、slots、runes、forge、enhance、fishing、achievements、enemies、maps、dungeon、stats、npc、formula、conditional、shop、quest、checkin。
+- **已知模块名注册表**：`FIXED_REGISTER_ORDER` = effects/statuses/marks/skill_chains/action（loader.py:46）；`_KIND_FOR_MODULE` 另登记 **28** 个（批82 · Q7/NEW-5 更正：原写 29；loader.py:146-198）：effects、statuses、marks、skill_chains、action、skills、jobs、items、equipment、traits、recipe、proficiency、slots、runes、forge、enhance、fishing、achievements、enemies、maps、dungeon、stats、npc、formula、conditional、shop、quest、checkin。
 - **kind 映射**（`_KIND_FOR_MODULE`，loader.py:150-202）：模块名→kind，如 effects→effect、statuses→status、marks→mark、enemies→enemy 等。
 - **对照自检**：`check_register_table_consistency`（loader.py:205-218）与 `check_manifest_modules_registered`（loader.py:221-233）。
 - **框架模块目录**（编辑器面板，非运行时必读）：`FRAMEWORK_MODULE_CATALOG`（`qbot_rpg/content/module_catalog.py:68` 起）；条目类型 `ModuleCatalogEntry`（module_catalog.py:31，`@dataclass` :30，字段 module/label/purpose/entry_type/requires/implemented/settings_section/overlap_with/overlap_note）。

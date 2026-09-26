@@ -188,7 +188,7 @@
 | `DEFAULT_QUALITY_TIERS` | core/quality.py:56 | 4 | ✅ | ✅ | `{common:(0,39), uncommon:(40,59), rare:(60,79), legendary:(80,100)}` |
 | `DEFAULT_QUALITY_COEF` | core/quality.py:64 | 4 | ✅ | ✅ | 0.8 / 1.0 / 1.2 / 1.5 |
 | `DEFAULT_TIER_LABELS` | core/quality.py:72 | — | ✅ | — | 档位中文标签 |
-| `ABSOLUTE_QUALITY_MAX` | core/quality.py:84 | 100 | ✅ | ❌（硬上限） | 品质绝对上限，**故意写死** |
+| `ABSOLUTE_QUALITY_MAX` | core/quality.py:84 | 100 | ✅ | ❌（硬上限） | 品质绝对上限，**故意写死**；**无 settings 覆盖旁路**（批82 · Q8 实测：无第二写点、无 settings 键，末端 `min(...)` 无条件生效） |
 
 > **易混提醒**：`AFFINITY_KEYS` 是 **settings 段名**（4 个），**不是**"相性键"6 个——上游盘点文档 §1.3 记作 6 项，本次实测为 4 项，以本节为准（差异见 §8）。
 > **易混提醒**：`data/affinity_keys.py` **没有 aliases 表**。真正的别名归并在 `gear_stats.py:584`（`EFFECT_LEGACY_ALIASES`）与 `core/condition_engine.py:96-120`。
@@ -229,7 +229,7 @@
 | `TEMPER_ROUNDINGS` | data/temper_stats.py:58 | `('floor','round','ceil')` | ❌ |
 
 关键默认值：`cap_per_level=6`、`per_stat_cap_ratio=0.5`、`value_type="flat"`、`points_per_action=1`、`reset_allowed=True`、`total_cap=None`。
-> **配额**：`total_cap` 与 `total_cap_by_level` 的关系、`per_stat_cap_ratio` 与 `per_stat_cap` 的优先级由 `normalize_temper_config` 归一（`total_cap_by_level` 优先于 `total_cap`）——具体优先级链 `待查`（本次未逐行读 :181-226）。
+> **配额（批82 · Q3 查清）**：`normalize_temper_config`（`data/temper_stats.py:181-223`）只做**逐键净化**（四键互不覆盖），**不决定优先级**；真正的优先链在**消费函数**：`total_cap_of`（`core/temper.py:136-154`）= **`total_cap`（显式绝对值） > `total_cap_by_level[等级]` > `等级 × cap_per_level`**；`per_stat_cap_of`（`core/temper.py:157-167`）= **`per_stat_cap[stat]`（逐属性覆盖） > `floor(total_cap × per_stat_cap_ratio)`**（ratio 缺省 0.5）。默认 `total_cap=None` / `total_cap_by_level={}` / `per_stat_cap={}` → 走「等级×6」与「×0.5」。
 
 #### 1.4.4 粹灵/精华产出（essence）
 
@@ -524,8 +524,13 @@
 
 - **类型**：`Mapping[模块名:str, object]`（顶层 dict，**深拷贝**；registry.py:39/56/106-108，构建 `loader.py:126`）。
 - **键来源**：`manifest.modules` 声明顺序去重（`_ordered_declared`，loader.py:80-93，调用点 :101）+ **恒有 `"manifest"` 键**（loader.py:310；`integrity_check` 断言时排除，registry.py:204）。
-- **值形态**：list 形态（条目表：skills/items/enemies…，loader.py:105-115）；`stats`/`formula` 为 map 形态（键=ID，loader.py:117-120）；`forge`/`enhance`/`fishing` 为顶层 obj 模块（context.py:1347-1361 注释）。
-- **已知模块名注册表**：`FIXED_REGISTER_ORDER` = effects/statuses/marks/skill_chains/action（loader.py:46）；`_KIND_FOR_MODULE` 另登记 29 个（loader.py:146-198）：effects、statuses、marks、skill_chains、action、skills、jobs、items、equipment、traits、recipe、proficiency、slots、runes、forge、enhance、fishing、achievements、enemies、maps、dungeon、stats、npc、formula、conditional、shop、quest、checkin。
+- **值形态（批82 · Q6 实测全表，36 个 field_meta 模块）**：形态由 `ModuleMeta.entry_type` 决定 ——
+  **list（24）**：`achievements, action, ai, checkin, dungeon, effects, enemies, equipment, hidden, items, jobs, maps, marks, npc, proficiency, quest, recipe, runes, shop, skill_chains, skills, slots, statuses, traits`（loader.py:105-115 逐条按 `id` 注册）；
+  **map（3）**：`formula, stats, templates`（仅 `stats`/`formula` 走「键=ID」注册 `loader.py:117-120`；**`templates` 同形但不注册**，由 `context._templates_table` 读 `modules_raw`，见 Q7/NEW-7）；
+  **object（9）**：`conditional, editor, enhance, env_event, fishing, forge, log_card, manifest, settings`（**不进注册表 tables**，只留 `modules_raw` 供各引擎 `parse_*` 读取）。
+- **已知模块名注册表**：`FIXED_REGISTER_ORDER` = effects/statuses/marks/skill_chains/action（loader.py:46）；`_KIND_FOR_MODULE` = **28 项（批82 · Q7/NEW-5 更正：原写 29）**（loader.py:146-198）：effects、statuses、marks、skill_chains、action、skills、jobs、items、equipment、traits、recipe、proficiency、slots、runes、forge、enhance、fishing、achievements、enemies、maps、dungeon、stats、npc、formula、conditional、shop、quest、checkin。
+  - **`catalog − kind` 差集（8）**：`assistant / codex / contest / farming / gathering / quest_board / settings / templates`。其中 `settings`/`templates` 在 field_meta 有登记（`check_manifest_modules_registered` 豁免）；另 **6 个能力标记类条目（assistant/codex/contest/farming/gathering/quest_board）无 loader kind、无 field_meta 校验器** → `check_manifest_modules_registered` 报出这 6 个，**列 NEW-6 待查**（是否可写 manifest 未查清，不猜）。`kind − catalog = ∅`。
+- **`ABSOLUTE_QUALITY_MAX`（批82 · Q8）**：`core/quality.py:84` = 100，**无任何 settings 覆盖旁路**（全仓无第二写点、无 settings 键），末端 `min(…, ABSOLUTE_QUALITY_MAX)` 无条件生效——**有意写死**（见 §1、§5 S8）。
 - **对照自检**：`check_register_table_consistency`（loader.py:201-216）、`check_manifest_modules_registered`（loader.py:217-234）。
 
 **改动风险**：模块名**双处登记**（`_KIND_FOR_MODULE` loader.py:150-202 与 `FRAMEWORK_MODULE_CATALOG` module_catalog.py:68），**需人工保持一致**，且只有**单向**自检。新增模块必须两处同步（见 §6 A 组 A8）。
@@ -585,7 +590,16 @@
 2. **重复注入 52 处**：本次对 `make_context` 做 AST 解析，发现 **52 个键被赋值 ≥2 次**（`battle_engine` 4 次；`items` 3 次；`name`/`skills`/`npcs`/`in_battle`/`rng`/`quests` 等 2 次）。**后写覆盖先写**，读序即语义。
 3. **存在动态键注入**：`ctx[_key] = ...`（`context.py:1835`、`:1837`，`_key` 由 maps/dungeons/enemies 派生）——**连键名都无法静态枚举**。
 
-**本次实测键数**：AST 可静态识别 **128 个不同字面量键**（共 183 次赋值）。上游盘点估"约 170 键"，差异来自动态注入与闭包挂载。**精确总数：无单一源，待查**。
+**本次实测键数（批82 · Q1 定区间口径）**：AST 可静态识别 **128 个不同字面量键**（共 183 次赋值）。上游盘点估"约 170 键"，差异来自动态注入 + 模块表注入（随包模块数）+ 注册态闭包挂载。**精确总数随「包 / 注册态」浮动 ⇒ 用区间口径**（`make_context` + `len(ctx)` 实测）：
+
+| 包 | 注册态 | 未注册态 | 仅注册态多出 |
+|---|---|---|---|
+| `content/test_demo` | 162 | 134 | 28 |
+| `content/veinborn` | 166 | 138 | 28 |
+| `content/blank` / `zz_craft_demo` | 162 / 165 | 134 / 137 | 28 |
+| **区间（现行 9 包）** | **162~166** | **134~138** | **28（恒定）** |
+
+> 可复现命令：`build_pack_deps(pack)` → `save_player` → `make_context`（注册玩家）→ `len(ctx)`；`only_reg=28` 恒定。**不要写死单一数字**（随包内模块数变化）。**3 个键框架内无生产消费方**（`monster_pool`/`shop_engine`/`worn_refs`）——登记为**结构性缺口 / 准死键**（Q2 / NEW-9，待收敛批处置，勿单删）。
 
 **字段分组的"现行依据"**（= 代码怎么分的，不是设计文档写的）：
 
@@ -946,7 +960,7 @@ Player.inventory (Tuple[ItemInstance])
 
 | # | 项 | 表现 | file:line | 本章处理 |
 |---|---|---|---|---|
-| **A1** | **内部 `ctx` dict** | 四段按代码位置切分；**52 个键重复注入**；存在动态键（`ctx[_key]`）→ 键名无法静态枚举 | context.py:1295-1373 / :1398-1584 / :1586-1639 / :1642-2034；动态 :1835/:1837 | §2.7.3 **明确标注"无单一源"**；给出四段分组的现行依据；精确总数标"待查" |
+| **A1** | **内部 `ctx` dict** | 四段按代码位置切分；**52 个键重复注入**；存在动态键（`ctx[_key]`）→ 键名无法静态枚举 | context.py:1295-1373 / :1398-1584 / :1586-1639 / :1642-2034；动态 :1835/:1837 | §2.7.3 **明确标注"无单一源"**；给出四段分组的现行依据；键数用**区间口径**（批82 · Q1：注册 162~166 / 未注册 134~138，`only_reg=28` 恒定）；3 键无消费方（Q2/NEW-9） |
 | **A2** | **combatant 字段** | ≥4 处构造（默认/归一/敌方/玩家）+ 运行期派生 + 效果写入 | core/battle.py:317-322、:2318-2327、:937-942；battle_launch_commands.py:182-220；core/pvp.py:154-203；effects.py:1035-1045、:2229-2235 | §2.5 逐处列出；§4.6 给"新增 combatant 键必查清单" |
 | **A3** | **运行期战斗快照顶层键** | 只有代码、无 dataclass 契约 | core/battle.py:2332-2433、:5537-5613 | §2.5.4 列出；标注"无契约类型" |
 | **A4** | **`Player.achievement_state`** | 字段散落 **3 处**：docstring 声明新形态 / codec 仍 tuple-list / 真值在 `persistent_state` | player.py:97-102；repository.py:174、:331；schema.py:63；context.py:1522-1524 | §2.1 改动风险 + 本节 A4；**字段已退化为旧档兼容读** |
@@ -959,8 +973,8 @@ Player.inventory (Tuple[ItemInstance])
 | # | 发现 | 性质 | 证据 | 建议 |
 |---|---|---|---|---|
 | **N1** | **两条治疗轴的 `consumer_note` 是过期文案** | 注释与实现不一致（同 C 组性质） | `gear_stats.py:239-241`/`:250-251` 写"待接"；实际 `effects.heal_apply:1838-1888` + `HEAL_RECEIVED_AXIS`/`HEAL_DONE_AXIS` :111-112 + 5 处实调 + `tests/unit/test_batch52_heal_damage_axes.py` | 更新 `consumer_note`（或删"待接"字样） |
-| **N2** | **`/装备` dict 归一丢 `effect_refs`，且写回背包** | 疑似缺口（字段静默丢失） | `basic_commands.py:1567-1597`（17/20）**缺 `effect_refs`** → `:1616-1618` 写回 `player["inventory"]`；对照 `runner.py:720-754`（18/20，**保留** `effect_refs` :751-753） | 收敛为公共归一函数（§3.4） |
-| **N3** | **`stack_max` 在两条归一链路均丢** | 疑似缺口（与已修的 `repository.py:219-222` 同类） | `runner.py:720`、`basic_commands.py:1567` 均未带 `stack_max` → 回落 99；`stack_max=1` 的实例归一后变"可堆叠 99" | 同上 |
+| **N2** | **`/装备` dict 归一丢 `effect_refs`，且写回背包** | **真缺口（批82 · Q4：未被任何裁决认定为可接受，字段静默丢失）** | `basic_commands.py:1567-1597`（17/20）**缺 `effect_refs`** → `:1616-1618` 写回 `player["inventory"]`；对照 `runner.py:720-754`（18/20，**保留** `effect_refs` :751-753） | 收敛为公共归一函数（§3.4）；**排收敛批**（Q5 已证 `/使用` 读取侧双形态兼容、无缺口） |
+| **N3** | **`stack_max` 在两条归一链路均丢** | **真缺口（批82 · Q4：未被任何裁决认定为可接受）** | `runner.py:720`、`basic_commands.py:1567` 均未带 `stack_max` → 回落 99；`stack_max=1` 的实例归一后变"可堆叠 99"（已修读档侧 `repository.py:219-222` 为同族对照） | 同上（与 N2 合并为公共归一函数） |
 | **N4** | **`FRAMEWORK_MODULE_CATALOG` 36 条目 `implemented` 全为 `True`** | 口径提示（非缺口） | `python3` 实测 `sum(implemented)=36/36` | "让作者看见未实装能力"目前靠目录条目存在；将来新增未实装模块应设 `implemented=False` |
 | **N5** | **两条 17/18 字段归一与读档 codec（20/20）不一致** | 结构风险 | 见 §3.1 表 | 新增 `ItemInstance` 字段时**必须同时改这两个内联归一** |
 

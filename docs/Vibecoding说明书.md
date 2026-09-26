@@ -553,6 +553,23 @@
 **不合格回答示例**
 > 「框架里没有，我新加一个 `cd_reduce` 字段。」——没查 ①②③，给不出 `file:line`，也没提测试；**打回，不许动手**。
 
+### 12.3 同义反复与别名归并表（防写了旧键以为生效）
+
+> **一句话**：旧键不是「另一个键」，是**同一个轴**的别名，**只换算一次**（不双计）。唯一源 `EFFECT_LEGACY_ALIASES`（**6 条**，`qbot_rpg/data/gear_stats.py:589`），每条由轴表的 `legacy_alias: ((旧键, sign), …)` 声明（`:248`/`:259`/`:272`/`:286`/`:298`）；换算式 `pct = sign × 旧键值`。
+
+| 旧写法 | 归并到（新轴） | 关系 | 换算 / 备注（来源） |
+|---|---|---|---|
+| `cooldown_reduction_pct` | `cooldown_pct` | 归并·**不双计** | `sign = -1`：旧值 30 → `cooldown_pct = -30`（= 冷却 ×0.7）。唯一写入点 `route_legacy_aliases_into_flat`（`gear_stats.py:759`），`route_bonus_into` 对该键仍显式跳过。批53（`CHANGELOG.md:478-480`） |
+| `immune_dmg` | `damage_taken_pct` | 归并·**不双计** | `sign = -1`，作**负半轴**别名（减免）；经 `combatant_updates`（`gear_stats.py:797`）`axis += sign × 旧值`。批52（旧编号批50，`CHANGELOG.md:504-507`） |
+| `heal_amp_pct` | `healing_done_pct` | 归并·**不双计** | `sign = +1`；同上。批52（旧编号批50，`CHANGELOG.md:502-504`） |
+| `weakness_dmg_pct` | `damage_dealt_pct` | 归并·**不双计** | `sign = +1`；经战斗桥 pct 层归入本轴。批70（`CHANGELOG.md:274-276`） |
+| `debuff_chance_pct` | `status_chance_pct` | 归并·**不双计** | `sign = +1`；**通用命中，当前不分 buff/debuff**（批53 有意，批82 复核确认，`CHANGELOG.md:482`、`:22`） |
+| `buff_chance_pct` | `status_chance_pct` | 归并·**不双计** | `sign = +1`；同上 |
+
+**其它自查**：拿不准某个旧键还有没有用，跑 `grep -rn "旧键名" qbot_rpg/ tests/`——若只出现在 `EFFECT_LEGACY_ALIASES` 与测试里，说明它**只是兼容别名**，不是可用来「新增」的键。
+
+> **结论**：**新写法优先；旧写法仍可用，但不要用来「新增」效果**。旧键与新键是**两个不同键**，同时写会被各算一次（双计）；新增请只写新轴。
+
 ---
 
 > **配套文档**：`docs/框架扩展开发手册.md`（框架能力与权责 · 稳定契约 · 勿当 bug 修）

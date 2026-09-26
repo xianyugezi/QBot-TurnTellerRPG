@@ -192,11 +192,80 @@
 
 ### 2.4 状态机
 
-<!-- TODO 2.4 -->
+> **共同的规矩**：状态机**本体归框架引擎**，内容只能"声明输入/读取状态"，不能自己写一套推进逻辑。**每台机器的权威状态都在战斗快照里**，续战/落档以它为准。
+
+**① 战斗推进 · CTB 行动条（Charge Time Battle）**
+- **谁推进**：调度器 `CTBScheduler`（`core/ctb_scheduler.py:128`）；**逻辑时间唯一推进源** = `advance_to_next_ready()`（`:467`，单调递增）。作战链固定为 `ACTOR_READY → ACTOR_TURN_START → BEFORE_ACTION → ACTION_RESOLVE → AFTER_ACTION → ACTOR_TURN_END`（`core/battle.py:542-544`），全部由行动条推进决定，**不再有"回合"单位**。
+- **内容能声明**：CTB 规则参数 `settings.ctb`（recovery/speed_reference/min_speed/action_delay，经 `battle.py:255-261` 透传给 `CtbRuleConfig`）；技能/动作的耗时；行动快慢走 `action_speed_pct`/`action_bar_shift` 轴。
+- **作者改哪安全**：要"更快/更慢"用特效轴，别碰引擎时序。**改 CTB 时序属框架级评审**（核心契约）。
+- **与数值/事件衔接**：快照边界枚举 `CTB_BOUNDARIES = (actor_ready, after_action)`（`battle.py:212`）；相位标注 `PHASE_ACTOR_READY`（`:191`）；关键点 `_resolve_ready_actor`:2724 / `_start_actor_turn`:2878 / `_do_action_inner`:3013 / `_settle`:2199。事件见 §2.3；**`turn` 是兼容镜像 = `action_seq`，不参与计算**（`battle.py:2357`，别当冗余删）。
+
+**② 状态效果（status）：施加 → 层数 → 时长 → 到期/驱散**
+- **谁推进**：`core/effects.py`——`apply_status`（`:495`）→ **唯一构造源 `_new_instance`（`:735-763`，14 键）** → `tick_turns`（`:849`）逐行动递减 → `_remove_status`（`:313`）或 `dispel` 分支（`:2257-2277`）。
+- **内容能声明**：`statuses.json` 的 `category`（buff/debuff/weak…）、`level`、叠加上限、`value`/`turns`/`charges`（**双维时长**）、`decay`（衰减方式，运行期是字符串）、`on_gain`/`on_lose`/`on_expire`。
+- **作者改哪安全**：全在 `statuses.json`；数值作用由 `effects` 动作声明。**改 effects 管线阶段顺序 = 评审**。
+- **与数值/事件衔接**：事件 `status_gain`/`status_lose`（§2.3）；层数/时长轴 `stack_gain_pct`/`stack_cap_delta`/`status_duration_pct`/`status_duration_taken_pct`（§2.1 B）；`decay` 类型双轨（契约 float / 运行期 str）是**已登记双轨，不是 bug**。
+
+**③ 印记（mark）**
+- **谁推进**：`MarksManager`（`core/marks.py`）——`new_inst`（`:258-264`）→ `apply_add`（`:239`，**必中**，重复 +count 至 `max_stack`，到顶不再涨）→ `tick_turn`（`:319`，仅 `duration="turns:N"` 才有 `remaining_turns`）→ `apply_remove`/`apply_clear`（`:271`/`:297`）。容器 `marks_state = {"player":[…], "enemy":[…]}`。
+- **内容能声明**：`marks.json` 的 `max_stack`/`polarity`（正/负，`POLARITIES` `marks.py:50`）/`duration`；动作 `mark_add`/`mark_remove`。
+- **作者改哪安全**：包内 `marks.json` 与动作。**键元组 `_MARK_INSTANCE_KEYS`（`:53-60`）是权威声明**，加键须与 `new_inst` 两处同步。
+- **与数值/事件衔接**：`marks`/`marks_total` 是公式可读聚合（`formula_view` `:421`）；**`mark_gain`/`mark_lose` 无派发点（二期）→ 印记不能用事件触发**，只能用动作。印记**非增益非减益、天然不吃 dispel**（`effects.py:2259`）。
+
+**④ 形态 / 姿态（transform / `stance: air`）**
+- **谁推进**：变换引擎三件套——触发 `core/transform.py`（触发闸 C1~C4 于 `can_transform`；`remaining`/`cooldown_remaining` 从触发起算，行动收尾 tick 递减）、还原 `core/transform_revert.py`、快照 `core/transform_snapshot.py`。**跃空姿态**权威来源 = 包 `statuses.json` 的 `"stance": "air"` 声明（`_declared_air_stance_ids` `battle.py:349`）。
+- **内容能声明**：job 的 `transform` 段（`transform_skill`/`transform_to`/`duration`/`turns`/`cooldown`/`form_status_id`…）；`statuses[].stance=="air"`；被击落倒地 status id 可配 `air_drop_status_id`（`battle.py` 引擎配置）。
+- **作者改哪安全**：**新姿态/新跃空只需在包内声明，不要再改框架表**。无声明时框架回退 legacy 集合（`_LEGACY_AIR_STATUS_IDS` `battle.py:340-343`）——**`or` 不是 union，勿动**（《手册·3》样例③）。
+- **与数值/事件衔接**：`transform_state`（7 字段）入快照（`battle.py:2388-2391`）；`form_status_id` 落 `transform_state` + `status_state` **双写**（双轨挂载）；形态 `cooldown_remaining` 与道具/技能冷却**不同对象**（《手册·3》R9）。
+
+**⑤ 连段（combo）**
+- **谁推进**：`core/combo.py`——6 态（`idle`/`in_combo`/`derivable`/`deriving`/`at_max_reset`/`at_max_hold`，`:109-111`），主迁移 8 条；**权威状态 = 战斗快照 `combo_state`**（引擎只读写 `snap["combo_state"][side]`，`:5`）。打断走 `effects.interrupt`；`_settle` 清零 `combo_state={}`。
+- **内容能声明**：`skill_chains.json`、技能连段标签六值（`combo`/`combo_preserve`/`combo_push`/`interrupt`…，`:126-129`）、派生条件；侧内五字段 `chain_id`/`chain_name`/`count`/`hold`/`step_index`（`:157`）。
+- **作者改哪安全**：包内连段链与标签；**成环是"有意的循环连招"，校验器只提示不拦**（《手册·3》C5）。
+- **与数值/事件衔接**：连段计数印记有 legacy 兜底（包声明 `role=="combo_counter"` 优先，`basic_commands.py:1929-1948`）；**`combo.py`（连段状态机）≠ `combo_table.py`（元素组合技）**，同名词不同事、是依赖不是重复（《手册·3》R8）。
+
+**⑥ 资源（法力 `mp` / 能量轴 / 炼金调合能量条）**
+- **谁推进**：法力 = combatant 的 `max_mp`/`mp`（默认 100，`_DEFAULT_STATS` `battle.py:317-322`）；战斗资源轴 = `ResourceAxisEngine`（`core/resource_axis.py:1048`；`get/set/add_value` `:416`/`:445`/`:481`，`check_cost`/`pay_cost` `:574`/`:696`，`gain_energy`/`apply_gain` `:760`/`:815`，技能侧 `:956`/`:990`）+ 生命周期 `ResourceLifecycle`（`core/resource_lifecycle.py:83`，**时点结清**）；炼金调合能量条 = `EnergyBar`（`core/energy_bar.py:82`，懒计算补格）。
+- **内容能声明**：资源轴定义/`energy_gain`/`energy_cost`；炼金能量开关 `settings.alchemy.energy_enabled`（**`proficiency.energy` 是兜底源**，`energy_bar.py:102`/`:178`；契约优先级 = settings 为准）。旧类型 `resource_custom` 加载时归一为 `resource`（`resource_axis.py:121`）。
+- **作者改哪安全**：包内资源轴/开关声明。**双源优先级已定，别把某一路当真源直接改**（《手册·3》B12 / 核清 C2）。
+- **与数值/事件衔接**：`resource_cost_pct`/`resource_gain_pct` 轴消费点 `battle.py:1279`/`:1281`；资源段 `resource_state` 入快照 `battle.py:2394`；**`energy_bar`（调合能量条）≠ `resource_axis`（战斗资源轴）**，不同系统（《手册·3》R7）。
 
 ### 2.5 互相影响关系（一张"流转图"）
 
-<!-- TODO 2.5 -->
+```
+内容声明/配置（content/<包>/** 纯 JSON）
+      │  谁拥有：内容包层 · 改哪：编辑器改包内 JSON · 被谁影响：校验器 / manifest 声明顺序
+      ▼
+装配装载（assembly/**：loader → registry → GameWorld + 装配层计算）
+      │  谁拥有：框架装配层 · 改哪：框架级（包不能改） · 被谁影响：manifest.modules、各 settings 段
+      ▼
+战斗事件派发（battle.py `_dispatch_event` → event_dispatcher.py）
+      │  谁拥有：框架 core（派发唯一出口 battle.py:2035） · 改哪：加时点=框架评审 · 被谁影响：owner 归属 / EffectRuntime 上限
+      ▼
+状态与层数变更（effects.py / marks.py / combo.py / transform.py / resource_axis.py）
+      │  谁拥有：各引擎 · 改哪：包内 statuses/marks/skill_chains 声明 · 被谁影响：施加成功(applied)/层数上限/时长
+      ▼
+数值轴 / 公式求值（gear_stats 特效轴 · combatant · condition_engine）
+      │  谁拥有：data 层轴表（唯一源） · 改哪：settings.effect_axes 调范围 · 被谁影响：三层属性管线、条件加成
+      ▼
+伤害 / 治疗结算（battle.py 乘区 → effects.py 管线）
+      │  谁拥有：core（`DEFAULT_PIPELINE_ORDER` effects.py:129-138） · 改哪：⚠️ 阶段顺序=稳定契约勿动 · 被谁影响：输出/承伤/暴击/护盾/保底
+      ▼
+战报与日志（message_format 渲染 · event_bus 计数 · battle 快照）
+         谁拥有：core 渲染层/事件计数 · 改哪：优先 E2b `templates.json` 改文案 · 被谁影响：模板宽度门禁、任务/成就条件
+```
+
+| 步骤 | 谁拥有（权威源） | 你改哪里 | 会被谁影响 |
+|---|---|---|---|
+| ① 内容声明/配置 | 内容包层（纯 JSON） | 编辑器改包内 JSON；**未在 `manifest.modules` 声明的文件不加载** | 红拦 5 类 → 整包拒绝；加载顺序 = 声明顺序 |
+| ② 装配装载 | 框架 `assembly/**` | 框架级（**包不能改**） | `manifest.modules`、各 `settings` 段；装配层把装备 `passives`/traits 推导成 `owned_effect_ids`、把技能三源合并成 `skill_levels` |
+| ③ 事件派发 | 框架 core（唯一出口 `battle.py:2035`） | 加时点 = 框架评审（枚举+派发点+数值影响+批次） | owner 归属过滤、符文 `extra_candidates`、`EffectRuntime` 的每回合/每场上限与递归深度 |
+| ④ 状态与层数变更 | 各引擎（effects/marks/combo/transform/resource_axis） | 包内 `statuses`/`marks`/`skill_chains` JSON 声明 | 施加是否成功（`applied`）、层数上限、时长/charges；结果进战斗快照 |
+| ⑤ 数值轴/公式求值 | `data/gear_stats.py` 轴表（**唯一源**） | `settings.effect_axes` 调范围、`settings.*` 调阈值、公式写 `[技能等级:ID]` | 三层属性管线（白值→flat→pct→临时层→条件）；**未配置 = 零变化** |
+| ⑥ 伤害/治疗结算 | core 乘区 + effects 管线 | ⚠️ **改阶段顺序/合并阶段 = 稳定契约，勿动**；承伤走 `damage_taken_pct`、减免走 `defense.mitigation`（**叠乘、互不替代**） | 输出轴 × 承伤轴 × 暴击 × 护盾/保底伤害（`min_damage`） |
+| ⑦ 战报与日志 | core 渲染层 / `event_bus` 计数 / 战斗快照 | 改文案**优先 E2b `templates.json`**；渲染层新增分支必须兜底不抛 | 模板宽度门禁（手机单行不折行）；计数被任务/成就条件消费 |
+
+> **一句话记法**：**声明归包、装配归框架、事件归分派器、状态归引擎、数值归轴表、结算归管线、呈现归渲染。** 改上游会顺流影响下游；**动任一步前先问"这一步的权威源在哪"**——权威源在框架的，就写声明而不是改代码。
 
 ---
 

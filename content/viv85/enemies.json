@@ -73,6 +73,36 @@
       1,
       3
      ]
+    },
+    {
+     "item": "bp_wp_hammer_1",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_1c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_1d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_1a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_1b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_1c",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -148,6 +178,36 @@
       1,
       2
      ]
+    },
+    {
+     "item": "bp_wp_sword_1",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_1b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_1c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_1d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_1a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_1b",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -239,6 +299,31 @@
      "item": "mat_common_hide",
      "chance": 60,
      "count": 1
+    },
+    {
+     "item": "bp_wp_spear_1",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_1d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_1a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_1b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_1c",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -318,6 +403,31 @@
     {
      "item": "mat_common_hide",
      "chance": 40,
+     "count": 1
+    },
+    {
+     "item": "bp_wp_staff_1",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_1a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_1b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_1c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_1d",
+     "chance": 12,
      "count": 1
     }
    ]
@@ -421,6 +531,31 @@
       1,
       2
      ]
+    },
+    {
+     "item": "bp_ar_head_1a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_1b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_1c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_1d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_1a",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -501,6 +636,41 @@
       1,
       3
      ]
+    },
+    {
+     "item": "bp_wp_sword_10",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_10a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_10a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_10a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_10a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_10a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_10a",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -586,6 +756,41 @@
      "item": "mat_slash_ore",
      "chance": 50,
      "count": 1
+    },
+    {
+     "item": "bp_wp_hammer_10",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_10b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_10b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_10b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_10b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_10b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_10b",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -669,6 +874,41 @@
       1,
       2
      ]
+    },
+    {
+     "item": "bp_wp_spear_10",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_10c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_10c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_10c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_10c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_10c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_10c",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -754,6 +994,36 @@
      "item": "mat_blunt_rock",
      "chance": 50,
      "count": 1
+    },
+    {
+     "item": "bp_wp_staff_10",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_10d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_10d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_10d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_10d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_10d",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -834,6 +1104,41 @@
       1,
       3
      ]
+    },
+    {
+     "item": "bp_wp_sword_20",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_20a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_20a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_20a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_20a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_20a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_20a",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -914,6 +1219,41 @@
       1,
       2
      ]
+    },
+    {
+     "item": "bp_wp_hammer_20",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_20b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_20b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_20b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_20b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_20b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_20b",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -994,6 +1334,41 @@
       1,
       2
      ]
+    },
+    {
+     "item": "bp_wp_spear_20",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_20c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_20c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_20c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_20c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_20c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_20c",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -1082,6 +1457,36 @@
       1,
       2
      ]
+    },
+    {
+     "item": "bp_wp_staff_20",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_20d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_20d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_20d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_20d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_20d",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -1162,6 +1567,41 @@
       2,
       3
      ]
+    },
+    {
+     "item": "bp_wp_sword_30",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_30a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_30a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_30a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_30a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_30a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_30a",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -1242,6 +1682,41 @@
       1,
       3
      ]
+    },
+    {
+     "item": "bp_wp_hammer_30",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_30b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_30b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_30b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_30b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_30b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_30b",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -1327,6 +1802,41 @@
      "item": "mat_magic_crystal",
      "chance": 50,
      "count": 1
+    },
+    {
+     "item": "bp_wp_spear_30",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_30c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_30c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_30c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_30c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_30c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_30c",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -1407,6 +1917,36 @@
       2,
       4
      ]
+    },
+    {
+     "item": "bp_wp_staff_30",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_30d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_30d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_30d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_30d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_30d",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -1487,6 +2027,41 @@
       2,
       3
      ]
+    },
+    {
+     "item": "bp_wp_sword_40",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_40a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_40a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_40a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_40a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_40a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_40a",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -1580,6 +2155,41 @@
       2,
       3
      ]
+    },
+    {
+     "item": "bp_wp_hammer_40",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_40b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_40b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_40b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_40b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_40b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_40b",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -1673,6 +2283,41 @@
       2,
       3
      ]
+    },
+    {
+     "item": "bp_wp_spear_40",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_40c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_40c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_40c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_40c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_40c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_40c",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -1753,6 +2398,41 @@
       3,
       5
      ]
+    },
+    {
+     "item": "bp_wp_sword_50",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_50a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_50a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_50a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_50a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_50a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_50a",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -1833,6 +2513,41 @@
       3,
       5
      ]
+    },
+    {
+     "item": "bp_wp_hammer_50",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_50b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_50b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_50b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_50b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_50b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_50b",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -1918,6 +2633,41 @@
       3,
       5
      ]
+    },
+    {
+     "item": "bp_wp_spear_50",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_50c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_50c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_50c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_50c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_50c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_50c",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -2006,6 +2756,51 @@
       2,
       4
      ]
+    },
+    {
+     "item": "bp_wp_sword_60",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_wp_staff_60",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_60c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_60b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_60a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_60d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_60c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_60b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_60a",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -2100,6 +2895,36 @@
       3,
       6
      ]
+    },
+    {
+     "item": "bp_wp_staff_40",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_40d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_40d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_40d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_40d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_40d",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -2208,6 +3033,36 @@
       4,
       7
      ]
+    },
+    {
+     "item": "bp_wp_staff_50",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_50d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_50d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_50d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_50d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_50d",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -2313,6 +3168,41 @@
       3,
       5
      ]
+    },
+    {
+     "item": "bp_wp_sword_70",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_70a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_70a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_70a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_70a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_70a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_70a",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -2404,6 +3294,41 @@
       3,
       5
      ]
+    },
+    {
+     "item": "bp_wp_hammer_70",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_70b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_70b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_70b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_70b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_70b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_70b",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -2495,6 +3420,41 @@
       3,
       5
      ]
+    },
+    {
+     "item": "bp_wp_spear_70",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_70c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_70c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_70c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_70c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_70c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_70c",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -2586,6 +3546,51 @@
       3,
       5
      ]
+    },
+    {
+     "item": "bp_wp_spear_60",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_60b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_60a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_60d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_60c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_60b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_60a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_60d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_60c",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -2677,6 +3682,26 @@
       2,
       4
      ]
+    },
+    {
+     "item": "bp_ar_head_80b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_80d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_80b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_80d",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -2774,6 +3799,31 @@
       2,
       3
      ]
+    },
+    {
+     "item": "bp_wp_sword_80",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_80c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_80a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_80c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_80a",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -2885,6 +3935,31 @@
       2,
       3
      ]
+    },
+    {
+     "item": "bp_wp_hammer_80",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_80d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_80b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_80d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_80b",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -2996,6 +4071,31 @@
       4,
       6
      ]
+    },
+    {
+     "item": "bp_wp_spear_80",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_80a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_80c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_80a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_80c",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -3093,6 +4193,36 @@
       2,
       3
      ]
+    },
+    {
+     "item": "bp_wp_staff_70",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_70d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_70d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_70d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_70d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_70d",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -3192,6 +4322,51 @@
       3,
       6
      ]
+    },
+    {
+     "item": "bp_wp_hammer_60",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_60a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_60d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_60c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_60b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_60a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_60d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_60c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_60b",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -3304,6 +4479,26 @@
       4,
       7
      ]
+    },
+    {
+     "item": "bp_wp_staff_80",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_80b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_80d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_80b",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -3424,6 +4619,26 @@
       4,
       7
      ]
+    },
+    {
+     "item": "bp_ar_head_80a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_80c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_80a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_80c",
+     "chance": 12,
+     "count": 1
     }
    ]
   },

@@ -4,42 +4,83 @@
   "name": "青脉草",
   "type": "material",
   "price": 10,
-  "desc": "四脉常见的药草，炼药与合成的基本材料。"
+  "desc": "四脉常见的药草，炼药与合成的基本材料。",
+  "material_tags": [
+   "herb"
+  ],
+  "material_level": 3,
+  "material_quality": "白",
+  "craft_cost": 10
  },
  {
   "id": "mat_slash_ore",
   "name": "锋利矿砂",
   "type": "material",
   "price": 24,
-  "desc": "斩脉矿脉的砂砾，打磨刃口的上品。"
+  "desc": "斩脉矿脉的砂砾，打磨刃口的上品。",
+  "material_tags": [
+   "ore",
+   "blade"
+  ],
+  "material_level": 3,
+  "material_quality": "白",
+  "craft_cost": 20
  },
  {
   "id": "mat_blunt_rock",
   "name": "沉岩碎块",
   "type": "material",
   "price": 24,
-  "desc": "打脉地脉的重岩碎块，沉重而坚韧。"
+  "desc": "打脉地脉的重岩碎块，沉重而坚韧。",
+  "material_tags": [
+   "ore",
+   "heavy"
+  ],
+  "material_level": 3,
+  "material_quality": "白",
+  "craft_cost": 20
  },
  {
   "id": "mat_pierce_bone",
   "name": "尖脊骨",
   "type": "material",
   "price": 24,
-  "desc": "突脉荒兽的脊骨，天然尖锐。"
+  "desc": "突脉荒兽的脊骨，天然尖锐。",
+  "material_tags": [
+   "bone",
+   "sharp"
+  ],
+  "material_level": 3,
+  "material_quality": "白",
+  "craft_cost": 20
  },
  {
   "id": "mat_magic_crystal",
   "name": "灵晶屑",
   "type": "material",
   "price": 30,
-  "desc": "魔脉凝出的晶屑，蕴含微弱灵能。"
+  "desc": "魔脉凝出的晶屑，蕴含微弱灵能。",
+  "material_tags": [
+   "crystal",
+   "arcane"
+  ],
+  "material_level": 5,
+  "material_quality": "白",
+  "craft_cost": 24
  },
  {
   "id": "mat_common_hide",
   "name": "荒兽皮",
   "type": "material",
   "price": 18,
-  "desc": "荒原野兽的皮革，制甲常用。"
+  "desc": "荒原野兽的皮革，制甲常用。",
+  "material_tags": [
+   "hide",
+   "cloth"
+  ],
+  "material_level": 2,
+  "material_quality": "白",
+  "craft_cost": 16
  },
  {
   "id": "pot_small",
@@ -68,28 +109,58 @@
   "name": "脉核碎片",
   "type": "material",
   "price": 800,
-  "desc": "脉核崩落的碎片，满级装备的核心材料。"
+  "desc": "脉核崩落的碎片，满级装备的核心材料。",
+  "material_tags": [
+   "crystal",
+   "core"
+  ],
+  "material_level": 70,
+  "material_quality": "金",
+  "craft_cost": 900
  },
  {
   "id": "mat_echo_dust",
   "name": "回响尘",
   "type": "material",
   "price": 600,
-  "desc": "回响之厅凝出的粉尘，触之有声。"
+  "desc": "回响之厅凝出的粉尘，触之有声。",
+  "material_tags": [
+   "arcane",
+   "dust"
+  ],
+  "material_level": 70,
+  "material_quality": "金",
+  "craft_cost": 700
  },
  {
   "id": "mat_abyss_scale",
   "name": "渊脉鳞",
   "type": "material",
   "price": 900,
-  "desc": "渊脉生物脱落的鳞片，坚不可摧。"
+  "desc": "渊脉生物脱落的鳞片，坚不可摧。",
+  "material_tags": [
+   "hide",
+   "scale",
+   "heavy"
+  ],
+  "material_level": 72,
+  "material_quality": "金",
+  "craft_cost": 1000
  },
  {
   "id": "mat_altar_relic",
   "name": "祭坛残片",
   "type": "material",
   "price": 700,
-  "desc": "四脉祭坛上的残破法器片段。"
+  "desc": "四脉祭坛上的残破法器片段。",
+  "material_tags": [
+   "relic",
+   "core",
+   "blade"
+  ],
+  "material_level": 68,
+  "material_quality": "金",
+  "craft_cost": 800
  },
  {
   "id": "pot_high",
@@ -113,5 +184,10295 @@
    "heal_mid"
   ],
   "desc": "连用两剂中回复，重伤时救命。"
+ },
+ {
+  "id": "key_gate_token",
+  "name": "脉门令",
+  "type": "key",
+  "price": 0,
+  "desc": "可进入脉心试炼副本（脉门守令发放）。"
+ },
+ {
+  "id": "key_altar_token",
+  "name": "四脉令",
+  "type": "key",
+  "price": 0,
+  "desc": "可进入四脉祭坛与渊脉讨伐（四脉长老发放）。"
+ },
+ {
+  "id": "key_core_token",
+  "name": "脉核令",
+  "type": "key",
+  "price": 0,
+  "desc": "可进入脉核决战（脉心记录者发放）。"
+ },
+ {
+  "id": "wp_sword_1",
+  "name": "试炼短剑",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 120,
+  "use_level": 1,
+  "atk": 12,
+  "desc": "试炼短剑（1 级档 · 需 1 级）",
+  "crit": 0.24
+ },
+ {
+  "id": "wp_sword_10",
+  "name": "淬脉长剑",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 400,
+  "use_level": 10,
+  "atk": 28,
+  "desc": "淬脉长剑（10 级档 · 需 10 级）",
+  "crit": 0.56
+ },
+ {
+  "id": "wp_sword_20",
+  "name": "脉纹重剑",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 1400,
+  "use_level": 20,
+  "atk": 58,
+  "desc": "脉纹重剑（20 级档 · 需 20 级）",
+  "crit": 1.16
+ },
+ {
+  "id": "wp_sword_30",
+  "name": "沉脉锐剑",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 4800,
+  "use_level": 30,
+  "atk": 105,
+  "desc": "沉脉锐剑（30 级档 · 需 30 级）",
+  "crit": 2.1
+ },
+ {
+  "id": "wp_sword_40",
+  "name": "裂脉细剑",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 14000,
+  "use_level": 40,
+  "atk": 172,
+  "desc": "裂脉细剑（40 级档 · 需 40 级）",
+  "crit": 3.44
+ },
+ {
+  "id": "wp_sword_50",
+  "name": "幽脉直剑",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 38000,
+  "use_level": 50,
+  "atk": 262,
+  "desc": "幽脉直剑（50 级档 · 需 50 级）",
+  "crit": 5.24
+ },
+ {
+  "id": "wp_sword_60",
+  "name": "断层短剑",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 95000,
+  "use_level": 60,
+  "atk": 378,
+  "desc": "断层短剑（60 级档 · 需 60 级）",
+  "crit": 7.56
+ },
+ {
+  "id": "wp_sword_70",
+  "name": "渊纹长剑",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 220000,
+  "use_level": 70,
+  "atk": 520,
+  "desc": "渊纹长剑（70 级档 · 需 70 级）",
+  "crit": 10.4
+ },
+ {
+  "id": "wp_sword_80",
+  "name": "四脉重剑",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 500000,
+  "use_level": 80,
+  "atk": 700,
+  "desc": "四脉重剑（80 级档 · 需 80 级）",
+  "crit": 14.0
+ },
+ {
+  "id": "wp_hammer_1",
+  "name": "试炼铁锤",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 120,
+  "use_level": 1,
+  "atk": 12,
+  "desc": "试炼铁锤（1 级档 · 需 1 级）",
+  "pierce_pct": 1
+ },
+ {
+  "id": "wp_hammer_10",
+  "name": "淬脉战锤",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 400,
+  "use_level": 10,
+  "atk": 28,
+  "desc": "淬脉战锤（10 级档 · 需 10 级）",
+  "pierce_pct": 3
+ },
+ {
+  "id": "wp_hammer_20",
+  "name": "脉纹重锤",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 1400,
+  "use_level": 20,
+  "atk": 58,
+  "desc": "脉纹重锤（20 级档 · 需 20 级）",
+  "pierce_pct": 6
+ },
+ {
+  "id": "wp_hammer_30",
+  "name": "沉脉巨锤",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 4800,
+  "use_level": 30,
+  "atk": 105,
+  "desc": "沉脉巨锤（30 级档 · 需 30 级）",
+  "pierce_pct": 10
+ },
+ {
+  "id": "wp_hammer_40",
+  "name": "裂脉镇锤",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 14000,
+  "use_level": 40,
+  "atk": 172,
+  "desc": "裂脉镇锤（40 级档 · 需 40 级）",
+  "pierce_pct": 17
+ },
+ {
+  "id": "wp_hammer_50",
+  "name": "幽脉破岳锤",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 38000,
+  "use_level": 50,
+  "atk": 262,
+  "desc": "幽脉破岳锤（50 级档 · 需 50 级）",
+  "pierce_pct": 26
+ },
+ {
+  "id": "wp_hammer_60",
+  "name": "断层铁锤",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 95000,
+  "use_level": 60,
+  "atk": 378,
+  "desc": "断层铁锤（60 级档 · 需 60 级）",
+  "pierce_pct": 38
+ },
+ {
+  "id": "wp_hammer_70",
+  "name": "渊纹战锤",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 220000,
+  "use_level": 70,
+  "atk": 520,
+  "desc": "渊纹战锤（70 级档 · 需 70 级）",
+  "pierce_pct": 52
+ },
+ {
+  "id": "wp_hammer_80",
+  "name": "四脉重锤",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 500000,
+  "use_level": 80,
+  "atk": 700,
+  "desc": "四脉重锤（80 级档 · 需 80 级）",
+  "pierce_pct": 70
+ },
+ {
+  "id": "wp_spear_1",
+  "name": "试炼长枪",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 120,
+  "use_level": 1,
+  "atk": 12,
+  "desc": "试炼长枪（1 级档 · 需 1 级）",
+  "foc": 6.0,
+  "spd": 6.0
+ },
+ {
+  "id": "wp_spear_10",
+  "name": "淬脉尖枪",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 400,
+  "use_level": 10,
+  "atk": 28,
+  "desc": "淬脉尖枪（10 级档 · 需 10 级）",
+  "foc": 14.0,
+  "spd": 14.0
+ },
+ {
+  "id": "wp_spear_20",
+  "name": "脉纹重枪",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 1400,
+  "use_level": 20,
+  "atk": 58,
+  "desc": "脉纹重枪（20 级档 · 需 20 级）",
+  "foc": 29.0,
+  "spd": 29.0
+ },
+ {
+  "id": "wp_spear_30",
+  "name": "沉脉龙枪",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 4800,
+  "use_level": 30,
+  "atk": 105,
+  "desc": "沉脉龙枪（30 级档 · 需 30 级）",
+  "foc": 52.5,
+  "spd": 52.5
+ },
+ {
+  "id": "wp_spear_40",
+  "name": "裂脉天枪",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 14000,
+  "use_level": 40,
+  "atk": 172,
+  "desc": "裂脉天枪（40 级档 · 需 40 级）",
+  "foc": 86.0,
+  "spd": 86.0
+ },
+ {
+  "id": "wp_spear_50",
+  "name": "幽脉裂风枪",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 38000,
+  "use_level": 50,
+  "atk": 262,
+  "desc": "幽脉裂风枪（50 级档 · 需 50 级）",
+  "foc": 131.0,
+  "spd": 131.0
+ },
+ {
+  "id": "wp_spear_60",
+  "name": "断层长枪",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 95000,
+  "use_level": 60,
+  "atk": 378,
+  "desc": "断层长枪（60 级档 · 需 60 级）",
+  "foc": 189.0,
+  "spd": 189.0
+ },
+ {
+  "id": "wp_spear_70",
+  "name": "渊纹尖枪",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 220000,
+  "use_level": 70,
+  "atk": 520,
+  "desc": "渊纹尖枪（70 级档 · 需 70 级）",
+  "foc": 260.0,
+  "spd": 260.0
+ },
+ {
+  "id": "wp_spear_80",
+  "name": "四脉重枪",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 500000,
+  "use_level": 80,
+  "atk": 700,
+  "desc": "四脉重枪（80 级档 · 需 80 级）",
+  "foc": 350.0,
+  "spd": 350.0
+ },
+ {
+  "id": "wp_staff_1",
+  "name": "试炼法杖",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 120,
+  "use_level": 1,
+  "atk": 12,
+  "desc": "试炼法杖（1 级档 · 需 1 级）",
+  "spr": 7.2,
+  "mag_pierce_pct": 1
+ },
+ {
+  "id": "wp_staff_10",
+  "name": "淬脉灵杖",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 400,
+  "use_level": 10,
+  "atk": 28,
+  "desc": "淬脉灵杖（10 级档 · 需 10 级）",
+  "spr": 16.8,
+  "mag_pierce_pct": 2
+ },
+ {
+  "id": "wp_staff_20",
+  "name": "脉纹脉杖",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 1400,
+  "use_level": 20,
+  "atk": 58,
+  "desc": "脉纹脉杖（20 级档 · 需 20 级）",
+  "spr": 34.8,
+  "mag_pierce_pct": 4
+ },
+ {
+  "id": "wp_staff_30",
+  "name": "沉脉玄杖",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 4800,
+  "use_level": 30,
+  "atk": 105,
+  "desc": "沉脉玄杖（30 级档 · 需 30 级）",
+  "spr": 63.0,
+  "mag_pierce_pct": 8
+ },
+ {
+  "id": "wp_staff_40",
+  "name": "裂脉渊杖",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 14000,
+  "use_level": 40,
+  "atk": 172,
+  "desc": "裂脉渊杖（40 级档 · 需 40 级）",
+  "spr": 103.2,
+  "mag_pierce_pct": 13
+ },
+ {
+  "id": "wp_staff_50",
+  "name": "幽脉天杖",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 38000,
+  "use_level": 50,
+  "atk": 262,
+  "desc": "幽脉天杖（50 级档 · 需 50 级）",
+  "spr": 157.2,
+  "mag_pierce_pct": 20
+ },
+ {
+  "id": "wp_staff_60",
+  "name": "断层法杖",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 95000,
+  "use_level": 60,
+  "atk": 378,
+  "desc": "断层法杖（60 级档 · 需 60 级）",
+  "spr": 226.8,
+  "mag_pierce_pct": 28
+ },
+ {
+  "id": "wp_staff_70",
+  "name": "渊纹灵杖",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 220000,
+  "use_level": 70,
+  "atk": 520,
+  "desc": "渊纹灵杖（70 级档 · 需 70 级）",
+  "spr": 312.0,
+  "mag_pierce_pct": 39
+ },
+ {
+  "id": "wp_staff_80",
+  "name": "四脉脉杖",
+  "type": "weapon",
+  "slot": "weapon",
+  "price": 500000,
+  "use_level": 80,
+  "atk": 700,
+  "desc": "四脉脉杖（80 级档 · 需 80 级）",
+  "spr": 420.0,
+  "mag_pierce_pct": 52
+ },
+ {
+  "id": "ar_head_1a",
+  "name": "试炼·坚壁头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 120,
+  "use_level": 1,
+  "dfn": 7,
+  "con": 1,
+  "hp": 36,
+  "desc": "坚壁：防御与体质（1 级档）"
+ },
+ {
+  "id": "ar_head_1b",
+  "name": "试炼·疾行头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 120,
+  "use_level": 1,
+  "dfn": 3,
+  "hp": 60,
+  "agi": 1,
+  "desc": "疾行：血量与敏捷（1 级档）"
+ },
+ {
+  "id": "ar_head_1c",
+  "name": "试炼·破势头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 120,
+  "use_level": 1,
+  "dfn": 2,
+  "hp": 28,
+  "atk": 3,
+  "str": 1,
+  "desc": "破势：攻击与力量（1 级档）"
+ },
+ {
+  "id": "ar_head_1d",
+  "name": "试炼·灵纹头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 120,
+  "use_level": 1,
+  "dfn": 3,
+  "hp": 28,
+  "mp": 21,
+  "spr": 1,
+  "desc": "灵纹：法力与精神（1 级档）"
+ },
+ {
+  "id": "ar_body_1a",
+  "name": "试炼·坚壁胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 120,
+  "use_level": 1,
+  "dfn": 7,
+  "con": 1,
+  "hp": 36,
+  "desc": "坚壁：防御与体质（1 级档）"
+ },
+ {
+  "id": "ar_body_1b",
+  "name": "试炼·疾行胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 120,
+  "use_level": 1,
+  "dfn": 3,
+  "hp": 60,
+  "agi": 1,
+  "desc": "疾行：血量与敏捷（1 级档）"
+ },
+ {
+  "id": "ar_body_1c",
+  "name": "试炼·破势胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 120,
+  "use_level": 1,
+  "dfn": 2,
+  "hp": 28,
+  "atk": 3,
+  "str": 1,
+  "desc": "破势：攻击与力量（1 级档）"
+ },
+ {
+  "id": "ar_body_1d",
+  "name": "试炼·灵纹胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 120,
+  "use_level": 1,
+  "dfn": 3,
+  "hp": 28,
+  "mp": 21,
+  "spr": 1,
+  "desc": "灵纹：法力与精神（1 级档）"
+ },
+ {
+  "id": "ar_hand_1a",
+  "name": "试炼·坚壁护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 120,
+  "use_level": 1,
+  "dfn": 7,
+  "con": 1,
+  "hp": 36,
+  "desc": "坚壁：防御与体质（1 级档）"
+ },
+ {
+  "id": "ar_hand_1b",
+  "name": "试炼·疾行护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 120,
+  "use_level": 1,
+  "dfn": 3,
+  "hp": 60,
+  "agi": 1,
+  "desc": "疾行：血量与敏捷（1 级档）"
+ },
+ {
+  "id": "ar_hand_1c",
+  "name": "试炼·破势护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 120,
+  "use_level": 1,
+  "dfn": 2,
+  "hp": 28,
+  "atk": 3,
+  "str": 1,
+  "desc": "破势：攻击与力量（1 级档）"
+ },
+ {
+  "id": "ar_hand_1d",
+  "name": "试炼·灵纹护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 120,
+  "use_level": 1,
+  "dfn": 3,
+  "hp": 28,
+  "mp": 21,
+  "spr": 1,
+  "desc": "灵纹：法力与精神（1 级档）"
+ },
+ {
+  "id": "ar_leg_1a",
+  "name": "试炼·坚壁胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 120,
+  "use_level": 1,
+  "dfn": 7,
+  "con": 1,
+  "hp": 36,
+  "desc": "坚壁：防御与体质（1 级档）"
+ },
+ {
+  "id": "ar_leg_1b",
+  "name": "试炼·疾行胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 120,
+  "use_level": 1,
+  "dfn": 3,
+  "hp": 60,
+  "agi": 1,
+  "desc": "疾行：血量与敏捷（1 级档）"
+ },
+ {
+  "id": "ar_leg_1c",
+  "name": "试炼·破势胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 120,
+  "use_level": 1,
+  "dfn": 2,
+  "hp": 28,
+  "atk": 3,
+  "str": 1,
+  "desc": "破势：攻击与力量（1 级档）"
+ },
+ {
+  "id": "ar_leg_1d",
+  "name": "试炼·灵纹胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 120,
+  "use_level": 1,
+  "dfn": 3,
+  "hp": 28,
+  "mp": 21,
+  "spr": 1,
+  "desc": "灵纹：法力与精神（1 级档）"
+ },
+ {
+  "id": "ar_foot_1a",
+  "name": "试炼·坚壁战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 120,
+  "use_level": 1,
+  "dfn": 7,
+  "con": 1,
+  "hp": 36,
+  "desc": "坚壁：防御与体质（1 级档）"
+ },
+ {
+  "id": "ar_foot_1b",
+  "name": "试炼·疾行战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 120,
+  "use_level": 1,
+  "dfn": 3,
+  "hp": 60,
+  "agi": 1,
+  "desc": "疾行：血量与敏捷（1 级档）"
+ },
+ {
+  "id": "ar_foot_1c",
+  "name": "试炼·破势战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 120,
+  "use_level": 1,
+  "dfn": 2,
+  "hp": 28,
+  "atk": 3,
+  "str": 1,
+  "desc": "破势：攻击与力量（1 级档）"
+ },
+ {
+  "id": "ar_foot_1d",
+  "name": "试炼·灵纹战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 120,
+  "use_level": 1,
+  "dfn": 3,
+  "hp": 28,
+  "mp": 21,
+  "spr": 1,
+  "desc": "灵纹：法力与精神（1 级档）"
+ },
+ {
+  "id": "ar_head_10a",
+  "name": "淬脉·坚壁头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 400,
+  "use_level": 10,
+  "dfn": 15,
+  "con": 2,
+  "hp": 85,
+  "desc": "坚壁：防御与体质（10 级档）"
+ },
+ {
+  "id": "ar_head_10b",
+  "name": "淬脉·疾行头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 400,
+  "use_level": 10,
+  "dfn": 8,
+  "hp": 142,
+  "agi": 2,
+  "desc": "疾行：血量与敏捷（10 级档）"
+ },
+ {
+  "id": "ar_head_10c",
+  "name": "淬脉·破势头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 400,
+  "use_level": 10,
+  "dfn": 6,
+  "hp": 66,
+  "atk": 7,
+  "str": 2,
+  "desc": "破势：攻击与力量（10 级档）"
+ },
+ {
+  "id": "ar_head_10d",
+  "name": "淬脉·灵纹头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 400,
+  "use_level": 10,
+  "dfn": 7,
+  "hp": 66,
+  "mp": 30,
+  "spr": 2,
+  "desc": "灵纹：法力与精神（10 级档）"
+ },
+ {
+  "id": "ar_body_10a",
+  "name": "淬脉·坚壁胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 400,
+  "use_level": 10,
+  "dfn": 15,
+  "con": 2,
+  "hp": 85,
+  "desc": "坚壁：防御与体质（10 级档）"
+ },
+ {
+  "id": "ar_body_10b",
+  "name": "淬脉·疾行胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 400,
+  "use_level": 10,
+  "dfn": 8,
+  "hp": 142,
+  "agi": 2,
+  "desc": "疾行：血量与敏捷（10 级档）"
+ },
+ {
+  "id": "ar_body_10c",
+  "name": "淬脉·破势胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 400,
+  "use_level": 10,
+  "dfn": 6,
+  "hp": 66,
+  "atk": 7,
+  "str": 2,
+  "desc": "破势：攻击与力量（10 级档）"
+ },
+ {
+  "id": "ar_body_10d",
+  "name": "淬脉·灵纹胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 400,
+  "use_level": 10,
+  "dfn": 7,
+  "hp": 66,
+  "mp": 30,
+  "spr": 2,
+  "desc": "灵纹：法力与精神（10 级档）"
+ },
+ {
+  "id": "ar_hand_10a",
+  "name": "淬脉·坚壁护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 400,
+  "use_level": 10,
+  "dfn": 15,
+  "con": 2,
+  "hp": 85,
+  "desc": "坚壁：防御与体质（10 级档）"
+ },
+ {
+  "id": "ar_hand_10b",
+  "name": "淬脉·疾行护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 400,
+  "use_level": 10,
+  "dfn": 8,
+  "hp": 142,
+  "agi": 2,
+  "desc": "疾行：血量与敏捷（10 级档）"
+ },
+ {
+  "id": "ar_hand_10c",
+  "name": "淬脉·破势护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 400,
+  "use_level": 10,
+  "dfn": 6,
+  "hp": 66,
+  "atk": 7,
+  "str": 2,
+  "desc": "破势：攻击与力量（10 级档）"
+ },
+ {
+  "id": "ar_hand_10d",
+  "name": "淬脉·灵纹护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 400,
+  "use_level": 10,
+  "dfn": 7,
+  "hp": 66,
+  "mp": 30,
+  "spr": 2,
+  "desc": "灵纹：法力与精神（10 级档）"
+ },
+ {
+  "id": "ar_leg_10a",
+  "name": "淬脉·坚壁胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 400,
+  "use_level": 10,
+  "dfn": 15,
+  "con": 2,
+  "hp": 85,
+  "desc": "坚壁：防御与体质（10 级档）"
+ },
+ {
+  "id": "ar_leg_10b",
+  "name": "淬脉·疾行胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 400,
+  "use_level": 10,
+  "dfn": 8,
+  "hp": 142,
+  "agi": 2,
+  "desc": "疾行：血量与敏捷（10 级档）"
+ },
+ {
+  "id": "ar_leg_10c",
+  "name": "淬脉·破势胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 400,
+  "use_level": 10,
+  "dfn": 6,
+  "hp": 66,
+  "atk": 7,
+  "str": 2,
+  "desc": "破势：攻击与力量（10 级档）"
+ },
+ {
+  "id": "ar_leg_10d",
+  "name": "淬脉·灵纹胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 400,
+  "use_level": 10,
+  "dfn": 7,
+  "hp": 66,
+  "mp": 30,
+  "spr": 2,
+  "desc": "灵纹：法力与精神（10 级档）"
+ },
+ {
+  "id": "ar_foot_10a",
+  "name": "淬脉·坚壁战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 400,
+  "use_level": 10,
+  "dfn": 15,
+  "con": 2,
+  "hp": 85,
+  "desc": "坚壁：防御与体质（10 级档）"
+ },
+ {
+  "id": "ar_foot_10b",
+  "name": "淬脉·疾行战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 400,
+  "use_level": 10,
+  "dfn": 8,
+  "hp": 142,
+  "agi": 2,
+  "desc": "疾行：血量与敏捷（10 级档）"
+ },
+ {
+  "id": "ar_foot_10c",
+  "name": "淬脉·破势战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 400,
+  "use_level": 10,
+  "dfn": 6,
+  "hp": 66,
+  "atk": 7,
+  "str": 2,
+  "desc": "破势：攻击与力量（10 级档）"
+ },
+ {
+  "id": "ar_foot_10d",
+  "name": "淬脉·灵纹战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 400,
+  "use_level": 10,
+  "dfn": 7,
+  "hp": 66,
+  "mp": 30,
+  "spr": 2,
+  "desc": "灵纹：法力与精神（10 级档）"
+ },
+ {
+  "id": "ar_head_20a",
+  "name": "脉纹·坚壁头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 1400,
+  "use_level": 20,
+  "dfn": 30,
+  "con": 3,
+  "hp": 189,
+  "desc": "坚壁：防御与体质（20 级档）"
+ },
+ {
+  "id": "ar_head_20b",
+  "name": "脉纹·疾行头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 1400,
+  "use_level": 20,
+  "dfn": 16,
+  "hp": 315,
+  "agi": 4,
+  "desc": "疾行：血量与敏捷（20 级档）"
+ },
+ {
+  "id": "ar_head_20c",
+  "name": "脉纹·破势头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 1400,
+  "use_level": 20,
+  "dfn": 12,
+  "hp": 147,
+  "atk": 15,
+  "str": 3,
+  "desc": "破势：攻击与力量（20 级档）"
+ },
+ {
+  "id": "ar_head_20d",
+  "name": "脉纹·灵纹头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 1400,
+  "use_level": 20,
+  "dfn": 15,
+  "hp": 147,
+  "mp": 40,
+  "spr": 3,
+  "desc": "灵纹：法力与精神（20 级档）"
+ },
+ {
+  "id": "ar_body_20a",
+  "name": "脉纹·坚壁胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 1400,
+  "use_level": 20,
+  "dfn": 30,
+  "con": 3,
+  "hp": 189,
+  "desc": "坚壁：防御与体质（20 级档）"
+ },
+ {
+  "id": "ar_body_20b",
+  "name": "脉纹·疾行胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 1400,
+  "use_level": 20,
+  "dfn": 16,
+  "hp": 315,
+  "agi": 4,
+  "desc": "疾行：血量与敏捷（20 级档）"
+ },
+ {
+  "id": "ar_body_20c",
+  "name": "脉纹·破势胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 1400,
+  "use_level": 20,
+  "dfn": 12,
+  "hp": 147,
+  "atk": 15,
+  "str": 3,
+  "desc": "破势：攻击与力量（20 级档）"
+ },
+ {
+  "id": "ar_body_20d",
+  "name": "脉纹·灵纹胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 1400,
+  "use_level": 20,
+  "dfn": 15,
+  "hp": 147,
+  "mp": 40,
+  "spr": 3,
+  "desc": "灵纹：法力与精神（20 级档）"
+ },
+ {
+  "id": "ar_hand_20a",
+  "name": "脉纹·坚壁护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 1400,
+  "use_level": 20,
+  "dfn": 30,
+  "con": 3,
+  "hp": 189,
+  "desc": "坚壁：防御与体质（20 级档）"
+ },
+ {
+  "id": "ar_hand_20b",
+  "name": "脉纹·疾行护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 1400,
+  "use_level": 20,
+  "dfn": 16,
+  "hp": 315,
+  "agi": 4,
+  "desc": "疾行：血量与敏捷（20 级档）"
+ },
+ {
+  "id": "ar_hand_20c",
+  "name": "脉纹·破势护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 1400,
+  "use_level": 20,
+  "dfn": 12,
+  "hp": 147,
+  "atk": 15,
+  "str": 3,
+  "desc": "破势：攻击与力量（20 级档）"
+ },
+ {
+  "id": "ar_hand_20d",
+  "name": "脉纹·灵纹护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 1400,
+  "use_level": 20,
+  "dfn": 15,
+  "hp": 147,
+  "mp": 40,
+  "spr": 3,
+  "desc": "灵纹：法力与精神（20 级档）"
+ },
+ {
+  "id": "ar_leg_20a",
+  "name": "脉纹·坚壁胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 1400,
+  "use_level": 20,
+  "dfn": 30,
+  "con": 3,
+  "hp": 189,
+  "desc": "坚壁：防御与体质（20 级档）"
+ },
+ {
+  "id": "ar_leg_20b",
+  "name": "脉纹·疾行胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 1400,
+  "use_level": 20,
+  "dfn": 16,
+  "hp": 315,
+  "agi": 4,
+  "desc": "疾行：血量与敏捷（20 级档）"
+ },
+ {
+  "id": "ar_leg_20c",
+  "name": "脉纹·破势胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 1400,
+  "use_level": 20,
+  "dfn": 12,
+  "hp": 147,
+  "atk": 15,
+  "str": 3,
+  "desc": "破势：攻击与力量（20 级档）"
+ },
+ {
+  "id": "ar_leg_20d",
+  "name": "脉纹·灵纹胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 1400,
+  "use_level": 20,
+  "dfn": 15,
+  "hp": 147,
+  "mp": 40,
+  "spr": 3,
+  "desc": "灵纹：法力与精神（20 级档）"
+ },
+ {
+  "id": "ar_foot_20a",
+  "name": "脉纹·坚壁战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 1400,
+  "use_level": 20,
+  "dfn": 30,
+  "con": 3,
+  "hp": 189,
+  "desc": "坚壁：防御与体质（20 级档）"
+ },
+ {
+  "id": "ar_foot_20b",
+  "name": "脉纹·疾行战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 1400,
+  "use_level": 20,
+  "dfn": 16,
+  "hp": 315,
+  "agi": 4,
+  "desc": "疾行：血量与敏捷（20 级档）"
+ },
+ {
+  "id": "ar_foot_20c",
+  "name": "脉纹·破势战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 1400,
+  "use_level": 20,
+  "dfn": 12,
+  "hp": 147,
+  "atk": 15,
+  "str": 3,
+  "desc": "破势：攻击与力量（20 级档）"
+ },
+ {
+  "id": "ar_foot_20d",
+  "name": "脉纹·灵纹战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 1400,
+  "use_level": 20,
+  "dfn": 15,
+  "hp": 147,
+  "mp": 40,
+  "spr": 3,
+  "desc": "灵纹：法力与精神（20 级档）"
+ },
+ {
+  "id": "ar_head_30a",
+  "name": "沉脉·坚壁头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 4800,
+  "use_level": 30,
+  "dfn": 52,
+  "con": 4,
+  "hp": 360,
+  "desc": "坚壁：防御与体质（30 级档）"
+ },
+ {
+  "id": "ar_head_30b",
+  "name": "沉脉·疾行头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 4800,
+  "use_level": 30,
+  "dfn": 28,
+  "hp": 600,
+  "agi": 5,
+  "desc": "疾行：血量与敏捷（30 级档）"
+ },
+ {
+  "id": "ar_head_30c",
+  "name": "沉脉·破势头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 4800,
+  "use_level": 30,
+  "dfn": 20,
+  "hp": 280,
+  "atk": 26,
+  "str": 4,
+  "desc": "破势：攻击与力量（30 级档）"
+ },
+ {
+  "id": "ar_head_30d",
+  "name": "沉脉·灵纹头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 4800,
+  "use_level": 30,
+  "dfn": 26,
+  "hp": 280,
+  "mp": 50,
+  "spr": 4,
+  "desc": "灵纹：法力与精神（30 级档）"
+ },
+ {
+  "id": "ar_body_30a",
+  "name": "沉脉·坚壁胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 4800,
+  "use_level": 30,
+  "dfn": 52,
+  "con": 4,
+  "hp": 360,
+  "desc": "坚壁：防御与体质（30 级档）"
+ },
+ {
+  "id": "ar_body_30b",
+  "name": "沉脉·疾行胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 4800,
+  "use_level": 30,
+  "dfn": 28,
+  "hp": 600,
+  "agi": 5,
+  "desc": "疾行：血量与敏捷（30 级档）"
+ },
+ {
+  "id": "ar_body_30c",
+  "name": "沉脉·破势胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 4800,
+  "use_level": 30,
+  "dfn": 20,
+  "hp": 280,
+  "atk": 26,
+  "str": 4,
+  "desc": "破势：攻击与力量（30 级档）"
+ },
+ {
+  "id": "ar_body_30d",
+  "name": "沉脉·灵纹胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 4800,
+  "use_level": 30,
+  "dfn": 26,
+  "hp": 280,
+  "mp": 50,
+  "spr": 4,
+  "desc": "灵纹：法力与精神（30 级档）"
+ },
+ {
+  "id": "ar_hand_30a",
+  "name": "沉脉·坚壁护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 4800,
+  "use_level": 30,
+  "dfn": 52,
+  "con": 4,
+  "hp": 360,
+  "desc": "坚壁：防御与体质（30 级档）"
+ },
+ {
+  "id": "ar_hand_30b",
+  "name": "沉脉·疾行护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 4800,
+  "use_level": 30,
+  "dfn": 28,
+  "hp": 600,
+  "agi": 5,
+  "desc": "疾行：血量与敏捷（30 级档）"
+ },
+ {
+  "id": "ar_hand_30c",
+  "name": "沉脉·破势护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 4800,
+  "use_level": 30,
+  "dfn": 20,
+  "hp": 280,
+  "atk": 26,
+  "str": 4,
+  "desc": "破势：攻击与力量（30 级档）"
+ },
+ {
+  "id": "ar_hand_30d",
+  "name": "沉脉·灵纹护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 4800,
+  "use_level": 30,
+  "dfn": 26,
+  "hp": 280,
+  "mp": 50,
+  "spr": 4,
+  "desc": "灵纹：法力与精神（30 级档）"
+ },
+ {
+  "id": "ar_leg_30a",
+  "name": "沉脉·坚壁胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 4800,
+  "use_level": 30,
+  "dfn": 52,
+  "con": 4,
+  "hp": 360,
+  "desc": "坚壁：防御与体质（30 级档）"
+ },
+ {
+  "id": "ar_leg_30b",
+  "name": "沉脉·疾行胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 4800,
+  "use_level": 30,
+  "dfn": 28,
+  "hp": 600,
+  "agi": 5,
+  "desc": "疾行：血量与敏捷（30 级档）"
+ },
+ {
+  "id": "ar_leg_30c",
+  "name": "沉脉·破势胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 4800,
+  "use_level": 30,
+  "dfn": 20,
+  "hp": 280,
+  "atk": 26,
+  "str": 4,
+  "desc": "破势：攻击与力量（30 级档）"
+ },
+ {
+  "id": "ar_leg_30d",
+  "name": "沉脉·灵纹胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 4800,
+  "use_level": 30,
+  "dfn": 26,
+  "hp": 280,
+  "mp": 50,
+  "spr": 4,
+  "desc": "灵纹：法力与精神（30 级档）"
+ },
+ {
+  "id": "ar_foot_30a",
+  "name": "沉脉·坚壁战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 4800,
+  "use_level": 30,
+  "dfn": 52,
+  "con": 4,
+  "hp": 360,
+  "desc": "坚壁：防御与体质（30 级档）"
+ },
+ {
+  "id": "ar_foot_30b",
+  "name": "沉脉·疾行战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 4800,
+  "use_level": 30,
+  "dfn": 28,
+  "hp": 600,
+  "agi": 5,
+  "desc": "疾行：血量与敏捷（30 级档）"
+ },
+ {
+  "id": "ar_foot_30c",
+  "name": "沉脉·破势战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 4800,
+  "use_level": 30,
+  "dfn": 20,
+  "hp": 280,
+  "atk": 26,
+  "str": 4,
+  "desc": "破势：攻击与力量（30 级档）"
+ },
+ {
+  "id": "ar_foot_30d",
+  "name": "沉脉·灵纹战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 4800,
+  "use_level": 30,
+  "dfn": 26,
+  "hp": 280,
+  "mp": 50,
+  "spr": 4,
+  "desc": "灵纹：法力与精神（30 级档）"
+ },
+ {
+  "id": "ar_head_40a",
+  "name": "裂脉·坚壁头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 14000,
+  "use_level": 40,
+  "dfn": 82,
+  "con": 4,
+  "hp": 621,
+  "desc": "坚壁：防御与体质（40 级档）"
+ },
+ {
+  "id": "ar_head_40b",
+  "name": "裂脉·疾行头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 14000,
+  "use_level": 40,
+  "dfn": 45,
+  "hp": 1035,
+  "agi": 6,
+  "desc": "疾行：血量与敏捷（40 级档）"
+ },
+ {
+  "id": "ar_head_40c",
+  "name": "裂脉·破势头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 14000,
+  "use_level": 40,
+  "dfn": 32,
+  "hp": 482,
+  "atk": 41,
+  "str": 4,
+  "desc": "破势：攻击与力量（40 级档）"
+ },
+ {
+  "id": "ar_head_40d",
+  "name": "裂脉·灵纹头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 14000,
+  "use_level": 40,
+  "dfn": 41,
+  "hp": 482,
+  "mp": 60,
+  "spr": 5,
+  "desc": "灵纹：法力与精神（40 级档）"
+ },
+ {
+  "id": "ar_body_40a",
+  "name": "裂脉·坚壁胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 14000,
+  "use_level": 40,
+  "dfn": 82,
+  "con": 4,
+  "hp": 621,
+  "desc": "坚壁：防御与体质（40 级档）"
+ },
+ {
+  "id": "ar_body_40b",
+  "name": "裂脉·疾行胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 14000,
+  "use_level": 40,
+  "dfn": 45,
+  "hp": 1035,
+  "agi": 6,
+  "desc": "疾行：血量与敏捷（40 级档）"
+ },
+ {
+  "id": "ar_body_40c",
+  "name": "裂脉·破势胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 14000,
+  "use_level": 40,
+  "dfn": 32,
+  "hp": 482,
+  "atk": 41,
+  "str": 4,
+  "desc": "破势：攻击与力量（40 级档）"
+ },
+ {
+  "id": "ar_body_40d",
+  "name": "裂脉·灵纹胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 14000,
+  "use_level": 40,
+  "dfn": 41,
+  "hp": 482,
+  "mp": 60,
+  "spr": 5,
+  "desc": "灵纹：法力与精神（40 级档）"
+ },
+ {
+  "id": "ar_hand_40a",
+  "name": "裂脉·坚壁护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 14000,
+  "use_level": 40,
+  "dfn": 82,
+  "con": 4,
+  "hp": 621,
+  "desc": "坚壁：防御与体质（40 级档）"
+ },
+ {
+  "id": "ar_hand_40b",
+  "name": "裂脉·疾行护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 14000,
+  "use_level": 40,
+  "dfn": 45,
+  "hp": 1035,
+  "agi": 6,
+  "desc": "疾行：血量与敏捷（40 级档）"
+ },
+ {
+  "id": "ar_hand_40c",
+  "name": "裂脉·破势护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 14000,
+  "use_level": 40,
+  "dfn": 32,
+  "hp": 482,
+  "atk": 41,
+  "str": 4,
+  "desc": "破势：攻击与力量（40 级档）"
+ },
+ {
+  "id": "ar_hand_40d",
+  "name": "裂脉·灵纹护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 14000,
+  "use_level": 40,
+  "dfn": 41,
+  "hp": 482,
+  "mp": 60,
+  "spr": 5,
+  "desc": "灵纹：法力与精神（40 级档）"
+ },
+ {
+  "id": "ar_leg_40a",
+  "name": "裂脉·坚壁胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 14000,
+  "use_level": 40,
+  "dfn": 82,
+  "con": 4,
+  "hp": 621,
+  "desc": "坚壁：防御与体质（40 级档）"
+ },
+ {
+  "id": "ar_leg_40b",
+  "name": "裂脉·疾行胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 14000,
+  "use_level": 40,
+  "dfn": 45,
+  "hp": 1035,
+  "agi": 6,
+  "desc": "疾行：血量与敏捷（40 级档）"
+ },
+ {
+  "id": "ar_leg_40c",
+  "name": "裂脉·破势胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 14000,
+  "use_level": 40,
+  "dfn": 32,
+  "hp": 482,
+  "atk": 41,
+  "str": 4,
+  "desc": "破势：攻击与力量（40 级档）"
+ },
+ {
+  "id": "ar_leg_40d",
+  "name": "裂脉·灵纹胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 14000,
+  "use_level": 40,
+  "dfn": 41,
+  "hp": 482,
+  "mp": 60,
+  "spr": 5,
+  "desc": "灵纹：法力与精神（40 级档）"
+ },
+ {
+  "id": "ar_foot_40a",
+  "name": "裂脉·坚壁战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 14000,
+  "use_level": 40,
+  "dfn": 82,
+  "con": 4,
+  "hp": 621,
+  "desc": "坚壁：防御与体质（40 级档）"
+ },
+ {
+  "id": "ar_foot_40b",
+  "name": "裂脉·疾行战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 14000,
+  "use_level": 40,
+  "dfn": 45,
+  "hp": 1035,
+  "agi": 6,
+  "desc": "疾行：血量与敏捷（40 级档）"
+ },
+ {
+  "id": "ar_foot_40c",
+  "name": "裂脉·破势战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 14000,
+  "use_level": 40,
+  "dfn": 32,
+  "hp": 482,
+  "atk": 41,
+  "str": 4,
+  "desc": "破势：攻击与力量（40 级档）"
+ },
+ {
+  "id": "ar_foot_40d",
+  "name": "裂脉·灵纹战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 14000,
+  "use_level": 40,
+  "dfn": 41,
+  "hp": 482,
+  "mp": 60,
+  "spr": 5,
+  "desc": "灵纹：法力与精神（40 级档）"
+ },
+ {
+  "id": "ar_head_50a",
+  "name": "幽脉·坚壁头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 38000,
+  "use_level": 50,
+  "dfn": 122,
+  "con": 5,
+  "hp": 990,
+  "desc": "坚壁：防御与体质（50 级档）"
+ },
+ {
+  "id": "ar_head_50b",
+  "name": "幽脉·疾行头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 38000,
+  "use_level": 50,
+  "dfn": 67,
+  "hp": 1650,
+  "agi": 7,
+  "desc": "疾行：血量与敏捷（50 级档）"
+ },
+ {
+  "id": "ar_head_50c",
+  "name": "幽脉·破势头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 38000,
+  "use_level": 50,
+  "dfn": 48,
+  "hp": 770,
+  "atk": 61,
+  "str": 5,
+  "desc": "破势：攻击与力量（50 级档）"
+ },
+ {
+  "id": "ar_head_50d",
+  "name": "幽脉·灵纹头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 38000,
+  "use_level": 50,
+  "dfn": 61,
+  "hp": 770,
+  "mp": 70,
+  "spr": 6,
+  "desc": "灵纹：法力与精神（50 级档）"
+ },
+ {
+  "id": "ar_body_50a",
+  "name": "幽脉·坚壁胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 38000,
+  "use_level": 50,
+  "dfn": 122,
+  "con": 5,
+  "hp": 990,
+  "desc": "坚壁：防御与体质（50 级档）"
+ },
+ {
+  "id": "ar_body_50b",
+  "name": "幽脉·疾行胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 38000,
+  "use_level": 50,
+  "dfn": 67,
+  "hp": 1650,
+  "agi": 7,
+  "desc": "疾行：血量与敏捷（50 级档）"
+ },
+ {
+  "id": "ar_body_50c",
+  "name": "幽脉·破势胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 38000,
+  "use_level": 50,
+  "dfn": 48,
+  "hp": 770,
+  "atk": 61,
+  "str": 5,
+  "desc": "破势：攻击与力量（50 级档）"
+ },
+ {
+  "id": "ar_body_50d",
+  "name": "幽脉·灵纹胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 38000,
+  "use_level": 50,
+  "dfn": 61,
+  "hp": 770,
+  "mp": 70,
+  "spr": 6,
+  "desc": "灵纹：法力与精神（50 级档）"
+ },
+ {
+  "id": "ar_hand_50a",
+  "name": "幽脉·坚壁护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 38000,
+  "use_level": 50,
+  "dfn": 122,
+  "con": 5,
+  "hp": 990,
+  "desc": "坚壁：防御与体质（50 级档）"
+ },
+ {
+  "id": "ar_hand_50b",
+  "name": "幽脉·疾行护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 38000,
+  "use_level": 50,
+  "dfn": 67,
+  "hp": 1650,
+  "agi": 7,
+  "desc": "疾行：血量与敏捷（50 级档）"
+ },
+ {
+  "id": "ar_hand_50c",
+  "name": "幽脉·破势护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 38000,
+  "use_level": 50,
+  "dfn": 48,
+  "hp": 770,
+  "atk": 61,
+  "str": 5,
+  "desc": "破势：攻击与力量（50 级档）"
+ },
+ {
+  "id": "ar_hand_50d",
+  "name": "幽脉·灵纹护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 38000,
+  "use_level": 50,
+  "dfn": 61,
+  "hp": 770,
+  "mp": 70,
+  "spr": 6,
+  "desc": "灵纹：法力与精神（50 级档）"
+ },
+ {
+  "id": "ar_leg_50a",
+  "name": "幽脉·坚壁胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 38000,
+  "use_level": 50,
+  "dfn": 122,
+  "con": 5,
+  "hp": 990,
+  "desc": "坚壁：防御与体质（50 级档）"
+ },
+ {
+  "id": "ar_leg_50b",
+  "name": "幽脉·疾行胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 38000,
+  "use_level": 50,
+  "dfn": 67,
+  "hp": 1650,
+  "agi": 7,
+  "desc": "疾行：血量与敏捷（50 级档）"
+ },
+ {
+  "id": "ar_leg_50c",
+  "name": "幽脉·破势胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 38000,
+  "use_level": 50,
+  "dfn": 48,
+  "hp": 770,
+  "atk": 61,
+  "str": 5,
+  "desc": "破势：攻击与力量（50 级档）"
+ },
+ {
+  "id": "ar_leg_50d",
+  "name": "幽脉·灵纹胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 38000,
+  "use_level": 50,
+  "dfn": 61,
+  "hp": 770,
+  "mp": 70,
+  "spr": 6,
+  "desc": "灵纹：法力与精神（50 级档）"
+ },
+ {
+  "id": "ar_foot_50a",
+  "name": "幽脉·坚壁战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 38000,
+  "use_level": 50,
+  "dfn": 122,
+  "con": 5,
+  "hp": 990,
+  "desc": "坚壁：防御与体质（50 级档）"
+ },
+ {
+  "id": "ar_foot_50b",
+  "name": "幽脉·疾行战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 38000,
+  "use_level": 50,
+  "dfn": 67,
+  "hp": 1650,
+  "agi": 7,
+  "desc": "疾行：血量与敏捷（50 级档）"
+ },
+ {
+  "id": "ar_foot_50c",
+  "name": "幽脉·破势战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 38000,
+  "use_level": 50,
+  "dfn": 48,
+  "hp": 770,
+  "atk": 61,
+  "str": 5,
+  "desc": "破势：攻击与力量（50 级档）"
+ },
+ {
+  "id": "ar_foot_50d",
+  "name": "幽脉·灵纹战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 38000,
+  "use_level": 50,
+  "dfn": 61,
+  "hp": 770,
+  "mp": 70,
+  "spr": 6,
+  "desc": "灵纹：法力与精神（50 级档）"
+ },
+ {
+  "id": "ar_head_60a",
+  "name": "断层·坚壁头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 95000,
+  "use_level": 60,
+  "dfn": 172,
+  "con": 6,
+  "hp": 1485,
+  "desc": "坚壁：防御与体质（60 级档）"
+ },
+ {
+  "id": "ar_head_60b",
+  "name": "断层·疾行头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 95000,
+  "use_level": 60,
+  "dfn": 94,
+  "hp": 2475,
+  "agi": 8,
+  "desc": "疾行：血量与敏捷（60 级档）"
+ },
+ {
+  "id": "ar_head_60c",
+  "name": "断层·破势头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 95000,
+  "use_level": 60,
+  "dfn": 68,
+  "hp": 1155,
+  "atk": 86,
+  "str": 6,
+  "desc": "破势：攻击与力量（60 级档）"
+ },
+ {
+  "id": "ar_head_60d",
+  "name": "断层·灵纹头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 95000,
+  "use_level": 60,
+  "dfn": 86,
+  "hp": 1155,
+  "mp": 80,
+  "spr": 7,
+  "desc": "灵纹：法力与精神（60 级档）"
+ },
+ {
+  "id": "ar_body_60a",
+  "name": "断层·坚壁胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 95000,
+  "use_level": 60,
+  "dfn": 172,
+  "con": 6,
+  "hp": 1485,
+  "desc": "坚壁：防御与体质（60 级档）"
+ },
+ {
+  "id": "ar_body_60b",
+  "name": "断层·疾行胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 95000,
+  "use_level": 60,
+  "dfn": 94,
+  "hp": 2475,
+  "agi": 8,
+  "desc": "疾行：血量与敏捷（60 级档）"
+ },
+ {
+  "id": "ar_body_60c",
+  "name": "断层·破势胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 95000,
+  "use_level": 60,
+  "dfn": 68,
+  "hp": 1155,
+  "atk": 86,
+  "str": 6,
+  "desc": "破势：攻击与力量（60 级档）"
+ },
+ {
+  "id": "ar_body_60d",
+  "name": "断层·灵纹胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 95000,
+  "use_level": 60,
+  "dfn": 86,
+  "hp": 1155,
+  "mp": 80,
+  "spr": 7,
+  "desc": "灵纹：法力与精神（60 级档）"
+ },
+ {
+  "id": "ar_hand_60a",
+  "name": "断层·坚壁护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 95000,
+  "use_level": 60,
+  "dfn": 172,
+  "con": 6,
+  "hp": 1485,
+  "desc": "坚壁：防御与体质（60 级档）"
+ },
+ {
+  "id": "ar_hand_60b",
+  "name": "断层·疾行护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 95000,
+  "use_level": 60,
+  "dfn": 94,
+  "hp": 2475,
+  "agi": 8,
+  "desc": "疾行：血量与敏捷（60 级档）"
+ },
+ {
+  "id": "ar_hand_60c",
+  "name": "断层·破势护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 95000,
+  "use_level": 60,
+  "dfn": 68,
+  "hp": 1155,
+  "atk": 86,
+  "str": 6,
+  "desc": "破势：攻击与力量（60 级档）"
+ },
+ {
+  "id": "ar_hand_60d",
+  "name": "断层·灵纹护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 95000,
+  "use_level": 60,
+  "dfn": 86,
+  "hp": 1155,
+  "mp": 80,
+  "spr": 7,
+  "desc": "灵纹：法力与精神（60 级档）"
+ },
+ {
+  "id": "ar_leg_60a",
+  "name": "断层·坚壁胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 95000,
+  "use_level": 60,
+  "dfn": 172,
+  "con": 6,
+  "hp": 1485,
+  "desc": "坚壁：防御与体质（60 级档）"
+ },
+ {
+  "id": "ar_leg_60b",
+  "name": "断层·疾行胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 95000,
+  "use_level": 60,
+  "dfn": 94,
+  "hp": 2475,
+  "agi": 8,
+  "desc": "疾行：血量与敏捷（60 级档）"
+ },
+ {
+  "id": "ar_leg_60c",
+  "name": "断层·破势胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 95000,
+  "use_level": 60,
+  "dfn": 68,
+  "hp": 1155,
+  "atk": 86,
+  "str": 6,
+  "desc": "破势：攻击与力量（60 级档）"
+ },
+ {
+  "id": "ar_leg_60d",
+  "name": "断层·灵纹胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 95000,
+  "use_level": 60,
+  "dfn": 86,
+  "hp": 1155,
+  "mp": 80,
+  "spr": 7,
+  "desc": "灵纹：法力与精神（60 级档）"
+ },
+ {
+  "id": "ar_foot_60a",
+  "name": "断层·坚壁战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 95000,
+  "use_level": 60,
+  "dfn": 172,
+  "con": 6,
+  "hp": 1485,
+  "desc": "坚壁：防御与体质（60 级档）"
+ },
+ {
+  "id": "ar_foot_60b",
+  "name": "断层·疾行战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 95000,
+  "use_level": 60,
+  "dfn": 94,
+  "hp": 2475,
+  "agi": 8,
+  "desc": "疾行：血量与敏捷（60 级档）"
+ },
+ {
+  "id": "ar_foot_60c",
+  "name": "断层·破势战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 95000,
+  "use_level": 60,
+  "dfn": 68,
+  "hp": 1155,
+  "atk": 86,
+  "str": 6,
+  "desc": "破势：攻击与力量（60 级档）"
+ },
+ {
+  "id": "ar_foot_60d",
+  "name": "断层·灵纹战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 95000,
+  "use_level": 60,
+  "dfn": 86,
+  "hp": 1155,
+  "mp": 80,
+  "spr": 7,
+  "desc": "灵纹：法力与精神（60 级档）"
+ },
+ {
+  "id": "ar_head_70a",
+  "name": "渊纹·坚壁头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 220000,
+  "use_level": 70,
+  "dfn": 232,
+  "con": 7,
+  "hp": 2142,
+  "desc": "坚壁：防御与体质（70 级档）"
+ },
+ {
+  "id": "ar_head_70b",
+  "name": "渊纹·疾行头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 220000,
+  "use_level": 70,
+  "dfn": 127,
+  "hp": 3570,
+  "agi": 10,
+  "desc": "疾行：血量与敏捷（70 级档）"
+ },
+ {
+  "id": "ar_head_70c",
+  "name": "渊纹·破势头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 220000,
+  "use_level": 70,
+  "dfn": 92,
+  "hp": 1666,
+  "atk": 116,
+  "str": 7,
+  "desc": "破势：攻击与力量（70 级档）"
+ },
+ {
+  "id": "ar_head_70d",
+  "name": "渊纹·灵纹头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 220000,
+  "use_level": 70,
+  "dfn": 116,
+  "hp": 1666,
+  "mp": 90,
+  "spr": 8,
+  "desc": "灵纹：法力与精神（70 级档）"
+ },
+ {
+  "id": "ar_body_70a",
+  "name": "渊纹·坚壁胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 220000,
+  "use_level": 70,
+  "dfn": 232,
+  "con": 7,
+  "hp": 2142,
+  "desc": "坚壁：防御与体质（70 级档）"
+ },
+ {
+  "id": "ar_body_70b",
+  "name": "渊纹·疾行胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 220000,
+  "use_level": 70,
+  "dfn": 127,
+  "hp": 3570,
+  "agi": 10,
+  "desc": "疾行：血量与敏捷（70 级档）"
+ },
+ {
+  "id": "ar_body_70c",
+  "name": "渊纹·破势胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 220000,
+  "use_level": 70,
+  "dfn": 92,
+  "hp": 1666,
+  "atk": 116,
+  "str": 7,
+  "desc": "破势：攻击与力量（70 级档）"
+ },
+ {
+  "id": "ar_body_70d",
+  "name": "渊纹·灵纹胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 220000,
+  "use_level": 70,
+  "dfn": 116,
+  "hp": 1666,
+  "mp": 90,
+  "spr": 8,
+  "desc": "灵纹：法力与精神（70 级档）"
+ },
+ {
+  "id": "ar_hand_70a",
+  "name": "渊纹·坚壁护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 220000,
+  "use_level": 70,
+  "dfn": 232,
+  "con": 7,
+  "hp": 2142,
+  "desc": "坚壁：防御与体质（70 级档）"
+ },
+ {
+  "id": "ar_hand_70b",
+  "name": "渊纹·疾行护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 220000,
+  "use_level": 70,
+  "dfn": 127,
+  "hp": 3570,
+  "agi": 10,
+  "desc": "疾行：血量与敏捷（70 级档）"
+ },
+ {
+  "id": "ar_hand_70c",
+  "name": "渊纹·破势护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 220000,
+  "use_level": 70,
+  "dfn": 92,
+  "hp": 1666,
+  "atk": 116,
+  "str": 7,
+  "desc": "破势：攻击与力量（70 级档）"
+ },
+ {
+  "id": "ar_hand_70d",
+  "name": "渊纹·灵纹护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 220000,
+  "use_level": 70,
+  "dfn": 116,
+  "hp": 1666,
+  "mp": 90,
+  "spr": 8,
+  "desc": "灵纹：法力与精神（70 级档）"
+ },
+ {
+  "id": "ar_leg_70a",
+  "name": "渊纹·坚壁胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 220000,
+  "use_level": 70,
+  "dfn": 232,
+  "con": 7,
+  "hp": 2142,
+  "desc": "坚壁：防御与体质（70 级档）"
+ },
+ {
+  "id": "ar_leg_70b",
+  "name": "渊纹·疾行胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 220000,
+  "use_level": 70,
+  "dfn": 127,
+  "hp": 3570,
+  "agi": 10,
+  "desc": "疾行：血量与敏捷（70 级档）"
+ },
+ {
+  "id": "ar_leg_70c",
+  "name": "渊纹·破势胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 220000,
+  "use_level": 70,
+  "dfn": 92,
+  "hp": 1666,
+  "atk": 116,
+  "str": 7,
+  "desc": "破势：攻击与力量（70 级档）"
+ },
+ {
+  "id": "ar_leg_70d",
+  "name": "渊纹·灵纹胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 220000,
+  "use_level": 70,
+  "dfn": 116,
+  "hp": 1666,
+  "mp": 90,
+  "spr": 8,
+  "desc": "灵纹：法力与精神（70 级档）"
+ },
+ {
+  "id": "ar_foot_70a",
+  "name": "渊纹·坚壁战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 220000,
+  "use_level": 70,
+  "dfn": 232,
+  "con": 7,
+  "hp": 2142,
+  "desc": "坚壁：防御与体质（70 级档）"
+ },
+ {
+  "id": "ar_foot_70b",
+  "name": "渊纹·疾行战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 220000,
+  "use_level": 70,
+  "dfn": 127,
+  "hp": 3570,
+  "agi": 10,
+  "desc": "疾行：血量与敏捷（70 级档）"
+ },
+ {
+  "id": "ar_foot_70c",
+  "name": "渊纹·破势战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 220000,
+  "use_level": 70,
+  "dfn": 92,
+  "hp": 1666,
+  "atk": 116,
+  "str": 7,
+  "desc": "破势：攻击与力量（70 级档）"
+ },
+ {
+  "id": "ar_foot_70d",
+  "name": "渊纹·灵纹战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 220000,
+  "use_level": 70,
+  "dfn": 116,
+  "hp": 1666,
+  "mp": 90,
+  "spr": 8,
+  "desc": "灵纹：法力与精神（70 级档）"
+ },
+ {
+  "id": "ar_head_80a",
+  "name": "四脉·坚壁头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 500000,
+  "use_level": 80,
+  "dfn": 305,
+  "con": 8,
+  "hp": 3015,
+  "desc": "坚壁：防御与体质（80 级档）"
+ },
+ {
+  "id": "ar_head_80b",
+  "name": "四脉·疾行头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 500000,
+  "use_level": 80,
+  "dfn": 167,
+  "hp": 5025,
+  "agi": 11,
+  "desc": "疾行：血量与敏捷（80 级档）"
+ },
+ {
+  "id": "ar_head_80c",
+  "name": "四脉·破势头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 500000,
+  "use_level": 80,
+  "dfn": 122,
+  "hp": 2345,
+  "atk": 152,
+  "str": 8,
+  "desc": "破势：攻击与力量（80 级档）"
+ },
+ {
+  "id": "ar_head_80d",
+  "name": "四脉·灵纹头甲",
+  "type": "armor",
+  "slot": "head",
+  "price": 500000,
+  "use_level": 80,
+  "dfn": 152,
+  "hp": 2345,
+  "mp": 100,
+  "spr": 9,
+  "desc": "灵纹：法力与精神（80 级档）"
+ },
+ {
+  "id": "ar_body_80a",
+  "name": "四脉·坚壁胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 500000,
+  "use_level": 80,
+  "dfn": 305,
+  "con": 8,
+  "hp": 3015,
+  "desc": "坚壁：防御与体质（80 级档）"
+ },
+ {
+  "id": "ar_body_80b",
+  "name": "四脉·疾行胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 500000,
+  "use_level": 80,
+  "dfn": 167,
+  "hp": 5025,
+  "agi": 11,
+  "desc": "疾行：血量与敏捷（80 级档）"
+ },
+ {
+  "id": "ar_body_80c",
+  "name": "四脉·破势胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 500000,
+  "use_level": 80,
+  "dfn": 122,
+  "hp": 2345,
+  "atk": 152,
+  "str": 8,
+  "desc": "破势：攻击与力量（80 级档）"
+ },
+ {
+  "id": "ar_body_80d",
+  "name": "四脉·灵纹胸甲",
+  "type": "armor",
+  "slot": "body",
+  "price": 500000,
+  "use_level": 80,
+  "dfn": 152,
+  "hp": 2345,
+  "mp": 100,
+  "spr": 9,
+  "desc": "灵纹：法力与精神（80 级档）"
+ },
+ {
+  "id": "ar_hand_80a",
+  "name": "四脉·坚壁护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 500000,
+  "use_level": 80,
+  "dfn": 305,
+  "con": 8,
+  "hp": 3015,
+  "desc": "坚壁：防御与体质（80 级档）"
+ },
+ {
+  "id": "ar_hand_80b",
+  "name": "四脉·疾行护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 500000,
+  "use_level": 80,
+  "dfn": 167,
+  "hp": 5025,
+  "agi": 11,
+  "desc": "疾行：血量与敏捷（80 级档）"
+ },
+ {
+  "id": "ar_hand_80c",
+  "name": "四脉·破势护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 500000,
+  "use_level": 80,
+  "dfn": 122,
+  "hp": 2345,
+  "atk": 152,
+  "str": 8,
+  "desc": "破势：攻击与力量（80 级档）"
+ },
+ {
+  "id": "ar_hand_80d",
+  "name": "四脉·灵纹护手",
+  "type": "armor",
+  "slot": "hand",
+  "price": 500000,
+  "use_level": 80,
+  "dfn": 152,
+  "hp": 2345,
+  "mp": 100,
+  "spr": 9,
+  "desc": "灵纹：法力与精神（80 级档）"
+ },
+ {
+  "id": "ar_leg_80a",
+  "name": "四脉·坚壁胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 500000,
+  "use_level": 80,
+  "dfn": 305,
+  "con": 8,
+  "hp": 3015,
+  "desc": "坚壁：防御与体质（80 级档）"
+ },
+ {
+  "id": "ar_leg_80b",
+  "name": "四脉·疾行胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 500000,
+  "use_level": 80,
+  "dfn": 167,
+  "hp": 5025,
+  "agi": 11,
+  "desc": "疾行：血量与敏捷（80 级档）"
+ },
+ {
+  "id": "ar_leg_80c",
+  "name": "四脉·破势胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 500000,
+  "use_level": 80,
+  "dfn": 122,
+  "hp": 2345,
+  "atk": 152,
+  "str": 8,
+  "desc": "破势：攻击与力量（80 级档）"
+ },
+ {
+  "id": "ar_leg_80d",
+  "name": "四脉·灵纹胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "price": 500000,
+  "use_level": 80,
+  "dfn": 152,
+  "hp": 2345,
+  "mp": 100,
+  "spr": 9,
+  "desc": "灵纹：法力与精神（80 级档）"
+ },
+ {
+  "id": "ar_foot_80a",
+  "name": "四脉·坚壁战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 500000,
+  "use_level": 80,
+  "dfn": 305,
+  "con": 8,
+  "hp": 3015,
+  "desc": "坚壁：防御与体质（80 级档）"
+ },
+ {
+  "id": "ar_foot_80b",
+  "name": "四脉·疾行战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 500000,
+  "use_level": 80,
+  "dfn": 167,
+  "hp": 5025,
+  "agi": 11,
+  "desc": "疾行：血量与敏捷（80 级档）"
+ },
+ {
+  "id": "ar_foot_80c",
+  "name": "四脉·破势战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 500000,
+  "use_level": 80,
+  "dfn": 122,
+  "hp": 2345,
+  "atk": 152,
+  "str": 8,
+  "desc": "破势：攻击与力量（80 级档）"
+ },
+ {
+  "id": "ar_foot_80d",
+  "name": "四脉·灵纹战靴",
+  "type": "armor",
+  "slot": "foot",
+  "price": 500000,
+  "use_level": 80,
+  "dfn": 152,
+  "hp": 2345,
+  "mp": 100,
+  "spr": 9,
+  "desc": "灵纹：法力与精神（80 级档）"
+ },
+ {
+  "id": "ac_1a",
+  "name": "试炼·护命符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 120,
+  "use_level": 1,
+  "hp": 48,
+  "con": 1,
+  "desc": "护命：血量与体质（1 级档）"
+ },
+ {
+  "id": "ac_1b",
+  "name": "试炼·鸿运符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 120,
+  "use_level": 1,
+  "hp": 24,
+  "lck": 1,
+  "crit": 0.004,
+  "desc": "鸿运：幸运与会心（1 级档）"
+ },
+ {
+  "id": "ac_1c",
+  "name": "试炼·疾影符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 120,
+  "use_level": 1,
+  "hp": 28,
+  "agi": 1,
+  "spd": 1,
+  "desc": "疾影：敏捷与速度（1 级档）"
+ },
+ {
+  "id": "ac_10a",
+  "name": "淬脉·护命符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 400,
+  "use_level": 10,
+  "hp": 114,
+  "con": 2,
+  "desc": "护命：血量与体质（10 级档）"
+ },
+ {
+  "id": "ac_10b",
+  "name": "淬脉·鸿运符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 400,
+  "use_level": 10,
+  "hp": 57,
+  "lck": 2,
+  "crit": 0.008,
+  "desc": "鸿运：幸运与会心（10 级档）"
+ },
+ {
+  "id": "ac_10c",
+  "name": "淬脉·疾影符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 400,
+  "use_level": 10,
+  "hp": 66,
+  "agi": 2,
+  "spd": 2,
+  "desc": "疾影：敏捷与速度（10 级档）"
+ },
+ {
+  "id": "ac_20a",
+  "name": "脉纹·护命符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 1400,
+  "use_level": 20,
+  "hp": 252,
+  "con": 3,
+  "desc": "护命：血量与体质（20 级档）"
+ },
+ {
+  "id": "ac_20b",
+  "name": "脉纹·鸿运符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 1400,
+  "use_level": 20,
+  "hp": 126,
+  "lck": 3,
+  "crit": 0.012,
+  "desc": "鸿运：幸运与会心（20 级档）"
+ },
+ {
+  "id": "ac_20c",
+  "name": "脉纹·疾影符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 1400,
+  "use_level": 20,
+  "hp": 147,
+  "agi": 3,
+  "spd": 3,
+  "desc": "疾影：敏捷与速度（20 级档）"
+ },
+ {
+  "id": "ac_30a",
+  "name": "沉脉·护命符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 4800,
+  "use_level": 30,
+  "hp": 480,
+  "con": 4,
+  "desc": "护命：血量与体质（30 级档）"
+ },
+ {
+  "id": "ac_30b",
+  "name": "沉脉·鸿运符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 4800,
+  "use_level": 30,
+  "hp": 240,
+  "lck": 4,
+  "crit": 0.016,
+  "desc": "鸿运：幸运与会心（30 级档）"
+ },
+ {
+  "id": "ac_30c",
+  "name": "沉脉·疾影符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 4800,
+  "use_level": 30,
+  "hp": 280,
+  "agi": 4,
+  "spd": 4,
+  "desc": "疾影：敏捷与速度（30 级档）"
+ },
+ {
+  "id": "ac_40a",
+  "name": "裂脉·护命符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 14000,
+  "use_level": 40,
+  "hp": 828,
+  "con": 4,
+  "desc": "护命：血量与体质（40 级档）"
+ },
+ {
+  "id": "ac_40b",
+  "name": "裂脉·鸿运符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 14000,
+  "use_level": 40,
+  "hp": 414,
+  "lck": 5,
+  "crit": 0.02,
+  "desc": "鸿运：幸运与会心（40 级档）"
+ },
+ {
+  "id": "ac_40c",
+  "name": "裂脉·疾影符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 14000,
+  "use_level": 40,
+  "hp": 482,
+  "agi": 5,
+  "spd": 4,
+  "desc": "疾影：敏捷与速度（40 级档）"
+ },
+ {
+  "id": "ac_50a",
+  "name": "幽脉·护命符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 38000,
+  "use_level": 50,
+  "hp": 1320,
+  "con": 5,
+  "desc": "护命：血量与体质（50 级档）"
+ },
+ {
+  "id": "ac_50b",
+  "name": "幽脉·鸿运符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 38000,
+  "use_level": 50,
+  "hp": 660,
+  "lck": 6,
+  "crit": 0.024,
+  "desc": "鸿运：幸运与会心（50 级档）"
+ },
+ {
+  "id": "ac_50c",
+  "name": "幽脉·疾影符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 38000,
+  "use_level": 50,
+  "hp": 770,
+  "agi": 6,
+  "spd": 5,
+  "desc": "疾影：敏捷与速度（50 级档）"
+ },
+ {
+  "id": "ac_60a",
+  "name": "断层·护命符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 95000,
+  "use_level": 60,
+  "hp": 1980,
+  "con": 6,
+  "desc": "护命：血量与体质（60 级档）"
+ },
+ {
+  "id": "ac_60b",
+  "name": "断层·鸿运符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 95000,
+  "use_level": 60,
+  "hp": 990,
+  "lck": 7,
+  "crit": 0.028,
+  "desc": "鸿运：幸运与会心（60 级档）"
+ },
+ {
+  "id": "ac_60c",
+  "name": "断层·疾影符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 95000,
+  "use_level": 60,
+  "hp": 1155,
+  "agi": 7,
+  "spd": 6,
+  "desc": "疾影：敏捷与速度（60 级档）"
+ },
+ {
+  "id": "ac_70a",
+  "name": "渊纹·护命符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 220000,
+  "use_level": 70,
+  "hp": 2856,
+  "con": 7,
+  "desc": "护命：血量与体质（70 级档）"
+ },
+ {
+  "id": "ac_70b",
+  "name": "渊纹·鸿运符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 220000,
+  "use_level": 70,
+  "hp": 1428,
+  "lck": 8,
+  "crit": 0.032,
+  "desc": "鸿运：幸运与会心（70 级档）"
+ },
+ {
+  "id": "ac_70c",
+  "name": "渊纹·疾影符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 220000,
+  "use_level": 70,
+  "hp": 1666,
+  "agi": 8,
+  "spd": 7,
+  "desc": "疾影：敏捷与速度（70 级档）"
+ },
+ {
+  "id": "ac_80a",
+  "name": "四脉·护命符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 500000,
+  "use_level": 80,
+  "hp": 4020,
+  "con": 8,
+  "desc": "护命：血量与体质（80 级档）"
+ },
+ {
+  "id": "ac_80b",
+  "name": "四脉·鸿运符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 500000,
+  "use_level": 80,
+  "hp": 2010,
+  "lck": 9,
+  "crit": 0.036,
+  "desc": "鸿运：幸运与会心（80 级档）"
+ },
+ {
+  "id": "ac_80c",
+  "name": "四脉·疾影符",
+  "type": "accessory",
+  "slot": "accessory",
+  "price": 500000,
+  "use_level": 80,
+  "hp": 2345,
+  "agi": 9,
+  "spd": 8,
+  "desc": "疾影：敏捷与速度（80 级档）"
+ },
+ {
+  "id": "bp_wp_sword_1",
+  "name": "试炼短剑图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "wp_sword_1",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_sword_1",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼短剑的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_sword_10",
+  "name": "淬脉长剑图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "wp_sword_10",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_sword_10",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉长剑的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_sword_20",
+  "name": "脉纹重剑图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "wp_sword_20",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_sword_20",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹重剑的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_sword_30",
+  "name": "沉脉锐剑图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "wp_sword_30",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_sword_30",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉锐剑的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_sword_40",
+  "name": "裂脉细剑图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "wp_sword_40",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_sword_40",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉细剑的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_sword_50",
+  "name": "幽脉直剑图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "wp_sword_50",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_sword_50",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉直剑的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_sword_60",
+  "name": "断层短剑图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "wp_sword_60",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_sword_60",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层短剑的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_sword_70",
+  "name": "渊纹长剑图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "wp_sword_70",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_sword_70",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹长剑的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_sword_80",
+  "name": "四脉重剑图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "wp_sword_80",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_sword_80",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉重剑的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_hammer_1",
+  "name": "试炼铁锤图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "wp_hammer_1",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_hammer_1",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼铁锤的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_hammer_10",
+  "name": "淬脉战锤图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "wp_hammer_10",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_hammer_10",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉战锤的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_hammer_20",
+  "name": "脉纹重锤图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "wp_hammer_20",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_hammer_20",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹重锤的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_hammer_30",
+  "name": "沉脉巨锤图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "wp_hammer_30",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_hammer_30",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉巨锤的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_hammer_40",
+  "name": "裂脉镇锤图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "wp_hammer_40",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_hammer_40",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉镇锤的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_hammer_50",
+  "name": "幽脉破岳锤图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "wp_hammer_50",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_hammer_50",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉破岳锤的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_hammer_60",
+  "name": "断层铁锤图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "wp_hammer_60",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_hammer_60",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层铁锤的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_hammer_70",
+  "name": "渊纹战锤图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "wp_hammer_70",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_hammer_70",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹战锤的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_hammer_80",
+  "name": "四脉重锤图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "wp_hammer_80",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_hammer_80",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉重锤的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_spear_1",
+  "name": "试炼长枪图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "wp_spear_1",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_spear_1",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼长枪的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_spear_10",
+  "name": "淬脉尖枪图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "wp_spear_10",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_spear_10",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉尖枪的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_spear_20",
+  "name": "脉纹重枪图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "wp_spear_20",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_spear_20",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹重枪的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_spear_30",
+  "name": "沉脉龙枪图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "wp_spear_30",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_spear_30",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉龙枪的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_spear_40",
+  "name": "裂脉天枪图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "wp_spear_40",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_spear_40",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉天枪的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_spear_50",
+  "name": "幽脉裂风枪图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "wp_spear_50",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_spear_50",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉裂风枪的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_spear_60",
+  "name": "断层长枪图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "wp_spear_60",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_spear_60",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层长枪的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_spear_70",
+  "name": "渊纹尖枪图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "wp_spear_70",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_spear_70",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹尖枪的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_spear_80",
+  "name": "四脉重枪图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "wp_spear_80",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_spear_80",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉重枪的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_staff_1",
+  "name": "试炼法杖图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "wp_staff_1",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_staff_1",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼法杖的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_staff_10",
+  "name": "淬脉灵杖图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "wp_staff_10",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_staff_10",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉灵杖的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_staff_20",
+  "name": "脉纹脉杖图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "wp_staff_20",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_staff_20",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹脉杖的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_staff_30",
+  "name": "沉脉玄杖图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "wp_staff_30",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_staff_30",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉玄杖的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_staff_40",
+  "name": "裂脉渊杖图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "wp_staff_40",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_staff_40",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉渊杖的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_staff_50",
+  "name": "幽脉天杖图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "wp_staff_50",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_staff_50",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉天杖的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_staff_60",
+  "name": "断层法杖图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "wp_staff_60",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_staff_60",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层法杖的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_staff_70",
+  "name": "渊纹灵杖图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "wp_staff_70",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_staff_70",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹灵杖的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_wp_staff_80",
+  "name": "四脉脉杖图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "wp_staff_80",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_staff_80",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉脉杖的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_1a",
+  "name": "试炼·坚壁头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_head_1a",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_1a",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼·坚壁头甲的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_1b",
+  "name": "试炼·疾行头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_head_1b",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_1b",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼·疾行头甲的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_1c",
+  "name": "试炼·破势头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_head_1c",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_1c",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼·破势头甲的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_1d",
+  "name": "试炼·灵纹头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_head_1d",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_1d",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼·灵纹头甲的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_1a",
+  "name": "试炼·坚壁胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_body_1a",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_1a",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼·坚壁胸甲的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_1b",
+  "name": "试炼·疾行胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_body_1b",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_1b",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼·疾行胸甲的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_1c",
+  "name": "试炼·破势胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_body_1c",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_1c",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼·破势胸甲的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_1d",
+  "name": "试炼·灵纹胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_body_1d",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_1d",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼·灵纹胸甲的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_1a",
+  "name": "试炼·坚壁护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_hand_1a",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_1a",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼·坚壁护手的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_1b",
+  "name": "试炼·疾行护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_hand_1b",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_1b",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼·疾行护手的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_1c",
+  "name": "试炼·破势护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_hand_1c",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_1c",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼·破势护手的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_1d",
+  "name": "试炼·灵纹护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_hand_1d",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_1d",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼·灵纹护手的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_1a",
+  "name": "试炼·坚壁胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_leg_1a",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_1a",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼·坚壁胫甲的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_1b",
+  "name": "试炼·疾行胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_leg_1b",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_1b",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼·疾行胫甲的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_1c",
+  "name": "试炼·破势胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_leg_1c",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_1c",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼·破势胫甲的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_1d",
+  "name": "试炼·灵纹胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_leg_1d",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_1d",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼·灵纹胫甲的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_1a",
+  "name": "试炼·坚壁战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_foot_1a",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_1a",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼·坚壁战靴的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_1b",
+  "name": "试炼·疾行战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_foot_1b",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_1b",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼·疾行战靴的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_1c",
+  "name": "试炼·破势战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_foot_1c",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_1c",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼·破势战靴的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_1d",
+  "name": "试炼·灵纹战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_foot_1d",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_1d",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼·灵纹战靴的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_10a",
+  "name": "淬脉·坚壁头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_head_10a",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_10a",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉·坚壁头甲的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_10b",
+  "name": "淬脉·疾行头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_head_10b",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_10b",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉·疾行头甲的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_10c",
+  "name": "淬脉·破势头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_head_10c",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_10c",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉·破势头甲的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_10d",
+  "name": "淬脉·灵纹头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_head_10d",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_10d",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉·灵纹头甲的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_10a",
+  "name": "淬脉·坚壁胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_body_10a",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_10a",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉·坚壁胸甲的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_10b",
+  "name": "淬脉·疾行胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_body_10b",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_10b",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉·疾行胸甲的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_10c",
+  "name": "淬脉·破势胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_body_10c",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_10c",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉·破势胸甲的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_10d",
+  "name": "淬脉·灵纹胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_body_10d",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_10d",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉·灵纹胸甲的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_10a",
+  "name": "淬脉·坚壁护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_hand_10a",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_10a",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉·坚壁护手的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_10b",
+  "name": "淬脉·疾行护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_hand_10b",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_10b",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉·疾行护手的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_10c",
+  "name": "淬脉·破势护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_hand_10c",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_10c",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉·破势护手的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_10d",
+  "name": "淬脉·灵纹护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_hand_10d",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_10d",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉·灵纹护手的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_10a",
+  "name": "淬脉·坚壁胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_leg_10a",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_10a",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉·坚壁胫甲的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_10b",
+  "name": "淬脉·疾行胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_leg_10b",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_10b",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉·疾行胫甲的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_10c",
+  "name": "淬脉·破势胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_leg_10c",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_10c",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉·破势胫甲的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_10d",
+  "name": "淬脉·灵纹胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_leg_10d",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_10d",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉·灵纹胫甲的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_10a",
+  "name": "淬脉·坚壁战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_foot_10a",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_10a",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉·坚壁战靴的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_10b",
+  "name": "淬脉·疾行战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_foot_10b",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_10b",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉·疾行战靴的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_10c",
+  "name": "淬脉·破势战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_foot_10c",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_10c",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉·破势战靴的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_10d",
+  "name": "淬脉·灵纹战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ar_foot_10d",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_10d",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉·灵纹战靴的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_20a",
+  "name": "脉纹·坚壁头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_head_20a",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_20a",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹·坚壁头甲的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_20b",
+  "name": "脉纹·疾行头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_head_20b",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_20b",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹·疾行头甲的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_20c",
+  "name": "脉纹·破势头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_head_20c",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_20c",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹·破势头甲的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_20d",
+  "name": "脉纹·灵纹头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_head_20d",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_20d",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹·灵纹头甲的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_20a",
+  "name": "脉纹·坚壁胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_body_20a",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_20a",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹·坚壁胸甲的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_20b",
+  "name": "脉纹·疾行胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_body_20b",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_20b",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹·疾行胸甲的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_20c",
+  "name": "脉纹·破势胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_body_20c",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_20c",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹·破势胸甲的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_20d",
+  "name": "脉纹·灵纹胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_body_20d",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_20d",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹·灵纹胸甲的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_20a",
+  "name": "脉纹·坚壁护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_hand_20a",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_20a",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹·坚壁护手的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_20b",
+  "name": "脉纹·疾行护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_hand_20b",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_20b",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹·疾行护手的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_20c",
+  "name": "脉纹·破势护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_hand_20c",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_20c",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹·破势护手的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_20d",
+  "name": "脉纹·灵纹护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_hand_20d",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_20d",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹·灵纹护手的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_20a",
+  "name": "脉纹·坚壁胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_leg_20a",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_20a",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹·坚壁胫甲的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_20b",
+  "name": "脉纹·疾行胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_leg_20b",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_20b",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹·疾行胫甲的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_20c",
+  "name": "脉纹·破势胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_leg_20c",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_20c",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹·破势胫甲的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_20d",
+  "name": "脉纹·灵纹胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_leg_20d",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_20d",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹·灵纹胫甲的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_20a",
+  "name": "脉纹·坚壁战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_foot_20a",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_20a",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹·坚壁战靴的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_20b",
+  "name": "脉纹·疾行战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_foot_20b",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_20b",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹·疾行战靴的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_20c",
+  "name": "脉纹·破势战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_foot_20c",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_20c",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹·破势战靴的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_20d",
+  "name": "脉纹·灵纹战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_foot_20d",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_20d",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹·灵纹战靴的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_30a",
+  "name": "沉脉·坚壁头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_head_30a",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_30a",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉·坚壁头甲的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_30b",
+  "name": "沉脉·疾行头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_head_30b",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_30b",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉·疾行头甲的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_30c",
+  "name": "沉脉·破势头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_head_30c",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_30c",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉·破势头甲的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_30d",
+  "name": "沉脉·灵纹头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_head_30d",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_30d",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉·灵纹头甲的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_30a",
+  "name": "沉脉·坚壁胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_body_30a",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_30a",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉·坚壁胸甲的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_30b",
+  "name": "沉脉·疾行胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_body_30b",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_30b",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉·疾行胸甲的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_30c",
+  "name": "沉脉·破势胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_body_30c",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_30c",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉·破势胸甲的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_30d",
+  "name": "沉脉·灵纹胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_body_30d",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_30d",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉·灵纹胸甲的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_30a",
+  "name": "沉脉·坚壁护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_hand_30a",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_30a",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉·坚壁护手的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_30b",
+  "name": "沉脉·疾行护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_hand_30b",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_30b",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉·疾行护手的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_30c",
+  "name": "沉脉·破势护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_hand_30c",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_30c",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉·破势护手的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_30d",
+  "name": "沉脉·灵纹护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_hand_30d",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_30d",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉·灵纹护手的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_30a",
+  "name": "沉脉·坚壁胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_leg_30a",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_30a",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉·坚壁胫甲的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_30b",
+  "name": "沉脉·疾行胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_leg_30b",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_30b",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉·疾行胫甲的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_30c",
+  "name": "沉脉·破势胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_leg_30c",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_30c",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉·破势胫甲的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_30d",
+  "name": "沉脉·灵纹胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_leg_30d",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_30d",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉·灵纹胫甲的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_30a",
+  "name": "沉脉·坚壁战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_foot_30a",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_30a",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉·坚壁战靴的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_30b",
+  "name": "沉脉·疾行战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_foot_30b",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_30b",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉·疾行战靴的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_30c",
+  "name": "沉脉·破势战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_foot_30c",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_30c",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉·破势战靴的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_30d",
+  "name": "沉脉·灵纹战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ar_foot_30d",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_30d",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉·灵纹战靴的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_40a",
+  "name": "裂脉·坚壁头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_head_40a",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_40a",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉·坚壁头甲的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_40b",
+  "name": "裂脉·疾行头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_head_40b",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_40b",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉·疾行头甲的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_40c",
+  "name": "裂脉·破势头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_head_40c",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_40c",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉·破势头甲的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_40d",
+  "name": "裂脉·灵纹头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_head_40d",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_40d",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉·灵纹头甲的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_40a",
+  "name": "裂脉·坚壁胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_body_40a",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_40a",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉·坚壁胸甲的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_40b",
+  "name": "裂脉·疾行胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_body_40b",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_40b",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉·疾行胸甲的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_40c",
+  "name": "裂脉·破势胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_body_40c",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_40c",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉·破势胸甲的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_40d",
+  "name": "裂脉·灵纹胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_body_40d",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_40d",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉·灵纹胸甲的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_40a",
+  "name": "裂脉·坚壁护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_hand_40a",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_40a",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉·坚壁护手的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_40b",
+  "name": "裂脉·疾行护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_hand_40b",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_40b",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉·疾行护手的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_40c",
+  "name": "裂脉·破势护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_hand_40c",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_40c",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉·破势护手的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_40d",
+  "name": "裂脉·灵纹护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_hand_40d",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_40d",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉·灵纹护手的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_40a",
+  "name": "裂脉·坚壁胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_leg_40a",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_40a",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉·坚壁胫甲的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_40b",
+  "name": "裂脉·疾行胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_leg_40b",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_40b",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉·疾行胫甲的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_40c",
+  "name": "裂脉·破势胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_leg_40c",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_40c",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉·破势胫甲的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_40d",
+  "name": "裂脉·灵纹胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_leg_40d",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_40d",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉·灵纹胫甲的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_40a",
+  "name": "裂脉·坚壁战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_foot_40a",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_40a",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉·坚壁战靴的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_40b",
+  "name": "裂脉·疾行战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_foot_40b",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_40b",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉·疾行战靴的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_40c",
+  "name": "裂脉·破势战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_foot_40c",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_40c",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉·破势战靴的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_40d",
+  "name": "裂脉·灵纹战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_foot_40d",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_40d",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉·灵纹战靴的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_50a",
+  "name": "幽脉·坚壁头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_head_50a",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_50a",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉·坚壁头甲的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_50b",
+  "name": "幽脉·疾行头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_head_50b",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_50b",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉·疾行头甲的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_50c",
+  "name": "幽脉·破势头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_head_50c",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_50c",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉·破势头甲的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_50d",
+  "name": "幽脉·灵纹头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_head_50d",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_50d",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉·灵纹头甲的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_50a",
+  "name": "幽脉·坚壁胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_body_50a",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_50a",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉·坚壁胸甲的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_50b",
+  "name": "幽脉·疾行胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_body_50b",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_50b",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉·疾行胸甲的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_50c",
+  "name": "幽脉·破势胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_body_50c",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_50c",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉·破势胸甲的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_50d",
+  "name": "幽脉·灵纹胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_body_50d",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_50d",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉·灵纹胸甲的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_50a",
+  "name": "幽脉·坚壁护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_hand_50a",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_50a",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉·坚壁护手的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_50b",
+  "name": "幽脉·疾行护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_hand_50b",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_50b",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉·疾行护手的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_50c",
+  "name": "幽脉·破势护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_hand_50c",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_50c",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉·破势护手的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_50d",
+  "name": "幽脉·灵纹护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_hand_50d",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_50d",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉·灵纹护手的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_50a",
+  "name": "幽脉·坚壁胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_leg_50a",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_50a",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉·坚壁胫甲的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_50b",
+  "name": "幽脉·疾行胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_leg_50b",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_50b",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉·疾行胫甲的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_50c",
+  "name": "幽脉·破势胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_leg_50c",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_50c",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉·破势胫甲的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_50d",
+  "name": "幽脉·灵纹胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_leg_50d",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_50d",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉·灵纹胫甲的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_50a",
+  "name": "幽脉·坚壁战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_foot_50a",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_50a",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉·坚壁战靴的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_50b",
+  "name": "幽脉·疾行战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_foot_50b",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_50b",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉·疾行战靴的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_50c",
+  "name": "幽脉·破势战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_foot_50c",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_50c",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉·破势战靴的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_50d",
+  "name": "幽脉·灵纹战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_foot_50d",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_50d",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉·灵纹战靴的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_60a",
+  "name": "断层·坚壁头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_head_60a",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_60a",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层·坚壁头甲的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_60b",
+  "name": "断层·疾行头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_head_60b",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_60b",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层·疾行头甲的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_60c",
+  "name": "断层·破势头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_head_60c",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_60c",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层·破势头甲的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_60d",
+  "name": "断层·灵纹头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_head_60d",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_60d",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层·灵纹头甲的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_60a",
+  "name": "断层·坚壁胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_body_60a",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_60a",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层·坚壁胸甲的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_60b",
+  "name": "断层·疾行胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_body_60b",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_60b",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层·疾行胸甲的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_60c",
+  "name": "断层·破势胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_body_60c",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_60c",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层·破势胸甲的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_60d",
+  "name": "断层·灵纹胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_body_60d",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_60d",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层·灵纹胸甲的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_60a",
+  "name": "断层·坚壁护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_hand_60a",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_60a",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层·坚壁护手的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_60b",
+  "name": "断层·疾行护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_hand_60b",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_60b",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层·疾行护手的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_60c",
+  "name": "断层·破势护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_hand_60c",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_60c",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层·破势护手的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_60d",
+  "name": "断层·灵纹护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_hand_60d",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_60d",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层·灵纹护手的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_60a",
+  "name": "断层·坚壁胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_leg_60a",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_60a",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层·坚壁胫甲的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_60b",
+  "name": "断层·疾行胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_leg_60b",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_60b",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层·疾行胫甲的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_60c",
+  "name": "断层·破势胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_leg_60c",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_60c",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层·破势胫甲的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_60d",
+  "name": "断层·灵纹胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_leg_60d",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_60d",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层·灵纹胫甲的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_60a",
+  "name": "断层·坚壁战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_foot_60a",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_60a",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层·坚壁战靴的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_60b",
+  "name": "断层·疾行战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_foot_60b",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_60b",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层·疾行战靴的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_60c",
+  "name": "断层·破势战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_foot_60c",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_60c",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层·破势战靴的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_60d",
+  "name": "断层·灵纹战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ar_foot_60d",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_60d",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层·灵纹战靴的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_70a",
+  "name": "渊纹·坚壁头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_head_70a",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_70a",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹·坚壁头甲的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_70b",
+  "name": "渊纹·疾行头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_head_70b",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_70b",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹·疾行头甲的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_70c",
+  "name": "渊纹·破势头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_head_70c",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_70c",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹·破势头甲的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_70d",
+  "name": "渊纹·灵纹头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_head_70d",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_70d",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹·灵纹头甲的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_70a",
+  "name": "渊纹·坚壁胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_body_70a",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_70a",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹·坚壁胸甲的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_70b",
+  "name": "渊纹·疾行胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_body_70b",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_70b",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹·疾行胸甲的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_70c",
+  "name": "渊纹·破势胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_body_70c",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_70c",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹·破势胸甲的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_70d",
+  "name": "渊纹·灵纹胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_body_70d",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_70d",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹·灵纹胸甲的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_70a",
+  "name": "渊纹·坚壁护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_hand_70a",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_70a",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹·坚壁护手的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_70b",
+  "name": "渊纹·疾行护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_hand_70b",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_70b",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹·疾行护手的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_70c",
+  "name": "渊纹·破势护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_hand_70c",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_70c",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹·破势护手的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_70d",
+  "name": "渊纹·灵纹护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_hand_70d",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_70d",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹·灵纹护手的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_70a",
+  "name": "渊纹·坚壁胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_leg_70a",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_70a",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹·坚壁胫甲的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_70b",
+  "name": "渊纹·疾行胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_leg_70b",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_70b",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹·疾行胫甲的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_70c",
+  "name": "渊纹·破势胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_leg_70c",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_70c",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹·破势胫甲的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_70d",
+  "name": "渊纹·灵纹胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_leg_70d",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_70d",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹·灵纹胫甲的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_70a",
+  "name": "渊纹·坚壁战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_foot_70a",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_70a",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹·坚壁战靴的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_70b",
+  "name": "渊纹·疾行战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_foot_70b",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_70b",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹·疾行战靴的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_70c",
+  "name": "渊纹·破势战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_foot_70c",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_70c",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹·破势战靴的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_70d",
+  "name": "渊纹·灵纹战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_foot_70d",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_70d",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹·灵纹战靴的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_80a",
+  "name": "四脉·坚壁头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_head_80a",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_80a",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·坚壁头甲的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_80b",
+  "name": "四脉·疾行头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_head_80b",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_80b",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·疾行头甲的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_80c",
+  "name": "四脉·破势头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_head_80c",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_80c",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·破势头甲的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_head_80d",
+  "name": "四脉·灵纹头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_head_80d",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_80d",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·灵纹头甲的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_80a",
+  "name": "四脉·坚壁胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_body_80a",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_80a",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·坚壁胸甲的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_80b",
+  "name": "四脉·疾行胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_body_80b",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_80b",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·疾行胸甲的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_80c",
+  "name": "四脉·破势胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_body_80c",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_80c",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·破势胸甲的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_body_80d",
+  "name": "四脉·灵纹胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_body_80d",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_80d",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·灵纹胸甲的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_80a",
+  "name": "四脉·坚壁护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_hand_80a",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_80a",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·坚壁护手的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_80b",
+  "name": "四脉·疾行护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_hand_80b",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_80b",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·疾行护手的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_80c",
+  "name": "四脉·破势护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_hand_80c",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_80c",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·破势护手的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_hand_80d",
+  "name": "四脉·灵纹护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_hand_80d",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_80d",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·灵纹护手的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_80a",
+  "name": "四脉·坚壁胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_leg_80a",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_80a",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·坚壁胫甲的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_80b",
+  "name": "四脉·疾行胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_leg_80b",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_80b",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·疾行胫甲的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_80c",
+  "name": "四脉·破势胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_leg_80c",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_80c",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·破势胫甲的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_leg_80d",
+  "name": "四脉·灵纹胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_leg_80d",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_80d",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·灵纹胫甲的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_80a",
+  "name": "四脉·坚壁战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_foot_80a",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_80a",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·坚壁战靴的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_80b",
+  "name": "四脉·疾行战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_foot_80b",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_80b",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·疾行战靴的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_80c",
+  "name": "四脉·破势战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_foot_80c",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_80c",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·破势战靴的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ar_foot_80d",
+  "name": "四脉·灵纹战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_foot_80d",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_80d",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·灵纹战靴的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_1a",
+  "name": "试炼·护命符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ac_1a",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_1a",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼·护命符的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_1b",
+  "name": "试炼·鸿运符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ac_1b",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_1b",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼·鸿运符的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_1c",
+  "name": "试炼·疾影符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ac_1c",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_1c",
+  "blueprint_level_band": {
+   "min": 1,
+   "max": 10
+  },
+  "blueprint_cost_cap": 247,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造试炼·疾影符的图纸（1 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_10a",
+  "name": "淬脉·护命符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ac_10a",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_10a",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉·护命符的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_10b",
+  "name": "淬脉·鸿运符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ac_10b",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_10b",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉·鸿运符的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_10c",
+  "name": "淬脉·疾影符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "铜",
+  "blueprint_output": "ac_10c",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_10c",
+  "blueprint_level_band": {
+   "min": 10,
+   "max": 19
+  },
+  "blueprint_cost_cap": 260,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "herb",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造淬脉·疾影符的图纸（10 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_20a",
+  "name": "脉纹·护命符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ac_20a",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_20a",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹·护命符的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_20b",
+  "name": "脉纹·鸿运符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ac_20b",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_20b",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹·鸿运符的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_20c",
+  "name": "脉纹·疾影符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ac_20c",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_20c",
+  "blueprint_level_band": {
+   "min": 20,
+   "max": 29
+  },
+  "blueprint_cost_cap": 269,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "ore",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造脉纹·疾影符的图纸（20 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_30a",
+  "name": "沉脉·护命符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ac_30a",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_30a",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉·护命符的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_30b",
+  "name": "沉脉·鸿运符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ac_30b",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_30b",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉·鸿运符的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_30c",
+  "name": "沉脉·疾影符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "银",
+  "blueprint_output": "ac_30c",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_30c",
+  "blueprint_level_band": {
+   "min": 30,
+   "max": 39
+  },
+  "blueprint_cost_cap": 276,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "bone",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造沉脉·疾影符的图纸（30 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_40a",
+  "name": "裂脉·护命符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ac_40a",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_40a",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉·护命符的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_40b",
+  "name": "裂脉·鸿运符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ac_40b",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_40b",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉·鸿运符的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_40c",
+  "name": "裂脉·疾影符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ac_40c",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_40c",
+  "blueprint_level_band": {
+   "min": 40,
+   "max": 49
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "bone",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造裂脉·疾影符的图纸（40 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_50a",
+  "name": "幽脉·护命符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ac_50a",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_50a",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉·护命符的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_50b",
+  "name": "幽脉·鸿运符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ac_50b",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_50b",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉·鸿运符的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_50c",
+  "name": "幽脉·疾影符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ac_50c",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_50c",
+  "blueprint_level_band": {
+   "min": 50,
+   "max": 59
+  },
+  "blueprint_cost_cap": 288,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "ore",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造幽脉·疾影符的图纸（50 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_60a",
+  "name": "断层·护命符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ac_60a",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_60a",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层·护命符的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_60b",
+  "name": "断层·鸿运符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ac_60b",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_60b",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层·鸿运符的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_60c",
+  "name": "断层·疾影符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "金",
+  "blueprint_output": "ac_60c",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_60c",
+  "blueprint_level_band": {
+   "min": 60,
+   "max": 69
+  },
+  "blueprint_cost_cap": 4180,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "arcane",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造断层·疾影符的图纸（60 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_70a",
+  "name": "渊纹·护命符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ac_70a",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_70a",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹·护命符的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_70b",
+  "name": "渊纹·鸿运符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ac_70b",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_70b",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹·鸿运符的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_70c",
+  "name": "渊纹·疾影符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ac_70c",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_70c",
+  "blueprint_level_band": {
+   "min": 70,
+   "max": 79
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "hide",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造渊纹·疾影符的图纸（70 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_80a",
+  "name": "四脉·护命符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ac_80a",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_80a",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·护命符的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_80b",
+  "name": "四脉·鸿运符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ac_80b",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_80b",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·鸿运符的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "bp_ac_80c",
+  "name": "四脉·疾影符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ac_80c",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_80c",
+  "blueprint_level_band": {
+   "min": 80,
+   "max": 89
+  },
+  "blueprint_cost_cap": 4660,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "crystal",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "hide",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·疾影符的图纸（80 级档）。材料越好，成品越强。"
  }
 ]

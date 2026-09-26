@@ -1,1 +1,2068 @@
-[]
+[
+ {
+  "id": "mq01",
+  "name": "试炼入门",
+  "type": "试炼",
+  "zone": "wild_ridge",
+  "desc": "试炼入门：完成下列条件后向 npc_guide 复命。",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 3,
+    "param": "dust_rat"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 60
+   },
+   {
+    "coins": 40
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 60
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 60
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_guide"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq02",
+  "name": "荒原清剿",
+  "type": "讨伐",
+  "zone": "wild_ridge",
+  "desc": "荒原清剿：完成下列条件后向 npc_guide 复命。",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 3,
+    "param": "fang_lizard"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 120
+   },
+   {
+    "coins": 80
+   },
+   {
+    "item": "pot_small",
+    "count": 2
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 160
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 80
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_guide"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq03",
+  "name": "猎犬成群",
+  "type": "讨伐",
+  "zone": "wild_ridge",
+  "desc": "猎犬成群：完成下列条件后向 npc_guide 复命。",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 2,
+    "param": "ridge_hound"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 160
+   },
+   {
+    "coins": 100
+   },
+   {
+    "item": "pot_small",
+    "count": 2
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 360
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 180
+    }
+   },
+   {
+    "prof": {
+     "job": "alchemy",
+     "exp": 180
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_guide"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq04",
+  "name": "刃甲试炼",
+  "type": "讨伐",
+  "zone": "slash_ground",
+  "desc": "刃甲试炼：完成下列条件后向 npc_smith 复命。",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 3,
+    "param": "blade_beetle"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 220
+   },
+   {
+    "coins": 140
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 640
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 320
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_smith"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq05",
+  "name": "守卫之刃",
+  "type": "讨伐",
+  "zone": "slash_ground",
+  "desc": "守卫之刃：完成下列条件后向 npc_smith 复命。",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 1,
+    "param": "blade_warden"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 300
+   },
+   {
+    "coins": 200
+   },
+   {
+    "item": "wp_sword_10",
+    "count": 1
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 1000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 500
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_smith"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq06",
+  "name": "荒兽皮革",
+  "type": "采集",
+  "zone": "wild_ridge",
+  "desc": "荒兽皮革：完成下列条件后向 npc_supply 复命。",
+  "conditions": [
+   {
+    "var": "item_count",
+    "op": "ge",
+    "value": 3,
+    "param": "mat_common_hide"
+   },
+   {
+    "var": "level",
+    "op": "ge",
+    "value": 5
+   }
+  ],
+  "reward": [
+   {
+    "exp": 200
+   },
+   {
+    "coins": 160
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 1440
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 720
+    }
+   },
+   {
+    "prof": {
+     "job": "alchemy",
+     "exp": 720
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_supply"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq07",
+  "name": "脉纹采集",
+  "type": "采集",
+  "zone": "vein_hill",
+  "desc": "脉纹采集：完成下列条件后向 npc_herbalist 复命。",
+  "conditions": [
+   {
+    "var": "item_count",
+    "op": "ge",
+    "value": 5,
+    "param": "viv_herb"
+   },
+   {
+    "var": "level",
+    "op": "ge",
+    "value": 12
+   }
+  ],
+  "reward": [
+   {
+    "exp": 600
+   },
+   {
+    "coins": 400
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 1960
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 980
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_herbalist"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq08",
+  "name": "蛾群清剿",
+  "type": "讨伐",
+  "zone": "vein_hill",
+  "desc": "蛾群清剿：完成下列条件后向 npc_herbalist 复命。",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 4,
+    "param": "vein_moth"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 700
+   },
+   {
+    "coins": 420
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 2560
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 1280
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_herbalist"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq09",
+  "name": "野猪成灾",
+  "type": "讨伐",
+  "zone": "vein_hill",
+  "desc": "野猪成灾：完成下列条件后向 npc_herbalist 复命。",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 3,
+    "param": "gravel_boar"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 800
+   },
+   {
+    "coins": 500
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 3240
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 1620
+    }
+   },
+   {
+    "prof": {
+     "job": "alchemy",
+     "exp": 1620
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_herbalist"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq10",
+  "name": "采石场的麻烦",
+  "type": "讨伐",
+  "zone": "quarry_pit",
+  "desc": "采石场的麻烦：完成下列条件后向 npc_quarryman 复命。",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 3,
+    "param": "stone_crab"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 900
+   },
+   {
+    "coins": 560
+   },
+   {
+    "item": "ar_head_20a",
+    "count": 1
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 4000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 2000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_quarryman"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq11",
+  "name": "砾灵之核",
+  "type": "采集",
+  "zone": "quarry_pit",
+  "desc": "砾灵之核：完成下列条件后向 npc_quarryman 复命。",
+  "conditions": [
+   {
+    "var": "item_count",
+    "op": "ge",
+    "value": 3,
+    "param": "mat_magic_crystal"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 950
+   },
+   {
+    "coins": 600
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 4840
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 2420
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_quarryman"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq12",
+  "name": "巨像试炼",
+  "type": "讨伐",
+  "zone": "quarry_pit",
+  "desc": "巨像试炼：完成下列条件后向 npc_quarryman 复命。",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 1,
+    "param": "quarry_titan"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 1400
+   },
+   {
+    "coins": 900
+   },
+   {
+    "item": "wp_hammer_10",
+    "count": 1
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 5760
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 2880
+    }
+   },
+   {
+    "prof": {
+     "job": "alchemy",
+     "exp": 2880
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_quarryman"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq13",
+  "name": "断崖之跃",
+  "type": "讨伐",
+  "zone": "broken_canyon",
+  "desc": "断崖之跃：完成下列条件后向 npc_guide2 复命。",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 4,
+    "param": "cliff_goat"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 1000
+   },
+   {
+    "coins": 620
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_guide2"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq14",
+  "name": "峡谷潜行者",
+  "type": "讨伐",
+  "zone": "broken_canyon",
+  "desc": "峡谷潜行者：完成下列条件后向 npc_guide2 复命。",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 1,
+    "param": "canyon_stalker"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 1600
+   },
+   {
+    "coins": 1000
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_guide2"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq15",
+  "name": "裂谷初探",
+  "type": "试炼",
+  "zone": "rift_mouth",
+  "desc": "裂谷初探：完成下列条件后向 npc_rift_keeper 复命。",
+  "conditions": [
+   {
+    "var": "level",
+    "op": "ge",
+    "value": 32
+   }
+  ],
+  "reward": [
+   {
+    "exp": 1800
+   },
+   {
+    "coins": 1200
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   },
+   {
+    "prof": {
+     "job": "alchemy",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_rift_keeper"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq16",
+  "name": "蝠群驱散",
+  "type": "讨伐",
+  "zone": "rift_mouth",
+  "desc": "蝠群驱散：完成下列条件后向 npc_rift_keeper 复命。",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 5,
+    "param": "rift_bat"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 2200
+   },
+   {
+    "coins": 1400
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_rift_keeper"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq17",
+  "name": "亚龙之鳞",
+  "type": "讨伐",
+  "zone": "rift_mouth",
+  "desc": "亚龙之鳞：完成下列条件后向 npc_rift_keeper 复命。",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 1,
+    "param": "rift_wyrm"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 3200
+   },
+   {
+    "coins": 2000
+   },
+   {
+    "item": "ar_body_30a",
+    "count": 1
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_rift_keeper"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq18",
+  "name": "幽菌采集",
+  "type": "采集",
+  "zone": "gloom_cave",
+  "desc": "幽菌采集：完成下列条件后向 npc_caver 复命。",
+  "conditions": [
+   {
+    "var": "item_count",
+    "op": "ge",
+    "value": 6,
+    "param": "mat_magic_crystal"
+   },
+   {
+    "var": "level",
+    "op": "ge",
+    "value": 38
+   }
+  ],
+  "reward": [
+   {
+    "exp": 2400
+   },
+   {
+    "coins": 1500
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   },
+   {
+    "prof": {
+     "job": "alchemy",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_caver"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq19",
+  "name": "穴蛛清巢",
+  "type": "讨伐",
+  "zone": "gloom_cave",
+  "desc": "穴蛛清巢：完成下列条件后向 npc_caver 复命。",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 4,
+    "param": "cave_spider"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 2600
+   },
+   {
+    "coins": 1600
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_caver"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq20",
+  "name": "幽脉守望",
+  "type": "讨伐",
+  "zone": "gloom_cave",
+  "desc": "幽脉守望：完成下列条件后向 npc_caver 复命。",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 1,
+    "param": "gloom_warden"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 3600
+   },
+   {
+    "coins": 2200
+   },
+   {
+    "item": "wp_spear_30",
+    "count": 1
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_caver"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq21",
+  "name": "断层狼群",
+  "type": "讨伐",
+  "zone": "fault_ledge",
+  "desc": "断层狼群：完成下列条件后向 npc_ledge_watch 复命。",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 4,
+    "param": "ledge_wolf"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 2800
+   },
+   {
+    "coins": 1700
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   },
+   {
+    "prof": {
+     "job": "alchemy",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_ledge_watch"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq22",
+  "name": "断层暴君",
+  "type": "讨伐",
+  "zone": "fault_ledge",
+  "desc": "击破断层暴君，取得进入脉心试炼的资格。",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 1,
+    "param": "fault_tyrant"
+   },
+   {
+    "var": "level",
+    "op": "ge",
+    "value": 48
+   }
+  ],
+  "reward": [
+   {
+    "exp": 5000
+   },
+   {
+    "coins": 3000
+   },
+   {
+    "item": "key_gate_token",
+    "count": 1
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_ledge_watch"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq23",
+  "name": "禁地外围",
+  "type": "试炼",
+  "zone": "sanctum_outskirt",
+  "desc": "禁地外围：完成下列条件后向 npc_sanctum_clerk 复命。",
+  "conditions": [
+   {
+    "var": "level",
+    "op": "ge",
+    "value": 55
+   }
+  ],
+  "reward": [
+   {
+    "exp": 6000
+   },
+   {
+    "coins": 3600
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_sanctum_clerk"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq24",
+  "name": "石像巡逻线",
+  "type": "讨伐",
+  "zone": "sanctum_outskirt",
+  "desc": "石像巡逻线：完成下列条件后向 npc_sanctum_clerk 复命。",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 3,
+    "param": "sentry_golem"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 7000
+   },
+   {
+    "coins": 4200
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   },
+   {
+    "prof": {
+     "job": "alchemy",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_sanctum_clerk"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq25",
+  "name": "残骸猎犬",
+  "type": "讨伐",
+  "zone": "sanctum_outskirt",
+  "desc": "残骸猎犬：完成下列条件后向 npc_sanctum_clerk 复命。",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 3,
+    "param": "ruin_hound"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 7500
+   },
+   {
+    "coins": 4400
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_sanctum_clerk"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq26",
+  "name": "禁地守卫",
+  "type": "讨伐",
+  "zone": "sanctum_outskirt",
+  "desc": "禁地守卫：完成下列条件后向 npc_sanctum_clerk 复命。",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 1,
+    "param": "sanctum_guardian"
+   },
+   {
+    "var": "level",
+    "op": "ge",
+    "value": 62
+   }
+  ],
+  "reward": [
+   {
+    "exp": 11000
+   },
+   {
+    "coins": 6600
+   },
+   {
+    "item": "key_altar_token",
+    "count": 1
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_sanctum_clerk"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq27",
+  "name": "脉光游灵",
+  "type": "讨伐",
+  "zone": "four_veins_cross",
+  "desc": "脉光游灵：完成下列条件后向 npc_elder 复命。",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 3,
+    "param": "vein_wisp"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 9000
+   },
+   {
+    "coins": 5400
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   },
+   {
+    "prof": {
+     "job": "alchemy",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_elder"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq28",
+  "name": "四脉化身",
+  "type": "讨伐",
+  "zone": "four_altars",
+  "desc": "四脉化身：完成下列条件后向 npc_elder 复命。",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 1,
+    "param": "four_veins_avatar"
+   },
+   {
+    "var": "level",
+    "op": "ge",
+    "value": 72
+   }
+  ],
+  "reward": [
+   {
+    "exp": 18000
+   },
+   {
+    "coins": 11000
+   },
+   {
+    "item": "ar_body_60a",
+    "count": 1
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_elder"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq29",
+  "name": "影卫试炼",
+  "type": "讨伐",
+  "zone": "trial_hall",
+  "desc": "影卫试炼：完成下列条件后向 npc_elder 复命。",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 3,
+    "param": "trial_shade"
+   },
+   {
+    "var": "level",
+    "op": "ge",
+    "value": 78
+   }
+  ],
+  "reward": [
+   {
+    "exp": 16000
+   },
+   {
+    "coins": 10000
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_elder"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "mq30",
+  "name": "四脉终试",
+  "type": "试炼",
+  "zone": "trial_hall",
+  "desc": "抵达 85 级，完成四脉试炼，取得脉核令。",
+  "conditions": [
+   {
+    "var": "level",
+    "op": "ge",
+    "value": 85
+   }
+  ],
+  "reward": [
+   {
+    "exp": 30000
+   },
+   {
+    "coins": 20000
+   },
+   {
+    "item": "key_core_token",
+    "count": 1
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   },
+   {
+    "prof": {
+     "job": "alchemy",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_elder"
+  },
+  "main": true,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "eq01",
+  "name": "满级·脉门试炼",
+  "type": "通关",
+  "zone": "endgame_gate",
+  "desc": "通关副本「脉门试炼」。",
+  "conditions": [
+   {
+    "var": "dungeon_clear",
+    "op": "eq",
+    "value": 1,
+    "param": "dg_gate"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 46000
+   },
+   {
+    "coins": 28000
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_core_keeper"
+  },
+  "main": false,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "eq02",
+  "name": "满级·深窟讨伐",
+  "type": "通关",
+  "zone": "endgame_gate",
+  "desc": "通关副本「深窟讨伐」。",
+  "conditions": [
+   {
+    "var": "dungeon_clear",
+    "op": "eq",
+    "value": 1,
+    "param": "dg_depths"
+   },
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 1,
+    "param": "sanctum_devourer"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 52000
+   },
+   {
+    "coins": 32000
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_core_keeper"
+  },
+  "main": false,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "eq03",
+  "name": "满级·回响讨伐",
+  "type": "通关",
+  "zone": "endgame_gate",
+  "desc": "通关副本「回响讨伐」。",
+  "conditions": [
+   {
+    "var": "dungeon_clear",
+    "op": "eq",
+    "value": 1,
+    "param": "dg_echo"
+   },
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 1,
+    "param": "echo_chorus"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 58000
+   },
+   {
+    "coins": 36000
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   },
+   {
+    "prof": {
+     "job": "alchemy",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_core_keeper"
+  },
+  "main": false,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "eq04",
+  "name": "满级·四脉祭坛战",
+  "type": "通关",
+  "zone": "endgame_gate",
+  "desc": "通关副本「四脉祭坛战」。",
+  "conditions": [
+   {
+    "var": "dungeon_clear",
+    "op": "eq",
+    "value": 1,
+    "param": "dg_altars"
+   },
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 1,
+    "param": "four_veins_avatar"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 64000
+   },
+   {
+    "coins": 40000
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_core_keeper"
+  },
+  "main": false,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "eq05",
+  "name": "满级·渊脉讨伐",
+  "type": "通关",
+  "zone": "endgame_gate",
+  "desc": "通关副本「渊脉讨伐」。",
+  "conditions": [
+   {
+    "var": "dungeon_clear",
+    "op": "eq",
+    "value": 1,
+    "param": "dg_abyss"
+   },
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 1,
+    "param": "abyss_sovereign"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 70000
+   },
+   {
+    "coins": 44000
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_core_keeper"
+  },
+  "main": false,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "eq06",
+  "name": "满级·脉核决战",
+  "type": "通关",
+  "zone": "endgame_gate",
+  "desc": "通关副本「脉核决战」。",
+  "conditions": [
+   {
+    "var": "dungeon_clear",
+    "op": "eq",
+    "value": 1,
+    "param": "dg_core"
+   },
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 1,
+    "param": "vein_core_tyrant"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 76000
+   },
+   {
+    "coins": 48000
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   },
+   {
+    "prof": {
+     "job": "alchemy",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_core_keeper"
+  },
+  "main": false,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "eq07",
+  "name": "满级·材料采办",
+  "type": "采集",
+  "zone": "endgame_gate",
+  "desc": "满级·材料采办：完成下列条件后向 npc_material_shop 复命。",
+  "conditions": [
+   {
+    "var": "item_count",
+    "op": "ge",
+    "value": 10,
+    "param": "mat_core_shard"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 50000
+   },
+   {
+    "coins": 30000
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_material_shop"
+  },
+  "main": false,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "eq08",
+  "name": "满级·渊脉鳞收集",
+  "type": "采集",
+  "zone": "endgame_gate",
+  "desc": "满级·渊脉鳞收集：完成下列条件后向 npc_material_shop 复命。",
+  "conditions": [
+   {
+    "var": "item_count",
+    "op": "ge",
+    "value": 8,
+    "param": "mat_abyss_scale"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 52000
+   },
+   {
+    "coins": 32000
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_material_shop"
+  },
+  "main": false,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "eq09",
+  "name": "满级·祭坛残片",
+  "type": "采集",
+  "zone": "endgame_gate",
+  "desc": "满级·祭坛残片：完成下列条件后向 npc_material_shop 复命。",
+  "conditions": [
+   {
+    "var": "item_count",
+    "op": "ge",
+    "value": 8,
+    "param": "mat_altar_relic"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 52000
+   },
+   {
+    "coins": 32000
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   },
+   {
+    "prof": {
+     "job": "alchemy",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_material_shop"
+  },
+  "main": false,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "eq10",
+  "name": "满级·回响尘",
+  "type": "采集",
+  "zone": "endgame_gate",
+  "desc": "满级·回响尘：完成下列条件后向 npc_material_shop 复命。",
+  "conditions": [
+   {
+    "var": "item_count",
+    "op": "ge",
+    "value": 8,
+    "param": "mat_echo_dust"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 52000
+   },
+   {
+    "coins": 32000
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_material_shop"
+  },
+  "main": false,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "eq11",
+  "name": "满级·四脉武器",
+  "type": "采集",
+  "zone": "endgame_gate",
+  "desc": "满级·四脉武器：完成下列条件后向 npc_material_shop 复命。",
+  "conditions": [
+   {
+    "var": "item_count",
+    "op": "ge",
+    "value": 20,
+    "param": "mat_core_shard"
+   },
+   {
+    "var": "level",
+    "op": "ge",
+    "value": 85
+   }
+  ],
+  "reward": [
+   {
+    "exp": 80000
+   },
+   {
+    "coins": 60000
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_material_shop"
+  },
+  "main": false,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "eq12",
+  "name": "满级·四脉镇岳",
+  "type": "采集",
+  "zone": "endgame_gate",
+  "desc": "满级·四脉镇岳：完成下列条件后向 npc_material_shop 复命。",
+  "conditions": [
+   {
+    "var": "item_count",
+    "op": "ge",
+    "value": 20,
+    "param": "mat_abyss_scale"
+   },
+   {
+    "var": "level",
+    "op": "ge",
+    "value": 85
+   }
+  ],
+  "reward": [
+   {
+    "exp": 80000
+   },
+   {
+    "coins": 60000
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   },
+   {
+    "prof": {
+     "job": "alchemy",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_material_shop"
+  },
+  "main": false,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "eq13",
+  "name": "满级·四脉天枪",
+  "type": "采集",
+  "zone": "endgame_gate",
+  "desc": "满级·四脉天枪：完成下列条件后向 npc_material_shop 复命。",
+  "conditions": [
+   {
+    "var": "item_count",
+    "op": "ge",
+    "value": 30,
+    "param": "mat_pierce_bone"
+   },
+   {
+    "var": "level",
+    "op": "ge",
+    "value": 85
+   }
+  ],
+  "reward": [
+   {
+    "exp": 80000
+   },
+   {
+    "coins": 60000
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_material_shop"
+  },
+  "main": false,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "eq14",
+  "name": "满级·四脉法杖",
+  "type": "采集",
+  "zone": "endgame_gate",
+  "desc": "满级·四脉法杖：完成下列条件后向 npc_material_shop 复命。",
+  "conditions": [
+   {
+    "var": "item_count",
+    "op": "ge",
+    "value": 30,
+    "param": "mat_magic_crystal"
+   },
+   {
+    "var": "level",
+    "op": "ge",
+    "value": 85
+   }
+  ],
+  "reward": [
+   {
+    "exp": 80000
+   },
+   {
+    "coins": 60000
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_material_shop"
+  },
+  "main": false,
+  "consume": false,
+  "repeatable": false
+ },
+ {
+  "id": "eq15",
+  "name": "满级·脉核霸权",
+  "type": "通关",
+  "zone": "endgame_gate",
+  "desc": "击破脉核霸主，四脉试炼彻底通关。",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 1,
+    "param": "vein_core_tyrant"
+   },
+   {
+    "var": "level",
+    "op": "ge",
+    "value": 85
+   }
+  ],
+  "reward": [
+   {
+    "exp": 200000
+   },
+   {
+    "coins": 120000
+   },
+   {
+    "prof": {
+     "job": "forge",
+     "exp": 6000
+    }
+   },
+   {
+    "prof": {
+     "job": "gather",
+     "exp": 3000
+    }
+   },
+   {
+    "prof": {
+     "job": "alchemy",
+     "exp": 3000
+    }
+   }
+  ],
+  "npc": {
+   "id": "npc_core_keeper"
+  },
+  "main": false,
+  "consume": false,
+  "repeatable": false
+ }
+]

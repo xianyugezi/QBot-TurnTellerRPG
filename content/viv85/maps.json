@@ -10,7 +10,35 @@
     "mode": "bidirectional"
    }
   },
-  "mechanics": []
+  "mechanics": [],
+  "npcs": [
+   "npc_guide",
+   "npc_supply"
+  ],
+  "gather_points": [
+   {
+    "id": "gp_trial_court_a",
+    "name": "药草丛",
+    "item": "viv_herb",
+    "rate": 0.85,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   },
+   {
+    "id": "gp_trial_court_b",
+    "name": "锋利矿脉",
+    "item": "mat_slash_ore",
+    "rate": 0.6,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   }
+  ]
  },
  {
   "id": "wild_ridge",
@@ -48,7 +76,31 @@
     "mode": "bidirectional"
    }
   },
-  "mechanics": []
+  "mechanics": [],
+  "gather_points": [
+   {
+    "id": "gp_wild_ridge_a",
+    "name": "药草丛",
+    "item": "viv_herb",
+    "rate": 0.85,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   },
+   {
+    "id": "gp_wild_ridge_b",
+    "name": "兽巢",
+    "item": "mat_common_hide",
+    "rate": 0.5,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   }
+  ]
  },
  {
   "id": "slash_ground",
@@ -81,7 +133,34 @@
     "mode": "bidirectional"
    }
   },
-  "mechanics": []
+  "mechanics": [],
+  "npcs": [
+   "npc_smith"
+  ],
+  "gather_points": [
+   {
+    "id": "gp_slash_ground_a",
+    "name": "锋利矿脉",
+    "item": "mat_slash_ore",
+    "rate": 0.8,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   },
+   {
+    "id": "gp_slash_ground_b",
+    "name": "锋利矿脉",
+    "item": "mat_slash_ore",
+    "rate": 0.5,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   }
+  ]
  },
  {
   "id": "vein_hill",
@@ -113,7 +192,34 @@
     "mode": "bidirectional"
    }
   },
-  "mechanics": []
+  "mechanics": [],
+  "npcs": [
+   "npc_herbalist"
+  ],
+  "gather_points": [
+   {
+    "id": "gp_vein_hill_a",
+    "name": "药草丛",
+    "item": "viv_herb",
+    "rate": 0.85,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   },
+   {
+    "id": "gp_vein_hill_b",
+    "name": "沉岩堆",
+    "item": "mat_blunt_rock",
+    "rate": 0.7,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   }
+  ]
  },
  {
   "id": "quarry_pit",
@@ -146,7 +252,34 @@
     "mode": "one_way"
    }
   },
-  "mechanics": []
+  "mechanics": [],
+  "npcs": [
+   "npc_quarryman"
+  ],
+  "gather_points": [
+   {
+    "id": "gp_quarry_pit_a",
+    "name": "沉岩堆",
+    "item": "mat_blunt_rock",
+    "rate": 0.85,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   },
+   {
+    "id": "gp_quarry_pit_b",
+    "name": "骸骨堆",
+    "item": "mat_pierce_bone",
+    "rate": 0.6,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   }
+  ]
  },
  {
   "id": "broken_canyon",
@@ -174,7 +307,34 @@
     "mode": "bidirectional"
    }
   },
-  "mechanics": []
+  "mechanics": [],
+  "npcs": [
+   "npc_guide2"
+  ],
+  "gather_points": [
+   {
+    "id": "gp_broken_canyon_a",
+    "name": "骸骨堆",
+    "item": "mat_pierce_bone",
+    "rate": 0.8,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   },
+   {
+    "id": "gp_broken_canyon_b",
+    "name": "锋利矿脉",
+    "item": "mat_slash_ore",
+    "rate": 0.6,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   }
+  ]
  },
  {
   "id": "rift_mouth",
@@ -202,7 +362,34 @@
     "mode": "bidirectional"
    }
   },
-  "mechanics": []
+  "mechanics": [],
+  "npcs": [
+   "npc_rift_keeper"
+  ],
+  "gather_points": [
+   {
+    "id": "gp_rift_mouth_a",
+    "name": "骸骨堆",
+    "item": "mat_pierce_bone",
+    "rate": 0.8,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   },
+   {
+    "id": "gp_rift_mouth_b",
+    "name": "灵晶簇",
+    "item": "mat_magic_crystal",
+    "rate": 0.5,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   }
+  ]
  },
  {
   "id": "gloom_cave",
@@ -235,7 +422,34 @@
     "mode": "bidirectional"
    }
   },
-  "mechanics": []
+  "mechanics": [],
+  "npcs": [
+   "npc_caver"
+  ],
+  "gather_points": [
+   {
+    "id": "gp_gloom_cave_a",
+    "name": "灵晶簇",
+    "item": "mat_magic_crystal",
+    "rate": 0.8,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   },
+   {
+    "id": "gp_gloom_cave_b",
+    "name": "药草丛",
+    "item": "viv_herb",
+    "rate": 0.7,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   }
+  ]
  },
  {
   "id": "fault_ledge",
@@ -263,7 +477,34 @@
     "mode": "bidirectional"
    }
   },
-  "mechanics": []
+  "mechanics": [],
+  "npcs": [
+   "npc_ledge_watch"
+  ],
+  "gather_points": [
+   {
+    "id": "gp_fault_ledge_a",
+    "name": "灵晶簇",
+    "item": "mat_magic_crystal",
+    "rate": 0.7,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   },
+   {
+    "id": "gp_fault_ledge_b",
+    "name": "沉岩堆",
+    "item": "mat_blunt_rock",
+    "rate": 0.7,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   }
+  ]
  },
  {
   "id": "sanctum_outskirt",
@@ -296,7 +537,34 @@
     "mode": "bidirectional"
    }
   },
-  "mechanics": []
+  "mechanics": [],
+  "npcs": [
+   "npc_sanctum_clerk"
+  ],
+  "gather_points": [
+   {
+    "id": "gp_sanctum_outskirt_a",
+    "name": "灵晶簇",
+    "item": "mat_magic_crystal",
+    "rate": 0.7,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   },
+   {
+    "id": "gp_sanctum_outskirt_b",
+    "name": "回响尘堆",
+    "item": "mat_echo_dust",
+    "rate": 0.35,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   }
+  ]
  },
  {
   "id": "four_veins_cross",
@@ -319,7 +587,34 @@
     "mode": "bidirectional"
    }
   },
-  "mechanics": []
+  "mechanics": [],
+  "npcs": [
+   "npc_elder"
+  ],
+  "gather_points": [
+   {
+    "id": "gp_four_veins_cross_a",
+    "name": "回响尘堆",
+    "item": "mat_echo_dust",
+    "rate": 0.4,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   },
+   {
+    "id": "gp_four_veins_cross_b",
+    "name": "祭坛残迹",
+    "item": "mat_altar_relic",
+    "rate": 0.3,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   }
+  ]
  },
  {
   "id": "trial_hall",
@@ -342,7 +637,23 @@
     "mode": "bidirectional"
    }
   },
-  "mechanics": []
+  "mechanics": [],
+  "npcs": [
+   "npc_trial_recorder"
+  ],
+  "gather_points": [
+   {
+    "id": "gp_trial_hall_a",
+    "name": "祭坛残迹",
+    "item": "mat_altar_relic",
+    "rate": 0.35,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   }
+  ]
  },
  {
   "id": "endgame_gate",
@@ -359,7 +670,51 @@
     "to": "sanctum_depths",
     "mode": "bidirectional"
    }
-  }
+  },
+  "npcs": [
+   "npc_core_keeper",
+   "npc_material_shop",
+   "npc_core_recorder"
+  ],
+  "dungeon_entrances": [
+   {
+    "dungeon": "dg_gate",
+    "name": "脉门试炼"
+   },
+   {
+    "dungeon": "dg_depths",
+    "name": "深窟讨伐"
+   },
+   {
+    "dungeon": "dg_echo",
+    "name": "回响讨伐"
+   },
+   {
+    "dungeon": "dg_altars",
+    "name": "四脉祭坛战"
+   },
+   {
+    "dungeon": "dg_abyss",
+    "name": "渊脉讨伐"
+   },
+   {
+    "dungeon": "dg_core",
+    "name": "脉核决战"
+   }
+  ],
+  "gather_points": [
+   {
+    "id": "gp_endgame_gate_a",
+    "name": "脉核碎堆",
+    "item": "mat_core_shard",
+    "rate": 0.3,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   }
+  ]
  },
  {
   "id": "sanctum_depths",
@@ -391,7 +746,31 @@
     "to": "four_altars",
     "mode": "bidirectional"
    }
-  }
+  },
+  "gather_points": [
+   {
+    "id": "gp_sanctum_depths_a",
+    "name": "脉核碎堆",
+    "item": "mat_core_shard",
+    "rate": 0.4,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   },
+   {
+    "id": "gp_sanctum_depths_b",
+    "name": "渊鳞残骸",
+    "item": "mat_abyss_scale",
+    "rate": 0.3,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   }
+  ]
  },
  {
   "id": "echo_hall",
@@ -419,7 +798,20 @@
     "to": "abyss_crevice",
     "mode": "bidirectional"
    }
-  }
+  },
+  "gather_points": [
+   {
+    "id": "gp_echo_hall_a",
+    "name": "回响尘堆",
+    "item": "mat_echo_dust",
+    "rate": 0.5,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   }
+  ]
  },
  {
   "id": "four_altars",
@@ -456,7 +848,20 @@
     "to": "vein_core",
     "mode": "bidirectional"
    }
-  }
+  },
+  "gather_points": [
+   {
+    "id": "gp_four_altars_a",
+    "name": "祭坛残迹",
+    "item": "mat_altar_relic",
+    "rate": 0.45,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   }
+  ]
  },
  {
   "id": "abyss_crevice",
@@ -493,7 +898,20 @@
     "to": "vein_core",
     "mode": "bidirectional"
    }
-  }
+  },
+  "gather_points": [
+   {
+    "id": "gp_abyss_crevice_a",
+    "name": "渊鳞残骸",
+    "item": "mat_abyss_scale",
+    "rate": 0.45,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   }
+  ]
  },
  {
   "id": "vein_core",
@@ -521,6 +939,30 @@
     "to": "four_altars",
     "mode": "bidirectional"
    }
-  }
+  },
+  "gather_points": [
+   {
+    "id": "gp_vein_core_a",
+    "name": "脉核碎堆",
+    "item": "mat_core_shard",
+    "rate": 0.5,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   },
+   {
+    "id": "gp_vein_core_b",
+    "name": "渊鳞残骸",
+    "item": "mat_abyss_scale",
+    "rate": 0.35,
+    "respawn_minutes": 10,
+    "seasons": [],
+    "periods": [],
+    "weather_mods": [],
+    "rarity": "normal"
+   }
+  ]
  }
 ]

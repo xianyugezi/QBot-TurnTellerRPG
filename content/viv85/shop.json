@@ -1,1 +1,188 @@
-[]
+[
+ {
+  "id": "shop_trial",
+  "name": "试炼补给铺",
+  "icon": "货",
+  "type": "normal",
+  "currency": "coins",
+  "desc": "试炼前庭的补给铺：药与基础材料（**不卖装备，装备靠图纸打造**）。",
+  "visible": true,
+  "items": [
+   {
+    "item": "pot_small",
+    "price": 60,
+    "stock": 99
+   },
+   {
+    "item": "pot_mid",
+    "price": 180,
+    "stock": 50
+   },
+   {
+    "item": "viv_herb",
+    "price": 30,
+    "stock": 99
+   },
+   {
+    "item": "mat_common_hide",
+    "price": 30,
+    "stock": 99
+   }
+  ]
+ },
+ {
+  "id": "shop_vein",
+  "name": "脉源杂货",
+  "icon": "杂",
+  "type": "normal",
+  "currency": "coins",
+  "desc": "脉源丘陵的杂货摊：药与一二区材料。",
+  "visible": true,
+  "level_required": 10,
+  "items": [
+   {
+    "item": "pot_small",
+    "price": 60,
+    "stock": 99
+   },
+   {
+    "item": "pot_mid",
+    "price": 180,
+    "stock": 50
+   },
+   {
+    "item": "mat_slash_ore",
+    "price": 60,
+    "stock": 99
+   },
+   {
+    "item": "mat_common_hide",
+    "price": 60,
+    "stock": 99
+   }
+  ]
+ },
+ {
+  "id": "shop_quarry",
+  "name": "采石工坊",
+  "icon": "石",
+  "type": "normal",
+  "currency": "coins",
+  "desc": "采石坑的工坊：材料铺（不卖成品装备）。",
+  "visible": true,
+  "level_required": 20,
+  "items": [
+   {
+    "item": "pot_mid",
+    "price": 180,
+    "stock": 50
+   },
+   {
+    "item": "mat_blunt_rock",
+    "price": 120,
+    "stock": 99
+   },
+   {
+    "item": "mat_pierce_bone",
+    "price": 120,
+    "stock": 99
+   }
+  ]
+ },
+ {
+  "id": "shop_rift",
+  "name": "裂谷驿站",
+  "icon": "驿",
+  "type": "normal",
+  "currency": "coins",
+  "desc": "裂谷口的驿站：药与三区材料。",
+  "visible": true,
+  "level_required": 35,
+  "items": [
+   {
+    "item": "pot_mid",
+    "price": 180,
+    "stock": 99
+   },
+   {
+    "item": "pot_high",
+    "price": 600,
+    "stock": 50
+   },
+   {
+    "item": "mat_pierce_bone",
+    "price": 300,
+    "stock": 99
+   },
+   {
+    "item": "mat_magic_crystal",
+    "price": 300,
+    "stock": 99
+   }
+  ]
+ },
+ {
+  "id": "shop_sanctum",
+  "name": "禁地货栈",
+  "icon": "栈",
+  "type": "normal",
+  "currency": "coins",
+  "desc": "禁地外围的货栈：四区材料与高级药。",
+  "visible": true,
+  "level_required": 55,
+  "items": [
+   {
+    "item": "pot_high",
+    "price": 600,
+    "stock": 99
+   },
+   {
+    "item": "mat_magic_crystal",
+    "price": 900,
+    "stock": 99
+   },
+   {
+    "item": "mat_echo_dust",
+    "price": 900,
+    "stock": 99
+   }
+  ]
+ },
+ {
+  "id": "shop_mat",
+  "name": "满级材料行",
+  "icon": "秤",
+  "type": "normal",
+  "currency": "coins",
+  "desc": "脉门关的材料行：满级药与满级材料。",
+  "visible": true,
+  "level_required": 85,
+  "items": [
+   {
+    "item": "pot_full",
+    "price": 1500,
+    "stock": 50
+   },
+   {
+    "item": "mat_core_shard",
+    "price": 1500,
+    "stock": 99
+   },
+   {
+    "item": "mat_echo_dust",
+    "price": 1500,
+    "stock": 99
+   },
+   {
+    "item": "mat_abyss_scale",
+    "price": 1500,
+    "stock": 99
+   },
+   {
+    "item": "mat_altar_relic",
+    "price": 1500,
+    "stock": 99
+   }
+  ]
+ }
+]

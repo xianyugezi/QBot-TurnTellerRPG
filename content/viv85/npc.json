@@ -1,1 +1,698 @@
-[]
+[
+ {
+  "id": "npc_guide",
+  "name": "试炼引导员·小试",
+  "icon": "引",
+  "map": "trial_court",
+  "type": "quest_giver",
+  "desc": "试炼前庭的引导员，负责给新人派活。",
+  "visible": true,
+  "dialogues": {
+   "greeting": "第一次来试炼？先从荒原径练手吧。",
+   "options": [
+    {
+     "text": "看看有什么委托",
+     "action": "quest",
+     "quests": [
+      {
+       "quest_id": "mq01"
+      },
+      {
+       "quest_id": "mq02"
+      },
+      {
+       "quest_id": "mq03"
+      }
+     ]
+    },
+    {
+     "text": "斩、打、突、魔四脉各有一路，选一路走到黑就是。",
+     "action": "reply"
+    },
+    {
+     "text": "离开"
+    }
+   ]
+  },
+  "quests": [
+   {
+    "quest_id": "mq01"
+   },
+   {
+    "quest_id": "mq02"
+   },
+   {
+    "quest_id": "mq03"
+   }
+  ]
+ },
+ {
+  "id": "npc_supply",
+  "name": "补给商·阿禾",
+  "icon": "货",
+  "map": "trial_court",
+  "type": "merchant",
+  "desc": "试炼前庭的补给商。",
+  "visible": true,
+  "dialogues": {
+   "greeting": "出门前带够药，别省这点钱。",
+   "options": [
+    {
+     "text": "看看货",
+     "action": "shop",
+     "shop_refs": [
+      "shop_trial"
+     ]
+    },
+    {
+     "text": "离开"
+    }
+   ]
+  },
+  "interactions": [
+   {
+    "action": "shop",
+    "text": "买东西",
+    "shop_refs": [
+     "shop_trial"
+    ]
+   }
+  ],
+  "shop_refs": [
+   "shop_trial"
+  ]
+ },
+ {
+  "id": "npc_smith",
+  "name": "铁匠·老锻",
+  "icon": "锤",
+  "map": "slash_ground",
+  "type": "merchant",
+  "desc": "斩脉试炼场的铁匠，兼修装备。",
+  "visible": true,
+  "dialogues": {
+   "greeting": "刃要常磨，人才不会钝。",
+   "options": [
+    {
+     "text": "看看武器",
+     "action": "shop",
+     "shop_refs": [
+      "shop_trial"
+     ]
+    },
+    {
+     "text": "打完一场就修，别等卷刃。",
+     "action": "reply"
+    },
+    {
+     "text": "离开"
+    }
+   ]
+  },
+  "interactions": [
+   {
+    "action": "repair",
+    "text": "修理装备",
+    "cost": {
+     "coins": 50
+    }
+   }
+  ],
+  "quests": [
+   {
+    "quest_id": "mq04"
+   },
+   {
+    "quest_id": "mq05"
+   }
+  ],
+  "shop_refs": [
+   "shop_trial"
+  ]
+ },
+ {
+  "id": "npc_herbalist",
+  "name": "采药人·青姨",
+  "icon": "草",
+  "map": "vein_hill",
+  "type": "quest_giver",
+  "desc": "脉源丘陵的采药人，认得所有脉纹草。",
+  "visible": true,
+  "dialogues": {
+   "greeting": "丘陵的脉纹夜里会亮，采药要趁那时候。",
+   "options": [
+    {
+     "text": "有什么活",
+     "action": "quest",
+     "quests": [
+      {
+       "quest_id": "mq07"
+      },
+      {
+       "quest_id": "mq08"
+      },
+      {
+       "quest_id": "mq09"
+      }
+     ]
+    },
+    {
+     "text": "离开"
+    }
+   ]
+  },
+  "quests": [
+   {
+    "quest_id": "mq07"
+   },
+   {
+    "quest_id": "mq08"
+   },
+   {
+    "quest_id": "mq09"
+   }
+  ]
+ },
+ {
+  "id": "npc_quarryman",
+  "name": "采石工·石三",
+  "icon": "石",
+  "map": "quarry_pit",
+  "type": "merchant",
+  "desc": "采石坑的老把式，卖石头也卖经验。",
+  "visible": true,
+  "dialogues": {
+   "greeting": "坑底那尊巨像，我劝你别惹。",
+   "options": [
+    {
+     "text": "看看货",
+     "action": "shop",
+     "shop_refs": [
+      "shop_quarry"
+     ]
+    },
+    {
+     "text": "离开"
+    }
+   ]
+  },
+  "interactions": [
+   {
+    "action": "shop",
+    "text": "买东西",
+    "shop_refs": [
+     "shop_quarry"
+    ]
+   }
+  ],
+  "quests": [
+   {
+    "quest_id": "mq10"
+   },
+   {
+    "quest_id": "mq11"
+   },
+   {
+    "quest_id": "mq12"
+   }
+  ],
+  "shop_refs": [
+   "shop_quarry"
+  ]
+ },
+ {
+  "id": "npc_guide2",
+  "name": "峡谷向导·风铃",
+  "icon": "铃",
+  "map": "broken_canyon",
+  "type": "quest_giver",
+  "desc": "破脉峡谷的向导，走崖壁如平地。",
+  "visible": true,
+  "dialogues": {
+   "greeting": "跟着我走，别往没绳子的地方去。",
+   "options": [
+    {
+     "text": "有什么活",
+     "action": "quest",
+     "quests": [
+      {
+       "quest_id": "mq13"
+      },
+      {
+       "quest_id": "mq14"
+      }
+     ]
+    },
+    {
+     "text": "离开"
+    }
+   ]
+  },
+  "quests": [
+   {
+    "quest_id": "mq13"
+   },
+   {
+    "quest_id": "mq14"
+   }
+  ]
+ },
+ {
+  "id": "npc_rift_keeper",
+  "name": "驿站老板·深戈",
+  "icon": "驿",
+  "map": "rift_mouth",
+  "type": "merchant",
+  "desc": "裂谷口的驿站老板，消息很灵。",
+  "visible": true,
+  "dialogues": {
+   "greeting": "裂谷里没有回头路，想清楚再下去。",
+   "options": [
+    {
+     "text": "看看货",
+     "action": "shop",
+     "shop_refs": [
+      "shop_rift"
+     ]
+    },
+    {
+     "text": "离开"
+    }
+   ]
+  },
+  "interactions": [
+   {
+    "action": "shop",
+    "text": "买东西",
+    "shop_refs": [
+     "shop_rift"
+    ]
+   }
+  ],
+  "quests": [
+   {
+    "quest_id": "mq15"
+   },
+   {
+    "quest_id": "mq16"
+   },
+   {
+    "quest_id": "mq17"
+   }
+  ],
+  "shop_refs": [
+   "shop_rift"
+  ]
+ },
+ {
+  "id": "npc_caver",
+  "name": "探路者·燃烛",
+  "icon": "烛",
+  "map": "gloom_cave",
+  "type": "quest_giver",
+  "desc": "幽脉洞窟的探路者，靠一根烛认路。",
+  "visible": true,
+  "dialogues": {
+   "greeting": "洞里别关灯，关了会听见不该听的。",
+   "options": [
+    {
+     "text": "有什么活",
+     "action": "quest",
+     "quests": [
+      {
+       "quest_id": "mq18"
+      },
+      {
+       "quest_id": "mq19"
+      },
+      {
+       "quest_id": "mq20"
+      }
+     ]
+    },
+    {
+     "text": "离开"
+    }
+   ]
+  },
+  "quests": [
+   {
+    "quest_id": "mq18"
+   },
+   {
+    "quest_id": "mq19"
+   },
+   {
+    "quest_id": "mq20"
+   }
+  ]
+ },
+ {
+  "id": "npc_ledge_watch",
+  "name": "断层守望·磐",
+  "icon": "磐",
+  "map": "fault_ledge",
+  "type": "quest_giver",
+  "desc": "守着断层平台的老兵。",
+  "visible": true,
+  "dialogues": {
+   "greeting": "暴君一怒吼，整条断层都会抖。",
+   "options": [
+    {
+     "text": "有什么活",
+     "action": "quest",
+     "quests": [
+      {
+       "quest_id": "mq21"
+      },
+      {
+       "quest_id": "mq22"
+      }
+     ]
+    },
+    {
+     "text": "离开"
+    }
+   ]
+  },
+  "quests": [
+   {
+    "quest_id": "mq21"
+   },
+   {
+    "quest_id": "mq22"
+   }
+  ]
+ },
+ {
+  "id": "npc_sanctum_clerk",
+  "name": "禁地书记·砚",
+  "icon": "砚",
+  "map": "sanctum_outskirt",
+  "type": "quest_giver",
+  "desc": "禁地外围的书记官，登记所有进出的猎者。",
+  "visible": true,
+  "dialogues": {
+   "greeting": "进去的人不少，出来的人不多。",
+   "options": [
+    {
+     "text": "登记并领委托",
+     "action": "quest",
+     "quests": [
+      {
+       "quest_id": "mq23"
+      },
+      {
+       "quest_id": "mq24"
+      },
+      {
+       "quest_id": "mq25"
+      },
+      {
+       "quest_id": "mq26"
+      }
+     ]
+    },
+    {
+     "text": "看看货",
+     "action": "shop",
+     "shop_refs": [
+      "shop_sanctum"
+     ]
+    },
+    {
+     "text": "离开"
+    }
+   ]
+  },
+  "quests": [
+   {
+    "quest_id": "mq23"
+   },
+   {
+    "quest_id": "mq24"
+   },
+   {
+    "quest_id": "mq25"
+   },
+   {
+    "quest_id": "mq26"
+   }
+  ],
+  "shop_refs": [
+   "shop_sanctum"
+  ]
+ },
+ {
+  "id": "npc_elder",
+  "name": "四脉长老·衡",
+  "icon": "衡",
+  "map": "four_veins_cross",
+  "type": "narrator",
+  "desc": "四脉交汇处的长老，通晓四脉源流。",
+  "visible": true,
+  "dialogues": {
+   "greeting": "四脉本是一脉，分开只是为了让你们有得选。",
+   "options": [
+    {
+     "text": "很久以前四脉同源，后来各走一路：斩求快、打求稳、突求准、魔求远。",
+     "action": "reply"
+    },
+    {
+     "text": "交付试炼",
+     "action": "quest",
+     "quests": [
+      {
+       "quest_id": "mq27"
+      },
+      {
+       "quest_id": "mq28"
+      },
+      {
+       "quest_id": "mq29"
+      },
+      {
+       "quest_id": "mq30"
+      }
+     ]
+    },
+    {
+     "text": "离开"
+    }
+   ]
+  },
+  "quests": [
+   {
+    "quest_id": "mq27"
+   },
+   {
+    "quest_id": "mq28"
+   },
+   {
+    "quest_id": "mq29"
+   },
+   {
+    "quest_id": "mq30"
+   }
+  ]
+ },
+ {
+  "id": "npc_core_keeper",
+  "name": "脉门守令·阙",
+  "icon": "阙",
+  "map": "endgame_gate",
+  "type": "quest_giver",
+  "desc": "守着脉门关的守令，只认满级的猎者。",
+  "visible": true,
+  "dialogues": {
+   "greeting": "满级只是起点，脉心才是真正的试炼。",
+   "options": [
+    {
+     "text": "领脉门任务",
+     "action": "quest",
+     "quests": [
+      {
+       "quest_id": "eq01"
+      },
+      {
+       "quest_id": "eq02"
+      },
+      {
+       "quest_id": "eq03"
+      },
+      {
+       "quest_id": "eq04"
+      },
+      {
+       "quest_id": "eq05"
+      },
+      {
+       "quest_id": "eq06"
+      },
+      {
+       "quest_id": "eq15"
+      }
+     ]
+    },
+    {
+     "text": "离开"
+    }
+   ]
+  },
+  "quests": [
+   {
+    "quest_id": "eq01"
+   },
+   {
+    "quest_id": "eq02"
+   },
+   {
+    "quest_id": "eq03"
+   },
+   {
+    "quest_id": "eq04"
+   },
+   {
+    "quest_id": "eq05"
+   },
+   {
+    "quest_id": "eq06"
+   },
+   {
+    "quest_id": "eq15"
+   }
+  ]
+ },
+ {
+  "id": "npc_material_shop",
+  "name": "材料行·秤",
+  "icon": "秤",
+  "map": "endgame_gate",
+  "type": "merchant",
+  "desc": "满级材料行，收满级材料也卖满级药。",
+  "visible": true,
+  "dialogues": {
+   "greeting": "满级的东西，价钱也是满级的。",
+   "options": [
+    {
+     "text": "看看货",
+     "action": "shop",
+     "shop_refs": [
+      "shop_mat"
+     ]
+    },
+    {
+     "text": "交付材料委托",
+     "action": "quest",
+     "quests": [
+      {
+       "quest_id": "eq07"
+      },
+      {
+       "quest_id": "eq08"
+      },
+      {
+       "quest_id": "eq09"
+      },
+      {
+       "quest_id": "eq10"
+      },
+      {
+       "quest_id": "eq11"
+      },
+      {
+       "quest_id": "eq12"
+      },
+      {
+       "quest_id": "eq13"
+      },
+      {
+       "quest_id": "eq14"
+      }
+     ]
+    },
+    {
+     "text": "离开"
+    }
+   ]
+  },
+  "quests": [
+   {
+    "quest_id": "eq07"
+   },
+   {
+    "quest_id": "eq08"
+   },
+   {
+    "quest_id": "eq09"
+   },
+   {
+    "quest_id": "eq10"
+   },
+   {
+    "quest_id": "eq11"
+   },
+   {
+    "quest_id": "eq12"
+   },
+   {
+    "quest_id": "eq13"
+   },
+   {
+    "quest_id": "eq14"
+   }
+  ],
+  "shop_refs": [
+   "shop_mat"
+  ]
+ },
+ {
+  "id": "npc_core_recorder",
+  "name": "脉心记录者·简",
+  "icon": "简",
+  "map": "endgame_gate",
+  "type": "narrator",
+  "desc": "记录脉心变动的记录者。",
+  "visible": true,
+  "dialogues": {
+   "greeting": "脉核上坐着的那位，已经坐了很久了。",
+   "options": [
+    {
+     "text": "脉核一动，四脉皆颤。要动它，先问问自己够不够硬。",
+     "action": "reply"
+    },
+    {
+     "text": "离开"
+    }
+   ]
+  },
+  "interactions": [
+   {
+    "action": "reply",
+    "text": "打听脉核霸主",
+    "info": true
+   }
+  ]
+ },
+ {
+  "id": "npc_trial_recorder",
+  "name": "试炼记录员·册",
+  "icon": "册",
+  "map": "trial_hall",
+  "type": "narrator",
+  "desc": "试炼终殿的记录员，登记每一次挑战。",
+  "visible": true,
+  "dialogues": {
+   "greeting": "影卫不会累，你会的。",
+   "options": [
+    {
+     "text": "你的每一次出手，都记在这里。",
+     "action": "reply"
+    },
+    {
+     "text": "离开"
+    }
+   ]
+  }
+ }
+]

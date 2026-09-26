@@ -1,1 +1,6320 @@
-[]
+[
+ {
+  "id": "rcp_wp_sword_1",
+  "name": "试炼短剑基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_sword_1",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_sword_10",
+  "name": "淬脉长剑基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_sword_10",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_sword_20",
+  "name": "脉纹重剑基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_sword_20",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_sword_30",
+  "name": "沉脉锐剑基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_sword_30",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_sword_40",
+  "name": "裂脉细剑基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_sword_40",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_sword_50",
+  "name": "幽脉直剑基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_sword_50",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_sword_60",
+  "name": "断层短剑基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_sword_60",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_sword_70",
+  "name": "渊纹长剑基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_sword_70",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_sword_80",
+  "name": "四脉重剑基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_sword_80",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_hammer_1",
+  "name": "试炼铁锤基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_hammer_1",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_hammer_10",
+  "name": "淬脉战锤基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_hammer_10",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_hammer_20",
+  "name": "脉纹重锤基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_hammer_20",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_hammer_30",
+  "name": "沉脉巨锤基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_hammer_30",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_hammer_40",
+  "name": "裂脉镇锤基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_hammer_40",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_hammer_50",
+  "name": "幽脉破岳锤基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_hammer_50",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_hammer_60",
+  "name": "断层铁锤基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_hammer_60",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_hammer_70",
+  "name": "渊纹战锤基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_hammer_70",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_hammer_80",
+  "name": "四脉重锤基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_hammer_80",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_spear_1",
+  "name": "试炼长枪基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_spear_1",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_spear_10",
+  "name": "淬脉尖枪基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_spear_10",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_spear_20",
+  "name": "脉纹重枪基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_spear_20",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_spear_30",
+  "name": "沉脉龙枪基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_spear_30",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_spear_40",
+  "name": "裂脉天枪基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_spear_40",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_spear_50",
+  "name": "幽脉裂风枪基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_spear_50",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_spear_60",
+  "name": "断层长枪基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_spear_60",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_spear_70",
+  "name": "渊纹尖枪基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_spear_70",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_spear_80",
+  "name": "四脉重枪基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_spear_80",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_staff_1",
+  "name": "试炼法杖基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_staff_1",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_staff_10",
+  "name": "淬脉灵杖基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_staff_10",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_staff_20",
+  "name": "脉纹脉杖基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_staff_20",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_staff_30",
+  "name": "沉脉玄杖基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_staff_30",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_staff_40",
+  "name": "裂脉渊杖基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_staff_40",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_staff_50",
+  "name": "幽脉天杖基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_staff_50",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_staff_60",
+  "name": "断层法杖基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_staff_60",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_staff_70",
+  "name": "渊纹灵杖基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_staff_70",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_staff_80",
+  "name": "四脉脉杖基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_staff_80",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_1a",
+  "name": "试炼·坚壁头甲基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_1a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_1b",
+  "name": "试炼·疾行头甲基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_1b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_1c",
+  "name": "试炼·破势头甲基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_1c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_1d",
+  "name": "试炼·灵纹头甲基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_1d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_1a",
+  "name": "试炼·坚壁胸甲基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_1a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_1b",
+  "name": "试炼·疾行胸甲基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_1b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_1c",
+  "name": "试炼·破势胸甲基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_1c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_1d",
+  "name": "试炼·灵纹胸甲基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_1d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_1a",
+  "name": "试炼·坚壁护手基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_1a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_1b",
+  "name": "试炼·疾行护手基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_1b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_1c",
+  "name": "试炼·破势护手基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_1c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_1d",
+  "name": "试炼·灵纹护手基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_1d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_1a",
+  "name": "试炼·坚壁胫甲基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_1a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_1b",
+  "name": "试炼·疾行胫甲基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_1b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_1c",
+  "name": "试炼·破势胫甲基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_1c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_1d",
+  "name": "试炼·灵纹胫甲基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_1d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_1a",
+  "name": "试炼·坚壁战靴基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_1a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_1b",
+  "name": "试炼·疾行战靴基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_1b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_1c",
+  "name": "试炼·破势战靴基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_1c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_1d",
+  "name": "试炼·灵纹战靴基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_1d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_10a",
+  "name": "淬脉·坚壁头甲基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_10a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_10b",
+  "name": "淬脉·疾行头甲基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_10b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_10c",
+  "name": "淬脉·破势头甲基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_10c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_10d",
+  "name": "淬脉·灵纹头甲基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_10d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_10a",
+  "name": "淬脉·坚壁胸甲基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_10a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_10b",
+  "name": "淬脉·疾行胸甲基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_10b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_10c",
+  "name": "淬脉·破势胸甲基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_10c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_10d",
+  "name": "淬脉·灵纹胸甲基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_10d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_10a",
+  "name": "淬脉·坚壁护手基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_10a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_10b",
+  "name": "淬脉·疾行护手基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_10b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_10c",
+  "name": "淬脉·破势护手基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_10c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_10d",
+  "name": "淬脉·灵纹护手基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_10d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_10a",
+  "name": "淬脉·坚壁胫甲基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_10a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_10b",
+  "name": "淬脉·疾行胫甲基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_10b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_10c",
+  "name": "淬脉·破势胫甲基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_10c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_10d",
+  "name": "淬脉·灵纹胫甲基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_10d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_10a",
+  "name": "淬脉·坚壁战靴基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_10a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_10b",
+  "name": "淬脉·疾行战靴基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_10b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_10c",
+  "name": "淬脉·破势战靴基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_10c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_10d",
+  "name": "淬脉·灵纹战靴基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_10d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_20a",
+  "name": "脉纹·坚壁头甲基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_20a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_20b",
+  "name": "脉纹·疾行头甲基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_20b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_20c",
+  "name": "脉纹·破势头甲基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_20c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_20d",
+  "name": "脉纹·灵纹头甲基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_20d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_20a",
+  "name": "脉纹·坚壁胸甲基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_20a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_20b",
+  "name": "脉纹·疾行胸甲基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_20b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_20c",
+  "name": "脉纹·破势胸甲基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_20c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_20d",
+  "name": "脉纹·灵纹胸甲基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_20d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_20a",
+  "name": "脉纹·坚壁护手基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_20a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_20b",
+  "name": "脉纹·疾行护手基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_20b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_20c",
+  "name": "脉纹·破势护手基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_20c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_20d",
+  "name": "脉纹·灵纹护手基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_20d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_20a",
+  "name": "脉纹·坚壁胫甲基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_20a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_20b",
+  "name": "脉纹·疾行胫甲基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_20b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_20c",
+  "name": "脉纹·破势胫甲基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_20c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_20d",
+  "name": "脉纹·灵纹胫甲基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_20d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_20a",
+  "name": "脉纹·坚壁战靴基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_20a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_20b",
+  "name": "脉纹·疾行战靴基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_20b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_20c",
+  "name": "脉纹·破势战靴基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_20c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_20d",
+  "name": "脉纹·灵纹战靴基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_20d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_30a",
+  "name": "沉脉·坚壁头甲基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_30a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_30b",
+  "name": "沉脉·疾行头甲基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_30b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_30c",
+  "name": "沉脉·破势头甲基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_30c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_30d",
+  "name": "沉脉·灵纹头甲基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_30d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_30a",
+  "name": "沉脉·坚壁胸甲基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_30a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_30b",
+  "name": "沉脉·疾行胸甲基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_30b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_30c",
+  "name": "沉脉·破势胸甲基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_30c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_30d",
+  "name": "沉脉·灵纹胸甲基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_30d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_30a",
+  "name": "沉脉·坚壁护手基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_30a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_30b",
+  "name": "沉脉·疾行护手基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_30b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_30c",
+  "name": "沉脉·破势护手基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_30c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_30d",
+  "name": "沉脉·灵纹护手基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_30d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_30a",
+  "name": "沉脉·坚壁胫甲基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_30a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_30b",
+  "name": "沉脉·疾行胫甲基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_30b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_30c",
+  "name": "沉脉·破势胫甲基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_30c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_30d",
+  "name": "沉脉·灵纹胫甲基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_30d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_30a",
+  "name": "沉脉·坚壁战靴基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_30a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_30b",
+  "name": "沉脉·疾行战靴基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_30b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_30c",
+  "name": "沉脉·破势战靴基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_30c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_30d",
+  "name": "沉脉·灵纹战靴基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_30d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_40a",
+  "name": "裂脉·坚壁头甲基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_40a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_40b",
+  "name": "裂脉·疾行头甲基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_40b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_40c",
+  "name": "裂脉·破势头甲基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_40c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_40d",
+  "name": "裂脉·灵纹头甲基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_40d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_40a",
+  "name": "裂脉·坚壁胸甲基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_40a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_40b",
+  "name": "裂脉·疾行胸甲基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_40b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_40c",
+  "name": "裂脉·破势胸甲基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_40c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_40d",
+  "name": "裂脉·灵纹胸甲基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_40d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_40a",
+  "name": "裂脉·坚壁护手基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_40a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_40b",
+  "name": "裂脉·疾行护手基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_40b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_40c",
+  "name": "裂脉·破势护手基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_40c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_40d",
+  "name": "裂脉·灵纹护手基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_40d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_40a",
+  "name": "裂脉·坚壁胫甲基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_40a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_40b",
+  "name": "裂脉·疾行胫甲基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_40b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_40c",
+  "name": "裂脉·破势胫甲基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_40c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_40d",
+  "name": "裂脉·灵纹胫甲基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_40d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_40a",
+  "name": "裂脉·坚壁战靴基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_40a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_40b",
+  "name": "裂脉·疾行战靴基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_40b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_40c",
+  "name": "裂脉·破势战靴基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_40c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_40d",
+  "name": "裂脉·灵纹战靴基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_40d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_50a",
+  "name": "幽脉·坚壁头甲基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_50a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_50b",
+  "name": "幽脉·疾行头甲基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_50b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_50c",
+  "name": "幽脉·破势头甲基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_50c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_50d",
+  "name": "幽脉·灵纹头甲基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_50d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_50a",
+  "name": "幽脉·坚壁胸甲基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_50a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_50b",
+  "name": "幽脉·疾行胸甲基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_50b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_50c",
+  "name": "幽脉·破势胸甲基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_50c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_50d",
+  "name": "幽脉·灵纹胸甲基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_50d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_50a",
+  "name": "幽脉·坚壁护手基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_50a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_50b",
+  "name": "幽脉·疾行护手基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_50b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_50c",
+  "name": "幽脉·破势护手基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_50c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_50d",
+  "name": "幽脉·灵纹护手基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_50d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_50a",
+  "name": "幽脉·坚壁胫甲基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_50a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_50b",
+  "name": "幽脉·疾行胫甲基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_50b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_50c",
+  "name": "幽脉·破势胫甲基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_50c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_50d",
+  "name": "幽脉·灵纹胫甲基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_50d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_50a",
+  "name": "幽脉·坚壁战靴基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_50a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_50b",
+  "name": "幽脉·疾行战靴基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_50b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_50c",
+  "name": "幽脉·破势战靴基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_50c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_50d",
+  "name": "幽脉·灵纹战靴基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_50d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_60a",
+  "name": "断层·坚壁头甲基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_60a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_60b",
+  "name": "断层·疾行头甲基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_60b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_60c",
+  "name": "断层·破势头甲基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_60c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_60d",
+  "name": "断层·灵纹头甲基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_60d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_60a",
+  "name": "断层·坚壁胸甲基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_60a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_60b",
+  "name": "断层·疾行胸甲基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_60b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_60c",
+  "name": "断层·破势胸甲基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_60c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_60d",
+  "name": "断层·灵纹胸甲基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_60d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_60a",
+  "name": "断层·坚壁护手基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_60a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_60b",
+  "name": "断层·疾行护手基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_60b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_60c",
+  "name": "断层·破势护手基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_60c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_60d",
+  "name": "断层·灵纹护手基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_60d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_60a",
+  "name": "断层·坚壁胫甲基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_60a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_60b",
+  "name": "断层·疾行胫甲基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_60b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_60c",
+  "name": "断层·破势胫甲基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_60c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_60d",
+  "name": "断层·灵纹胫甲基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_60d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_60a",
+  "name": "断层·坚壁战靴基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_60a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_60b",
+  "name": "断层·疾行战靴基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_60b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_60c",
+  "name": "断层·破势战靴基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_60c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_60d",
+  "name": "断层·灵纹战靴基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_60d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_70a",
+  "name": "渊纹·坚壁头甲基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_70a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_70b",
+  "name": "渊纹·疾行头甲基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_70b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_70c",
+  "name": "渊纹·破势头甲基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_70c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_70d",
+  "name": "渊纹·灵纹头甲基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_70d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_70a",
+  "name": "渊纹·坚壁胸甲基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_70a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_70b",
+  "name": "渊纹·疾行胸甲基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_70b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_70c",
+  "name": "渊纹·破势胸甲基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_70c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_70d",
+  "name": "渊纹·灵纹胸甲基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_70d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_70a",
+  "name": "渊纹·坚壁护手基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_70a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_70b",
+  "name": "渊纹·疾行护手基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_70b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_70c",
+  "name": "渊纹·破势护手基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_70c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_70d",
+  "name": "渊纹·灵纹护手基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_70d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_70a",
+  "name": "渊纹·坚壁胫甲基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_70a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_70b",
+  "name": "渊纹·疾行胫甲基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_70b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_70c",
+  "name": "渊纹·破势胫甲基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_70c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_70d",
+  "name": "渊纹·灵纹胫甲基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_70d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_70a",
+  "name": "渊纹·坚壁战靴基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_70a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_70b",
+  "name": "渊纹·疾行战靴基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_70b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_70c",
+  "name": "渊纹·破势战靴基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_70c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_70d",
+  "name": "渊纹·灵纹战靴基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_70d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_80a",
+  "name": "四脉·坚壁头甲基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_80a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_80b",
+  "name": "四脉·疾行头甲基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_80b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_80c",
+  "name": "四脉·破势头甲基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_80c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_80d",
+  "name": "四脉·灵纹头甲基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_80d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_80a",
+  "name": "四脉·坚壁胸甲基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_80a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_80b",
+  "name": "四脉·疾行胸甲基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_80b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_80c",
+  "name": "四脉·破势胸甲基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_80c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_80d",
+  "name": "四脉·灵纹胸甲基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_80d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_80a",
+  "name": "四脉·坚壁护手基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_80a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_80b",
+  "name": "四脉·疾行护手基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_80b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_80c",
+  "name": "四脉·破势护手基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_80c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_80d",
+  "name": "四脉·灵纹护手基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_80d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_80a",
+  "name": "四脉·坚壁胫甲基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_80a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_80b",
+  "name": "四脉·疾行胫甲基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_80b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_80c",
+  "name": "四脉·破势胫甲基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_80c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_80d",
+  "name": "四脉·灵纹胫甲基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_80d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_80a",
+  "name": "四脉·坚壁战靴基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_80a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_80b",
+  "name": "四脉·疾行战靴基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_80b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_80c",
+  "name": "四脉·破势战靴基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_80c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_80d",
+  "name": "四脉·灵纹战靴基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_80d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_1a",
+  "name": "试炼·护命符基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_1a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_1b",
+  "name": "试炼·鸿运符基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_1b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_1c",
+  "name": "试炼·疾影符基合成",
+  "kind": "craft",
+  "level": 1,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_common_hide",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_1c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 24,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_10a",
+  "name": "淬脉·护命符基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_10a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_10b",
+  "name": "淬脉·鸿运符基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_10b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_10c",
+  "name": "淬脉·疾影符基合成",
+  "kind": "craft",
+  "level": 10,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_slash_ore",
+    "count": 2
+   },
+   {
+    "id": "viv_herb",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_10c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 80,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_20a",
+  "name": "脉纹·护命符基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_20a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_20b",
+  "name": "脉纹·鸿运符基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_20b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_20c",
+  "name": "脉纹·疾影符基合成",
+  "kind": "craft",
+  "level": 20,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_blunt_rock",
+    "count": 2
+   },
+   {
+    "id": "mat_common_hide",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_20c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 280,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_30a",
+  "name": "沉脉·护命符基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_30a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_30b",
+  "name": "沉脉·鸿运符基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_30b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_30c",
+  "name": "沉脉·疾影符基合成",
+  "kind": "craft",
+  "level": 30,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_pierce_bone",
+    "count": 2
+   },
+   {
+    "id": "mat_slash_ore",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_30c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 960,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_40a",
+  "name": "裂脉·护命符基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_40a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_40b",
+  "name": "裂脉·鸿运符基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_40b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_40c",
+  "name": "裂脉·疾影符基合成",
+  "kind": "craft",
+  "level": 40,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_pierce_bone",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_40c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 2800,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_50a",
+  "name": "幽脉·护命符基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_50a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_50b",
+  "name": "幽脉·鸿运符基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_50b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_50c",
+  "name": "幽脉·疾影符基合成",
+  "kind": "craft",
+  "level": 50,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_magic_crystal",
+    "count": 2
+   },
+   {
+    "id": "mat_blunt_rock",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_50c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 7600,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_60a",
+  "name": "断层·护命符基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_60a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_60b",
+  "name": "断层·鸿运符基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_60b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_60c",
+  "name": "断层·疾影符基合成",
+  "kind": "craft",
+  "level": 60,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_60c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 19000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_70a",
+  "name": "渊纹·护命符基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_70a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_70b",
+  "name": "渊纹·鸿运符基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_70b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_70c",
+  "name": "渊纹·疾影符基合成",
+  "kind": "craft",
+  "level": 70,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_70c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 44000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_80a",
+  "name": "四脉·护命符基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_80a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_80b",
+  "name": "四脉·鸿运符基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_80b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_80c",
+  "name": "四脉·疾影符基合成",
+  "kind": "craft",
+  "level": 80,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_80c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 100000,
+   "gem": 0
+  }
+ }
+]

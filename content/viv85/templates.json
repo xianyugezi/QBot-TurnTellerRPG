@@ -1,0 +1,5 @@
+{
+ "deep_craft_usage": "发 精造 <图纸>            ← 看预览（等级带 / 材料需求）\n发 精造 学习 <图纸>        ← 先学会图纸\n发 精造 <图纸> <材料>*N <材料>*N  ← 投料打造（多个材料**用空格分隔**）",
+ "deep_craft_no_materials": "❌ 请投入材料\n发 精造 {name} 材料*N 材料*N（多个材料**用空格分隔**）",
+ "deep_craft_blueprint_not_found": "❌ 未找到图纸「{target}」（图纸要打怪掉落，先去刷）"
+}

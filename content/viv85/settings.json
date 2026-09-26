@@ -153,5 +153,31 @@
  },
  "battle": {
   "min_damage": 0
+ },
+ "deep_craft": {
+  "enabled": true,
+  "craft_rules": {
+   "material_level_weight": {
+    "main": 0.6,
+    "free": 0.4
+   },
+   "level_rounding": "floor",
+   "cost_base": 60,
+   "cost_per_kind": 20,
+   "cost_floor_ratio": 0.0,
+   "max_per_kind": 5,
+   "max_kinds": 10,
+   "random_stat_count": {
+    "min": 0,
+    "max": 2
+   },
+   "random_set_affix_count": {
+    "min": 0,
+    "max": 0
+   }
+  }
+ },
+ "alchemy": {
+  "mode": "full"
  }
 }

@@ -4202,5 +4202,110 @@
   "energy_gain": {
    "mp": 2
   }
+ },
+ {
+  "id": "forge_basic",
+  "name": "锻造·轻击",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "打",
+  "element": "earth",
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "forge"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "锻造师的防身轻击（生活职业普攻）。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "gather_basic",
+  "name": "采集·轻击",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "打",
+  "element": "earth",
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "gather"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "采集者的防身轻击（生活职业普攻）。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
+ },
+ {
+  "id": "alchemy_basic",
+  "name": "炼金·轻击",
+  "type": "basic",
+  "kind": "damage",
+  "power": 100,
+  "recovery": 60,
+  "attack_type": "打",
+  "element": "earth",
+  "effects": [],
+  "mp_cost": 0,
+  "cooldown": 0,
+  "tag": "none",
+  "armor": false,
+  "interrupt": false,
+  "chain_refs": [],
+  "consume_marks": {},
+  "job_restrict": [
+   "alchemy"
+  ],
+  "job_form": null,
+  "level": null,
+  "hits": 1,
+  "trigger_limit": {
+   "per_round": 10,
+   "per_battle": 99
+  },
+  "desc": "调剂师的防身轻击（生活职业普攻）。",
+  "hit_mod": 1.0,
+  "crit_mod": 1.0,
+  "block_mode": "auto",
+  "energy_gain": {
+   "mp": 2
+  }
  }
 ]

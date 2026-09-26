@@ -1,1 +1,222 @@
-[]
+[
+ {
+  "id": "dg_gate",
+  "name": "脉门试炼",
+  "type": "explore",
+  "entry_item": "key_gate_token",
+  "entry_limit": 0,
+  "maps": [
+   "sanctum_depths"
+  ],
+  "subquests": [],
+  "safe_zone": "sanctum_depths",
+  "drops": {
+   "normal": [
+    {
+     "item": "mat_core_shard",
+     "chance": 0.5
+    }
+   ],
+   "first_clear": {
+    "items": [
+     {
+      "item": "mat_core_shard",
+      "count": 3
+     }
+    ],
+    "title": null,
+    "codex": []
+   }
+  }
+ },
+ {
+  "id": "dg_depths",
+  "name": "深窟讨伐",
+  "type": "boss",
+  "entry_item": "key_gate_token",
+  "entry_limit": 3,
+  "maps": [
+   "sanctum_depths"
+  ],
+  "subquests": [],
+  "safe_zone": "sanctum_depths",
+  "drops": {
+   "normal": [
+    {
+     "item": "mat_core_shard",
+     "chance": 0.6
+    }
+   ],
+   "boss": [
+    {
+     "item": "mat_core_shard",
+     "chance": 1.0
+    }
+   ],
+   "first_clear": {
+    "items": [
+     {
+      "item": "wp_sword_85",
+      "count": 1
+     }
+    ],
+    "title": "深窟征服者",
+    "codex": []
+   }
+  },
+  "boss_room": "sanctum_depths",
+  "boss": "sanctum_devourer"
+ },
+ {
+  "id": "dg_echo",
+  "name": "回响讨伐",
+  "type": "boss",
+  "entry_item": "key_gate_token",
+  "entry_limit": 3,
+  "maps": [
+   "echo_hall"
+  ],
+  "subquests": [],
+  "safe_zone": "echo_hall",
+  "drops": {
+   "normal": [
+    {
+     "item": "mat_echo_dust",
+     "chance": 0.6
+    }
+   ],
+   "boss": [
+    {
+     "item": "mat_echo_dust",
+     "chance": 1.0
+    }
+   ],
+   "first_clear": {
+    "items": [
+     {
+      "item": "ac_80b",
+      "count": 1
+     }
+    ],
+    "title": "回响止息",
+    "codex": []
+   }
+  },
+  "boss_room": "echo_hall",
+  "boss": "echo_chorus"
+ },
+ {
+  "id": "dg_altars",
+  "name": "四脉祭坛战",
+  "type": "boss",
+  "entry_item": "key_altar_token",
+  "entry_limit": 3,
+  "maps": [
+   "four_altars"
+  ],
+  "subquests": [],
+  "safe_zone": "four_altars",
+  "drops": {
+   "normal": [
+    {
+     "item": "mat_altar_relic",
+     "chance": 0.6
+    }
+   ],
+   "boss": [
+    {
+     "item": "mat_altar_relic",
+     "chance": 1.0
+    }
+   ],
+   "first_clear": {
+    "items": [
+     {
+      "item": "ar_body_60a",
+      "count": 1
+     }
+    ],
+    "title": "四脉通者",
+    "codex": []
+   }
+  },
+  "boss_room": "four_altars",
+  "boss": "four_veins_avatar"
+ },
+ {
+  "id": "dg_abyss",
+  "name": "渊脉讨伐",
+  "type": "boss",
+  "entry_item": "key_altar_token",
+  "entry_limit": 3,
+  "maps": [
+   "abyss_crevice"
+  ],
+  "subquests": [],
+  "safe_zone": "abyss_crevice",
+  "drops": {
+   "normal": [
+    {
+     "item": "mat_abyss_scale",
+     "chance": 0.6
+    }
+   ],
+   "boss": [
+    {
+     "item": "mat_abyss_scale",
+     "chance": 1.0
+    }
+   ],
+   "first_clear": {
+    "items": [
+     {
+      "item": "wp_spear_85",
+      "count": 1
+     }
+    ],
+    "title": "渊脉平定者",
+    "codex": []
+   }
+  },
+  "boss_room": "abyss_crevice",
+  "boss": "abyss_sovereign"
+ },
+ {
+  "id": "dg_core",
+  "name": "脉核决战",
+  "type": "boss",
+  "entry_item": "key_core_token",
+  "entry_limit": 5,
+  "maps": [
+   "vein_core"
+  ],
+  "subquests": [],
+  "safe_zone": "vein_core",
+  "drops": {
+   "normal": [
+    {
+     "item": "mat_core_shard",
+     "chance": 0.7
+    }
+   ],
+   "boss": [
+    {
+     "item": "mat_core_shard",
+     "chance": 1.0
+    }
+   ],
+   "first_clear": {
+    "items": [
+     {
+      "item": "ac_80b",
+      "count": 1
+     }
+    ],
+    "title": "四脉试炼·通关",
+    "codex": []
+   }
+  },
+  "boss_room": "vein_core",
+  "boss": "vein_core_tyrant"
+ }
+]

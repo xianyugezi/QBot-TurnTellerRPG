@@ -878,5 +878,71 @@
   "inherit": {
    "from": "fa_warlock"
   }
+ },
+ {
+  "id": "forge",
+  "name": "锻造师",
+  "difficulty": "simple",
+  "playstyle": "打造装备与武器：图纸 + 材料 → 成品",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "锻造",
+   "生活"
+  ],
+  "weapon_types": [],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "str": 1.0,
+   "con": 1.0,
+   "hp": 0.8
+  },
+  "description": "打造装备与武器：图纸 + 材料 → 成品"
+ },
+ {
+  "id": "gather",
+  "name": "采集者",
+  "difficulty": "simple",
+  "playstyle": "野外采集材料：矿脉 / 药草 / 骸骨",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "采集",
+   "生活"
+  ],
+  "weapon_types": [],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "agi": 1.0,
+   "lck": 1.0,
+   "hp": 1.0
+  },
+  "description": "野外采集材料：矿脉 / 药草 / 骸骨"
+ },
+ {
+  "id": "alchemy",
+  "name": "调剂师",
+  "difficulty": "simple",
+  "playstyle": "调合药剂与合成",
+  "recommended_newbie": false,
+  "is_basic": false,
+  "mechanic_tags": [
+   "炼金",
+   "生活"
+  ],
+  "weapon_types": [],
+  "resource_axes": [
+   "mp"
+  ],
+  "growth": {
+   "int": 1.0,
+   "spr": 1.0,
+   "mp": 1.0
+  },
+  "description": "调合药剂与合成"
  }
 ]

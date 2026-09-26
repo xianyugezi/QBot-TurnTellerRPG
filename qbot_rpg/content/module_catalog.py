@@ -49,9 +49,11 @@ class ModuleCatalogEntry:
     requires: Tuple[str, ...] = ()
     implemented: bool = True
     settings_section: str = ""
-    # 编辑器批19 #5：与其他落点的**功能重叠**声明（通用、包无关的框架知识）。
+    # 编辑器批19 #5：与其他落点的**名字相近/易误写**声明（通用、包无关的框架知识）。
     # `overlap_with` = 另一处落点（如 settings.json 的段路径）；非空 → 编辑器在模块页给
-    # **黄提示**（不硬拦）：建议归口一处，并展示 `overlap_note` 说明各自定位（如实核查）。
+    # **黄提示**（不硬拦）：说明二者语义不同、**各自单一源**（勿为同步而两边同改），并展示
+    # `overlap_note` 说明各自定位（如实核查）。批82 · B2：措辞由「功能重叠/归口一处」纠正为
+    # 「名字相近、语义不同」——与批78 X3「不同数据空间」结论一致。
     overlap_with: str = ""
     overlap_note: str = ""
 
@@ -93,12 +95,12 @@ FRAMEWORK_MODULE_CATALOG: Tuple[ModuleCatalogEntry, ...] = (
                        "list", requires=("items",),
                        overlap_with="settings.slot_defs",
                        overlap_note=(
-                           "两者名字相近但语义不同，请勿混用：settings.slot_defs 是运行时"
-                           "装备**部位表**（编辑器「基础 ▸ 装备槽位」，装备/物品的「部位」"
-                           "引用它）；slots 模块（slots.json）是**珠插槽**条目"
+                           "两者是**不同数据空间**，名字相近但语义不同，请勿混用："
+                           "settings.slot_defs 是运行时装备**部位表**（编辑器「基础 ▸ 装备槽位」，"
+                           "装备/物品的「部位」引用它）；slots 模块（slots.json）是**珠插槽**条目"
                            "（{equip_id, slots:[{slot_level}]}，core/jewel.py 镶嵌消费）。"
-                           "改部位定义去 settings.slot_defs，改镶嵌孔位才来这里；"
-                           "建议按此归口一处，避免两边同改不同步。本提示不阻断保存。")),
+                           "**各自单一源**：部位定义只写 settings.slot_defs，镶嵌孔位只写 "
+                           "slots.json，勿为同步而两边同改。本提示不阻断保存。")),
     # 批46 · 符文地基（43-A）：符文附魔定义（三阶 / 跨装备类型差异表 / 效果声明）。
     # 落点 = runes.json list 模块；孔位/镶嵌复用 slots 的孔位数组（core/jewel.py），
     # 镶嵌状态挂 ItemInstance.uid（player.persistent_state.rune_sockets）。

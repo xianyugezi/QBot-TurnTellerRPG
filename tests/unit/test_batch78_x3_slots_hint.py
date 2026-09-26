@@ -1,4 +1,4 @@
-"""批78 · X3 验收：slots 模块 ↔ settings.slot_defs 归口提示（目录声明驱动）。
+"""批78 · X3 验收：slots 模块 ↔ settings.slot_defs 黄提示（不同数据空间；目录声明驱动）。
 
 背景（登记表 X3 重核）：批19 #5 目录条目「两处都在表达装备部位定义」的描述与实现冲突——
 slots.json 条目形态 = {equip_id, slots:[{slot_level}]}（契约 §四 SLOTS_FIELD_DEFS，
@@ -28,10 +28,10 @@ def test_slots_entry_corrected_to_jewel_sockets() -> None:
 
 
 def test_slots_overlap_note_explains_relation_and_where_to_edit() -> None:
-    """黄提示文案：说明二者语义（部位表 vs 珠插槽）、改哪处、归口、不阻断。"""
+    """黄提示文案：说明二者**不同数据空间**（部位表 vs 珠插槽）、各自单一源、不阻断。"""
     note = CATALOG_BY_MODULE["slots"].overlap_note
     for token in ("settings.slot_defs", "部位表", "珠插槽", "core/jewel.py",
-                  "归口", "不阻断"):
+                  "不同数据空间", "单一源", "不阻断"):
         assert token in note, token
 
 
@@ -42,7 +42,7 @@ def test_overlap_hint_mechanism_driven_by_catalog() -> None:
     h = hits[0]
     assert h["level"] == "yellow" and h["code"] == "module_overlap"
     assert h["target"] == "settings.slot_defs" and h["target_present"] is True
-    assert "归口" in h["message"] and "不阻断" in h["message"]
+    assert "单一源" in h["message"] and "不阻断" in h["message"]
 
 
 def test_overlap_hint_reports_absent_other_side() -> None:

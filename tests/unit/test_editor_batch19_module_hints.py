@@ -1,10 +1,10 @@
 """编辑器重写批19 · 段 E：特性 / 装备槽 用途与重叠提示（用户 #5 相关点）。
 
-用户反馈 #5 的相关点：`settings.slot_defs`（8 部位）与 `slots` 模块**功能重叠**。
-本批在「特性」「装备槽」模块页显示：
+用户反馈 #5 的相关点：`settings.slot_defs`（8 部位）与 `slots` 模块**名字相近但语义不同**
+（批82 · B2 口径，非"功能重叠"）。本批在「特性」「装备槽」模块页显示：
   · 用途说明（取 `module_catalog` 的 purpose 一句话）；
   · 「当前包未使用」态（模块有目录能力、当前包数据为空）；
-  · `slots` ↔ `settings.slot_defs` 的**黄提示**（不硬拦）：建议归口一处 + 各自定位说明。
+  · `slots` ↔ `settings.slot_defs` 的**黄提示**（不硬拦）：不同数据空间/各自单一源 + 定位说明。
 机制为**目录声明驱动**（`ModuleCatalogEntry.overlap_with/overlap_note`），不写死模块名。
 """
 
@@ -52,7 +52,7 @@ def test_slots_overlap_hint_names_the_other_location() -> None:
     assert h["level"] == "yellow" and h["code"] == "module_overlap"
     assert h["target"] == "settings.slot_defs"
     assert h["target_present"] is True          # 另一处确实有数据（实测 veinborn 8 部位）
-    assert "归口" in h["message"] and "不阻断" in h["message"]
+    assert "单一源" in h["message"] and "不阻断" in h["message"]
 
 
 def test_traits_has_no_overlap_hint() -> None:

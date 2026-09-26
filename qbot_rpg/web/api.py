@@ -788,10 +788,12 @@ def _module_in_use(data: object) -> bool:
 
 
 def _module_overlap_hints(module: str, pack_dir: Path) -> List[Dict[str, Any]]:
-    """模块的功能重叠黄提示（批19 #5，通用：声明来自 `module_catalog` 目录）。
+    """模块的「名字相近、语义不同」黄提示（批19 #5，通用：声明来自 `module_catalog` 目录）。
 
     目录条目声明 `overlap_with`（另一处落点，形如 `模块.段.子键`）时不硬拦，只提示
-    「建议归口一处」+ `overlap_note`（各自定位，如实核查）；并如实给出另一处是否已有数据。
+    「不同数据空间 / 各自单一源」+ `overlap_note`（各自定位，如实核查）；并如实给出另一处
+    是否已有数据。批82 · B2：文案由「功能重叠/归口一处」纠正为「名字相近、语义不同」——
+    与批78 X3「非重复落点」结论一致（`code` 仍为历史值 `module_overlap`，不破坏前端契约）。
     """
     ce = catalog_entry(module)
     if ce is None or not ce.overlap_with:
@@ -810,7 +812,8 @@ def _module_overlap_hints(module: str, pack_dir: Path) -> List[Dict[str, Any]]:
         "target": str(ce.overlap_with),
         "target_present": present,
         "message": str(ce.overlap_note or
-                       f"该模块与「{ce.overlap_with}」功能重叠，建议归口一处。"),
+                       f"「{module}」与「{ce.overlap_with}」名字相近、语义不同，请勿混用"
+                       "（各自单一源）。"),
     }]
 
 

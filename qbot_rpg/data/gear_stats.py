@@ -547,10 +547,8 @@ GEAR_HELP_ZH: Dict[str, str] = {
     "heal_amp_pct": "回复强化：治疗/回复效果按该比例提升（百分点，0-500）。",
     # 批82 · D2（用户 2026-09-23 裁决 B：v1 不分治）：两旧键 = `status_chance_pct` 的
     # **通用命中同义别名**，对 buff/debuff 一视同仁（批53 有意归并，effects 消费点无分支）。
-    "debuff_chance_pct": "通用状态命中提升（当前不分 buff/debuff；"
-                         "与 buff_chance_pct 同义别名，百分点，0-500）。",
-    "buff_chance_pct": "通用状态命中提升（当前不分 buff/debuff；"
-                       "与 debuff_chance_pct 同义别名，百分点，0-500）。",
+    "debuff_chance_pct": "通用状态命中提升（当前不分 buff/debuff；两旧键同义，0-500 百分点）。",
+    "buff_chance_pct": "通用状态命中提升（当前不分 buff/debuff；两旧键同义，0-500 百分点）。",
     "weakness_dmg_pct": "弱点伤害增加：命中目标弱点时伤害按该比例提升（百分点，0-500）。",
     # 占位键（原案 §7；批53 起作为 cooldown_pct 的兼容别名**生效**）
     "cooldown_reduction_pct": "冷却缩减（百分点）：作为「冷却时长修正」的兼容别名，只换算一次。",

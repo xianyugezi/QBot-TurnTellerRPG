@@ -1,0 +1,316 @@
+{
+ "schema_version": 1,
+ "module_labels": {
+  "settings": "通用设置",
+  "stats": "属性表",
+  "formula": "公式库",
+  "effects": "效果",
+  "statuses": "状态",
+  "skills": "技能",
+  "skill_chains": "派生链",
+  "jobs": "职业",
+  "items": "物品",
+  "equipment": "装备",
+  "action": "行动",
+  "enemies": "怪物",
+  "maps": "地图",
+  "dungeon": "副本",
+  "npc": "NPC",
+  "shop": "商店",
+  "quest": "任务",
+  "proficiency": "熟练度",
+  "recipe": "配方",
+  "achievements": "成就",
+  "templates": "消息模板"
+ },
+ "module_tree": [
+  {
+   "module": "skills",
+   "children": [
+    "effects",
+    "statuses",
+    "skill_chains"
+   ]
+  },
+  {
+   "module": "items",
+   "children": [
+    "equipment"
+   ]
+  },
+  {
+   "module": "enemies",
+   "children": [
+    "action"
+   ]
+  },
+  {
+   "module": "quest",
+   "children": []
+  }
+ ],
+ "field_labels": {
+  "items": {
+   "id": "编号",
+   "name": "名称",
+   "type": "种类",
+   "price": "售价",
+   "slot": "装备部位",
+   "atk": "攻击",
+   "dfn": "防御",
+   "hp": "生命",
+   "mp": "法力",
+   "use_level": "使用等级",
+   "usable": "可使用",
+   "bind": "绑定",
+   "effects": "效果引用",
+   "desc": "说明",
+   "blueprint_output": "产出的装备",
+   "blueprint_slot": "产出部位",
+   "blueprint_recipe": "投料配方",
+   "blueprint_level_band": "等级带",
+   "blueprint_material_slots": "材料槽",
+   "blueprint_grade": "图纸档",
+   "blueprint_cost_cap": "cost 上限",
+   "material_tags": "材料标签",
+   "material_level": "材料等级"
+  },
+  "skills": {
+   "id": "编号",
+   "name": "名称",
+   "type": "类型",
+   "kind": "类别",
+   "power": "威力",
+   "attack_type": "攻击类型",
+   "element": "元素",
+   "hits": "段数",
+   "mp_cost": "法力消耗",
+   "cooldown": "冷却",
+   "job_restrict": "职业限制",
+   "effects": "效果",
+   "desc": "说明"
+  },
+  "jobs": {
+   "id": "编号",
+   "name": "名称",
+   "is_basic": "初始职业",
+   "recommended_newbie": "推荐新手",
+   "weapon_types": "武器类型",
+   "growth": "成长率",
+   "advance": "转职前置",
+   "inherit": "进阶继承",
+   "playstyle": "玩法",
+   "description": "介绍"
+  },
+  "enemies": {
+   "id": "编号",
+   "name": "名称",
+   "tier": "档位",
+   "area": "区域",
+   "stats": "属性",
+   "hp": "生命",
+   "weakness": "弱点",
+   "pv": "防护值",
+   "actions": "行动表",
+   "drops": "掉落",
+   "rewards": "奖励",
+   "lore": "图鉴情报",
+   "desc": "说明"
+  },
+  "maps": {
+   "id": "编号",
+   "name": "名称",
+   "desc": "介绍",
+   "monsters": "怪物",
+   "exits": "通道",
+   "npcs": "区域角色",
+   "gather_points": "采集点",
+   "dungeon_entrances": "副本入口"
+  },
+  "quest": {
+   "id": "编号",
+   "name": "名称",
+   "type": "类别",
+   "zone": "区域",
+   "conditions": "完成条件",
+   "reward": "奖励",
+   "npc": "发布者",
+   "main": "主线",
+   "repeatable": "可重复",
+   "desc": "说明"
+  },
+  "npc": {
+   "id": "编号",
+   "name": "名称",
+   "icon": "图标",
+   "map": "所在图",
+   "type": "类型",
+   "desc": "介绍",
+   "dialogues": "对话",
+   "interactions": "交互",
+   "quests": "可发布任务",
+   "shop_refs": "关联商店"
+  },
+  "shop": {
+   "id": "编号",
+   "name": "名称",
+   "icon": "图标",
+   "desc": "介绍",
+   "items": "货架",
+   "currency": "货币",
+   "level_required": "等级门槛"
+  },
+  "dungeon": {
+   "id": "编号",
+   "name": "名称",
+   "type": "类型",
+   "maps": "包含地图",
+   "safe_zone": "安全区",
+   "boss": "BOSS",
+   "boss_room": "BOSS 房",
+   "entry_item": "入场凭证",
+   "entry_limit": "进入次数上限",
+   "drops": "掉落"
+  },
+  "recipe": {
+   "id": "编号",
+   "name": "名称",
+   "kind": "类别",
+   "level": "配方等级",
+   "materials": "材料",
+   "output": "产出",
+   "cost": "货币成本",
+   "synth_allowed": "可合成"
+  },
+  "proficiency": {
+   "id": "编号",
+   "name": "名称",
+   "tier_names": "档位名称",
+   "job_rank_levels": "职业等级门槛",
+   "exp_sources": "经验来源",
+   "sp_per_level": "每级 SP",
+   "desc": "说明"
+  },
+  "stats": {
+   "name": "显示名",
+   "type": "类型",
+   "base": "基础值",
+   "growth": "每级成长",
+   "max": "上限"
+  },
+  "action": {
+   "id": "编号",
+   "name": "名称",
+   "kind": "类别",
+   "power": "威力",
+   "attack_type": "攻击类型",
+   "element": "元素",
+   "weight": "权重",
+   "probability": "触发概率",
+   "intent": "意图",
+   "effects": "效果"
+  }
+ },
+ "field_help": {
+  "items": {
+   "price": "基础售价（铜钱）。装备的售价只用于参考，实际靠打造获得。",
+   "blueprint_output": "这张图纸打造出来的装备 id（必须存在于 items）。",
+   "blueprint_recipe": "公用合成配方 id：声明投料需求与标准产出。",
+   "blueprint_cost_cap": "本次打造的 cost 上限（按投料成本算，超了会被拒）。",
+   "use_level": "使用/穿戴所需等级（装备按 9 档：1/10/20/…/80）。",
+   "material_tags": "材料标签：图纸的材料槽按标签取料。"
+  },
+  "enemies": {
+   "pv": "防护值：低于门槛时弱化类效果减半，打破后可一轮爆发。",
+   "rewards": "击败奖励 {exp, currencies:{coins}}——不写就零经验零铜钱。",
+   "lore": "图鉴情报：按解锁度 10/50/100 逐级放出。"
+  },
+  "maps": {
+   "npcs": "区域角色挂点（只写 npc.json 的 map 字段不生效，必须挂在这里）。",
+   "gather_points": "采集点：id 全库唯一 + item + rate(0~1) + 刷新分钟。",
+   "dungeon_entrances": "副本入口；本地图若属于某副本的内部地图则不能再挂。"
+  },
+  "quest": {
+   "conditions": "完成条件（值型/累计型/事件型三原语，全部满足才算完成）。",
+   "reward": "奖励统一条目列表：[{exp},{coins},{item,count}]。"
+  },
+  "proficiency": {
+   "job_rank_levels": "档位经验门槛（7 档）。注意 level 字段是**档位序号**不是等级。",
+   "job_tier_map": "档位 → 可做配方等级区间（决定 /精造 能不能做）。"
+  }
+ },
+ "group_labels": {
+  "items": {
+   "base": "基础",
+   "stats": "数值",
+   "effects": "效果",
+   "text": "文本"
+  },
+  "skills": {
+   "base": "标识与定位",
+   "numeric": "数值",
+   "refs": "引用",
+   "text": "文本"
+  },
+  "jobs": {
+   "base": "标识与定位",
+   "tags": "标签与武器",
+   "growth": "成长率",
+   "advance": "转职前置",
+   "inherit": "进阶继承",
+   "text": "文本"
+  },
+  "enemies": {
+   "base": "标识",
+   "numeric": "数值与抗性",
+   "behavior": "行为",
+   "refs": "引用",
+   "text": "文本"
+  },
+  "maps": {
+   "base": "标识",
+   "channel": "通道",
+   "content": "内容",
+   "text": "文本"
+  },
+  "quest": {
+   "base": "标识",
+   "condition": "完成条件",
+   "reward": "奖励",
+   "text": "文本"
+  },
+  "npc": {
+   "base": "标识",
+   "dialog": "对话与交互",
+   "refs": "关联引用"
+  },
+  "shop": {
+   "base": "标识",
+   "rules": "门槛与刷新",
+   "items": "货架"
+  },
+  "recipe": {
+   "base": "标识",
+   "material": "材料",
+   "output": "产出"
+  }
+ },
+ "id_prefix": {
+  "items": "itm",
+  "equipment": "eqp",
+  "skills": "sk",
+  "skill_chains": "ch",
+  "jobs": "job",
+  "enemies": "en",
+  "maps": "map",
+  "quest": "q",
+  "npc": "npc",
+  "shop": "shop",
+  "dungeon": "dg",
+  "recipe": "rcp",
+  "proficiency": "prof",
+  "action": "act",
+  "effects": "fx",
+  "statuses": "st"
+ }
+}

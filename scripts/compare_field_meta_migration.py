@@ -359,7 +359,8 @@ DEFAULT_PACKS = ("veinborn", "test_demo")
 #   · D3 `deep_craft.craft_rules.cost_*`/`blueprint_cost_cap` help 补「不扣货币」区分、
 #     `forge.forge_fee` 补 help（严格键新增/改值，有意）；
 #   · D4 `proficiency.energy` 子字段 help 标 deprecated + 兜底说明（严格键改值，有意）；
-#   · B2 `module_catalog` slots `overlap_note` 措辞「不同数据空间/各自单一源」（模块声明改值，有意）。
+#   · B2 `module_catalog` slots `overlap_note` 措辞「不同数据空间/各自单一源」
+#     （模块声明改值，有意）。
 #   对拍实证：删除项 = 0；重定后基线树与当前树逐字段 diff=0。
 DEFAULT_BASELINE_REF = "6de98bc"
 

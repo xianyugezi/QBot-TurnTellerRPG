@@ -38,7 +38,8 @@
   J-1  珠插槽定义来源：ctx["slot_defs"] = slots.json 珠插槽条目归一映射
        {equip_id: [{"slot_level": 1..3}, ...]}；槽位索引 0 起；单件槽位数 = slots 数组长度
        （SOCK-01 工程补白：定稿未写死槽数，默认 1-3 个槽，内容包可配）。
-       注：不用 ctx["slots"] 键——该键被 M6 装备引擎「部位定义 slots.json」占用，避免冲突。
+       注：不用 ctx["slots"] 键——该键被装配层的**装备部位定义**（`settings.slot_defs`，由
+       `assembly/context.py` 注入）占用，避免冲突（批83 · NEW-2：原注释误记为来自 slots.json）。
   J-2  珠绑定写入形态：ctx["equipment"][equip_id]["jewels"] = {slot_index: jewel_snapshot}，
        jewel_snapshot = {jewel_id, quality, traits, stack_key, slot_level,
        bound: True, bound_to: player}——珠随装备绑定角色（SOCK-04），战斗结算按快照引用

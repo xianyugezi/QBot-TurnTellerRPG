@@ -669,7 +669,7 @@
 
 | 勾 | 检查 | 命令 | 看到什么算通过 |
 |---|---|---|---|
-| [ ] | 全量测试 | `pytest tests/ -q -o addopts=""` | 看到 `0 failed`（本批基线 **9147 passed**） |
+| [ ] | 全量测试 | `pytest tests/ -q -o addopts=""` | 看到 `0 failed`（本环境实测 **9145 passed / 12 skipped**；任务给定基线 9147 passed，差 2 见报告「待查」） |
 | [ ] | 工作树干净 | `git status --porcelain` | **无输出**（硬纪律） |
 | [ ] | 架构门禁 | `python scripts/check_architecture.py` | 末行 `ARCH-OK` |
 | [ ] | 内容包门禁 | `python scripts/check_m7_content.py --path content/<包>` | 无红项（**缺省只查一个包**） |

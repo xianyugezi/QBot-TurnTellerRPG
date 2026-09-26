@@ -6,15 +6,15 @@
   "area": "荒原径",
   "desc": "荒原径常见的小型荒兽，皮糙肉厚，残血时会扑咬反击。",
   "stats": {
-   "hp": 140,
-   "mp": 20,
-   "str": 12,
-   "int": 8,
-   "con": 14,
-   "spr": 8,
-   "foc": 10,
-   "agi": 12,
-   "luk": 8
+   "hp": 13000,
+   "mp": 260,
+   "str": 3965,
+   "int": 1586,
+   "con": 12,
+   "spr": 1586,
+   "foc": 49,
+   "agi": 49,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -28,9 +28,9 @@
   "pv": 20,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 40,
+   "exp": 52,
    "currencies": {
-    "coins": 25
+    "coins": 19
    }
   },
   "actions": [
@@ -128,15 +128,15 @@
   "area": "荒原径",
   "desc": "成群结队在沙地里翻找食物的鼠类，单个不足为惧。",
   "stats": {
-   "hp": 110,
-   "mp": 10,
-   "str": 10,
-   "int": 6,
-   "con": 10,
-   "spr": 6,
-   "foc": 8,
-   "agi": 14,
-   "luk": 10
+   "hp": 13000,
+   "mp": 260,
+   "str": 3965,
+   "int": 1586,
+   "con": 12,
+   "spr": 1586,
+   "foc": 49,
+   "agi": 49,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -150,9 +150,9 @@
   "pv": 12,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 28,
+   "exp": 52,
    "currencies": {
-    "coins": 15
+    "coins": 19
    }
   },
   "actions": [
@@ -233,15 +233,15 @@
   "area": "荒原径",
   "desc": "脊背隆起如刀锋的猎犬，成群狩猎。",
   "stats": {
-   "hp": 160,
-   "mp": 20,
-   "str": 14,
-   "int": 8,
-   "con": 14,
-   "spr": 8,
-   "foc": 12,
-   "agi": 16,
-   "luk": 8
+   "hp": 13000,
+   "mp": 260,
+   "str": 3965,
+   "int": 1586,
+   "con": 12,
+   "spr": 1586,
+   "foc": 49,
+   "agi": 49,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -255,9 +255,9 @@
   "pv": 24,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 55,
+   "exp": 52,
    "currencies": {
-    "coins": 32
+    "coins": 19
    }
   },
   "actions": [
@@ -349,15 +349,15 @@
   "area": "斩脉试炼场",
   "desc": "甲壳薄而锋利、行动迟缓的大型甲虫。",
   "stats": {
-   "hp": 190,
-   "mp": 10,
-   "str": 15,
-   "int": 6,
-   "con": 20,
-   "spr": 6,
-   "foc": 10,
-   "agi": 8,
-   "luk": 6
+   "hp": 13000,
+   "mp": 260,
+   "str": 3965,
+   "int": 1586,
+   "con": 12,
+   "spr": 1586,
+   "foc": 49,
+   "agi": 49,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -371,9 +371,9 @@
   "pv": 30,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 70,
+   "exp": 52,
    "currencies": {
-    "coins": 40
+    "coins": 19
    }
   },
   "actions": [
@@ -454,15 +454,15 @@
   "area": "荒原径",
   "desc": "背覆沉岩的荒兽，冲撞迅猛，被破甲后承受更多伤害。",
   "stats": {
-   "hp": 420,
-   "mp": 40,
-   "str": 20,
-   "int": 10,
+   "hp": 29000,
+   "mp": 580,
+   "str": 5947,
+   "int": 2378,
    "con": 24,
-   "spr": 10,
-   "foc": 14,
-   "agi": 14,
-   "luk": 6
+   "spr": 2378,
+   "foc": 49,
+   "agi": 49,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -476,9 +476,9 @@
   "pv": 60,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 260,
+   "exp": 116,
    "currencies": {
-    "coins": 180
+    "coins": 43
    }
   },
   "actions": [
@@ -581,15 +581,15 @@
   "area": "斩脉试炼场",
   "desc": "立于试炼场的石躯守卫，双臂生刃。",
   "stats": {
-   "hp": 380,
-   "mp": 60,
-   "str": 22,
-   "int": 10,
-   "con": 22,
-   "spr": 12,
-   "foc": 18,
-   "agi": 18,
-   "luk": 8
+   "hp": 29000,
+   "mp": 580,
+   "str": 5947,
+   "int": 2378,
+   "con": 24,
+   "spr": 2378,
+   "foc": 49,
+   "agi": 49,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -603,9 +603,9 @@
   "pv": 70,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 300,
+   "exp": 116,
    "currencies": {
-    "coins": 210
+    "coins": 43
    }
   },
   "actions": [
@@ -696,15 +696,15 @@
   "area": "斩脉试炼场",
   "desc": "翼膜轻薄、俯冲如箭的荒原掠食者。",
   "stats": {
-   "hp": 360,
-   "mp": 40,
-   "str": 24,
-   "int": 8,
-   "con": 20,
-   "spr": 8,
-   "foc": 16,
-   "agi": 22,
-   "luk": 6
+   "hp": 29000,
+   "mp": 580,
+   "str": 5947,
+   "int": 2378,
+   "con": 24,
+   "spr": 2378,
+   "foc": 49,
+   "agi": 49,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -718,9 +718,9 @@
   "pv": 65,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 280,
+   "exp": 116,
    "currencies": {
-    "coins": 200
+    "coins": 43
    }
   },
   "actions": [
@@ -816,15 +816,15 @@
   "area": "脉源丘陵",
   "desc": "翅上生有脉纹、飞行无声的巨蛾。",
   "stats": {
-   "hp": 520,
-   "mp": 90,
-   "str": 30,
-   "int": 12,
-   "con": 28,
-   "spr": 10,
-   "foc": 20,
-   "agi": 22,
-   "luk": 10
+   "hp": 40000,
+   "mp": 800,
+   "str": 12380,
+   "int": 4952,
+   "con": 16,
+   "spr": 4952,
+   "foc": 70,
+   "agi": 70,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -838,9 +838,9 @@
   "pv": 90,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 320,
+   "exp": 160,
    "currencies": {
-    "coins": 210
+    "coins": 60
    }
   },
   "actions": [
@@ -934,15 +934,15 @@
   "area": "脉源丘陵",
   "desc": "皮糙肉厚的野猪，冲撞时可撞碎石砾。",
   "stats": {
-   "hp": 680,
-   "mp": 40,
-   "str": 34,
-   "int": 8,
-   "con": 34,
-   "spr": 8,
-   "foc": 14,
-   "agi": 16,
-   "luk": 6
+   "hp": 40000,
+   "mp": 800,
+   "str": 12380,
+   "int": 4952,
+   "con": 16,
+   "spr": 4952,
+   "foc": 70,
+   "agi": 70,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -956,9 +956,9 @@
   "pv": 110,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 420,
+   "exp": 160,
    "currencies": {
-    "coins": 260
+    "coins": 60
    }
   },
   "actions": [
@@ -1049,15 +1049,15 @@
   "area": "采石坑",
   "desc": "背着石质硬壳、行动缓慢的蟹状荒兽。",
   "stats": {
-   "hp": 760,
-   "mp": 30,
-   "str": 30,
-   "int": 6,
-   "con": 42,
-   "spr": 6,
-   "foc": 12,
-   "agi": 10,
-   "luk": 6
+   "hp": 40000,
+   "mp": 800,
+   "str": 12380,
+   "int": 4952,
+   "con": 16,
+   "spr": 4952,
+   "foc": 70,
+   "agi": 70,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -1071,9 +1071,9 @@
   "pv": 130,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 460,
+   "exp": 160,
    "currencies": {
-    "coins": 280
+    "coins": 60
    }
   },
   "actions": [
@@ -1164,15 +1164,15 @@
   "area": "破脉峡谷",
   "desc": "能在断崖上直上直下的野山羊，头角坚硬。",
   "stats": {
-   "hp": 600,
-   "mp": 60,
-   "str": 32,
-   "int": 10,
-   "con": 26,
-   "spr": 10,
-   "foc": 18,
-   "agi": 24,
-   "luk": 8
+   "hp": 40000,
+   "mp": 800,
+   "str": 12380,
+   "int": 4952,
+   "con": 16,
+   "spr": 4952,
+   "foc": 70,
+   "agi": 70,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -1186,9 +1186,9 @@
   "pv": 100,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 400,
+   "exp": 160,
    "currencies": {
-    "coins": 250
+    "coins": 60
    }
   },
   "actions": [
@@ -1279,15 +1279,15 @@
   "area": "采石坑",
   "desc": "由碎岩与灵能凝成的小型灵体，飘忽不定。",
   "stats": {
-   "hp": 480,
-   "mp": 140,
-   "str": 24,
-   "int": 16,
-   "con": 24,
-   "spr": 18,
-   "foc": 22,
-   "agi": 20,
-   "luk": 12
+   "hp": 40000,
+   "mp": 800,
+   "str": 12380,
+   "int": 4952,
+   "con": 16,
+   "spr": 4952,
+   "foc": 70,
+   "agi": 70,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -1301,9 +1301,9 @@
   "pv": 85,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 380,
+   "exp": 160,
    "currencies": {
-    "coins": 240
+    "coins": 60
    }
   },
   "actions": [
@@ -1394,15 +1394,15 @@
   "area": "采石坑",
   "desc": "采石坑深处的巨型石像，脚步震地。",
   "stats": {
-   "hp": 1500,
-   "mp": 120,
-   "str": 52,
-   "int": 12,
-   "con": 62,
-   "spr": 12,
-   "foc": 20,
-   "agi": 12,
-   "luk": 6
+   "hp": 84000,
+   "mp": 1680,
+   "str": 18570,
+   "int": 7428,
+   "con": 32,
+   "spr": 7428,
+   "foc": 70,
+   "agi": 70,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -1416,9 +1416,9 @@
   "pv": 260,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 1500,
+   "exp": 336,
    "currencies": {
-    "coins": 900
+    "coins": 126
    }
   },
   "actions": [
@@ -1512,15 +1512,15 @@
   "area": "破脉峡谷",
   "desc": "藏在峡谷阴影里、出手极快的猎手。",
   "stats": {
-   "hp": 1100,
-   "mp": 160,
-   "str": 46,
-   "int": 20,
-   "con": 40,
-   "spr": 18,
-   "foc": 30,
-   "agi": 34,
-   "luk": 10
+   "hp": 84000,
+   "mp": 1680,
+   "str": 18570,
+   "int": 7428,
+   "con": 32,
+   "spr": 7428,
+   "foc": 70,
+   "agi": 70,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -1534,9 +1534,9 @@
   "pv": 200,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 1200,
+   "exp": 336,
    "currencies": {
-    "coins": 720
+    "coins": 126
    }
   },
   "actions": [
@@ -1627,15 +1627,15 @@
   "area": "裂谷口",
   "desc": "裂谷口成群倒挂的巨蝠，飞行轨迹诡谲。",
   "stats": {
-   "hp": 1600,
-   "mp": 180,
-   "str": 54,
-   "int": 18,
-   "con": 46,
-   "spr": 16,
-   "foc": 30,
-   "agi": 36,
-   "luk": 10
+   "hp": 70000,
+   "mp": 1400,
+   "str": 22280,
+   "int": 8912,
+   "con": 20,
+   "spr": 8912,
+   "foc": 94,
+   "agi": 94,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -1649,9 +1649,9 @@
   "pv": 280,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 1800,
+   "exp": 280,
    "currencies": {
-    "coins": 1000
+    "coins": 105
    }
   },
   "actions": [
@@ -1742,15 +1742,15 @@
   "area": "幽脉洞窟",
   "desc": "菌盖厚重、靠孢粉攻击的洞穴荒兽。",
   "stats": {
-   "hp": 2100,
-   "mp": 220,
-   "str": 48,
-   "int": 22,
-   "con": 60,
-   "spr": 20,
-   "foc": 26,
-   "agi": 18,
-   "luk": 8
+   "hp": 70000,
+   "mp": 1400,
+   "str": 22280,
+   "int": 8912,
+   "con": 20,
+   "spr": 8912,
+   "foc": 94,
+   "agi": 94,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -1764,9 +1764,9 @@
   "pv": 340,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 2300,
+   "exp": 280,
    "currencies": {
-    "coins": 1300
+    "coins": 105
    }
   },
   "actions": [
@@ -1862,15 +1862,15 @@
   "area": "幽脉洞窟",
   "desc": "洞穴顶层结网的大型蛛类，毒性不轻。",
   "stats": {
-   "hp": 1800,
-   "mp": 160,
-   "str": 56,
-   "int": 16,
-   "con": 48,
-   "spr": 16,
-   "foc": 32,
-   "agi": 30,
-   "luk": 10
+   "hp": 70000,
+   "mp": 1400,
+   "str": 22280,
+   "int": 8912,
+   "con": 20,
+   "spr": 8912,
+   "foc": 94,
+   "agi": 94,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -1884,9 +1884,9 @@
   "pv": 300,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 2000,
+   "exp": 280,
    "currencies": {
-    "coins": 1150
+    "coins": 105
    }
   },
   "actions": [
@@ -1972,15 +1972,15 @@
   "area": "断层平台",
   "desc": "在断层平台游荡的独狼，领地意识极强。",
   "stats": {
-   "hp": 1900,
-   "mp": 180,
-   "str": 60,
-   "int": 16,
-   "con": 50,
-   "spr": 16,
-   "foc": 34,
-   "agi": 34,
-   "luk": 10
+   "hp": 70000,
+   "mp": 1400,
+   "str": 22280,
+   "int": 8912,
+   "con": 20,
+   "spr": 8912,
+   "foc": 94,
+   "agi": 94,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -1994,9 +1994,9 @@
   "pv": 320,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 2200,
+   "exp": 280,
    "currencies": {
-    "coins": 1250
+    "coins": 105
    }
   },
   "actions": [
@@ -2087,15 +2087,15 @@
   "area": "裂谷口",
   "desc": "盘踞裂谷口、体型尚幼的亚龙，脾气极坏。",
   "stats": {
-   "hp": 5200,
-   "mp": 420,
-   "str": 78,
-   "int": 40,
-   "con": 76,
-   "spr": 34,
-   "foc": 44,
-   "agi": 30,
-   "luk": 12
+   "hp": 143000,
+   "mp": 2860,
+   "str": 33420,
+   "int": 13368,
+   "con": 40,
+   "spr": 13368,
+   "foc": 94,
+   "agi": 94,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -2109,9 +2109,9 @@
   "pv": 900,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 6500,
+   "exp": 572,
    "currencies": {
-    "coins": 3600
+    "coins": 214
    }
   },
   "actions": [
@@ -2215,15 +2215,15 @@
   "area": "幽脉洞窟",
   "desc": "守在幽脉深处的石躯守望者，掌心灵光不灭。",
   "stats": {
-   "hp": 6000,
-   "mp": 520,
-   "str": 70,
-   "int": 46,
-   "con": 84,
-   "spr": 40,
-   "foc": 46,
-   "agi": 28,
-   "luk": 12
+   "hp": 143000,
+   "mp": 2860,
+   "str": 33420,
+   "int": 13368,
+   "con": 40,
+   "spr": 13368,
+   "foc": 94,
+   "agi": 94,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -2237,9 +2237,9 @@
   "pv": 1000,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 7200,
+   "exp": 572,
    "currencies": {
-    "coins": 4000
+    "coins": 214
    }
   },
   "actions": [
@@ -2343,15 +2343,15 @@
   "area": "禁地外围",
   "desc": "在禁地外围巡逻的石像，动作呆板但势大力沉。",
   "stats": {
-   "hp": 4200,
-   "mp": 260,
-   "str": 82,
-   "int": 22,
-   "con": 74,
-   "spr": 20,
-   "foc": 36,
-   "agi": 24,
-   "luk": 10
+   "hp": 105000,
+   "mp": 2100,
+   "str": 38120,
+   "int": 15248,
+   "con": 24,
+   "spr": 15248,
+   "foc": 124,
+   "agi": 124,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -2365,9 +2365,9 @@
   "pv": 700,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 7000,
+   "exp": 420,
    "currencies": {
-    "coins": 3800
+    "coins": 157
    }
   },
   "actions": [
@@ -2458,15 +2458,15 @@
   "area": "禁地外围",
   "desc": "啃食残骸为生的猎犬，牙齿泛着灰白。",
   "stats": {
-   "hp": 3900,
-   "mp": 300,
-   "str": 90,
-   "int": 24,
-   "con": 68,
-   "spr": 22,
-   "foc": 40,
-   "agi": 42,
-   "luk": 12
+   "hp": 105000,
+   "mp": 2100,
+   "str": 38120,
+   "int": 15248,
+   "con": 24,
+   "spr": 15248,
+   "foc": 124,
+   "agi": 124,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -2480,9 +2480,9 @@
   "pv": 650,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 6600,
+   "exp": 420,
    "currencies": {
-    "coins": 3600
+    "coins": 157
    }
   },
   "actions": [
@@ -2573,15 +2573,15 @@
   "area": "四脉交汇",
   "desc": "四脉交汇处凝成的游灵，光带缠绕。",
   "stats": {
-   "hp": 3400,
-   "mp": 480,
-   "str": 76,
-   "int": 40,
-   "con": 62,
-   "spr": 44,
-   "foc": 46,
-   "agi": 38,
-   "luk": 14
+   "hp": 105000,
+   "mp": 2100,
+   "str": 38120,
+   "int": 15248,
+   "con": 24,
+   "spr": 15248,
+   "foc": 124,
+   "agi": 124,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -2595,9 +2595,9 @@
   "pv": 560,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 6400,
+   "exp": 420,
    "currencies": {
-    "coins": 3500
+    "coins": 157
    }
   },
   "actions": [
@@ -2693,15 +2693,15 @@
   "area": "试炼终殿",
   "desc": "终殿中的影卫，形貌与其他影卫一致，看不出差别。",
   "stats": {
-   "hp": 4600,
-   "mp": 380,
-   "str": 94,
-   "int": 30,
-   "con": 70,
-   "spr": 28,
-   "foc": 44,
-   "agi": 40,
-   "luk": 12
+   "hp": 105000,
+   "mp": 2100,
+   "str": 38120,
+   "int": 15248,
+   "con": 24,
+   "spr": 15248,
+   "foc": 124,
+   "agi": 124,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -2715,9 +2715,9 @@
   "pv": 760,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 7600,
+   "exp": 420,
    "currencies": {
-    "coins": 4200
+    "coins": 157
    }
   },
   "actions": [
@@ -2826,15 +2826,15 @@
   "area": "断层平台",
   "desc": "断层平台上的独居暴君，一击可裂地。",
   "stats": {
-   "hp": 14000,
-   "mp": 900,
-   "str": 120,
-   "int": 60,
-   "con": 108,
-   "spr": 50,
-   "foc": 60,
-   "agi": 38,
-   "luk": 14
+   "hp": 707000,
+   "mp": 14140,
+   "str": 49014,
+   "int": 19605,
+   "con": 30,
+   "spr": 19605,
+   "foc": 163,
+   "agi": 163,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -2849,9 +2849,9 @@
   "pv": 2400,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 26000,
+   "exp": 2828,
    "currencies": {
-    "coins": 15000
+    "coins": 1060
    }
   },
   "actions": [
@@ -2964,15 +2964,15 @@
   "area": "禁地外围",
   "desc": "守着禁地入口的巨像，胸口灵光如脉。",
   "stats": {
-   "hp": 16000,
-   "mp": 1000,
-   "str": 112,
-   "int": 66,
-   "con": 116,
-   "spr": 56,
-   "foc": 62,
-   "agi": 36,
-   "luk": 14
+   "hp": 707000,
+   "mp": 14140,
+   "str": 49014,
+   "int": 19605,
+   "con": 30,
+   "spr": 19605,
+   "foc": 163,
+   "agi": 163,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -2987,9 +2987,9 @@
   "pv": 2600,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 30000,
+   "exp": 2828,
    "currencies": {
-    "coins": 17000
+    "coins": 1060
    }
   },
   "actions": [
@@ -3102,15 +3102,15 @@
   "area": "脉心深窟",
   "desc": "深窟里游荡的亡骸，骨架被脉光缠住。",
   "stats": {
-   "hp": 12000,
-   "mp": 600,
-   "str": 128,
-   "int": 40,
-   "con": 120,
-   "spr": 36,
-   "foc": 56,
-   "agi": 34,
-   "luk": 12
+   "hp": 123000,
+   "mp": 2460,
+   "str": 46288,
+   "int": 18515,
+   "con": 28,
+   "spr": 18515,
+   "foc": 142,
+   "agi": 142,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -3124,9 +3124,9 @@
   "pv": 500,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 20000,
+   "exp": 492,
    "currencies": {
-    "coins": 10000
+    "coins": 184
    }
   },
   "actions": [
@@ -3228,15 +3228,15 @@
   "area": "回响之厅",
   "desc": "厅中回声凝成的影体，说话声由远及近。",
   "stats": {
-   "hp": 11000,
-   "mp": 800,
-   "str": 120,
-   "int": 52,
-   "con": 108,
-   "spr": 50,
-   "foc": 62,
-   "agi": 44,
-   "luk": 14
+   "hp": 123000,
+   "mp": 2460,
+   "str": 46288,
+   "int": 18515,
+   "con": 28,
+   "spr": 18515,
+   "foc": 142,
+   "agi": 142,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -3250,9 +3250,9 @@
   "pv": 480,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 19000,
+   "exp": 492,
    "currencies": {
-    "coins": 9500
+    "coins": 184
    }
   },
   "actions": [
@@ -3354,15 +3354,15 @@
   "area": "四脉祭坛",
   "desc": "侍立在祭坛四角的石人，四脉各一。",
   "stats": {
-   "hp": 13500,
-   "mp": 620,
-   "str": 134,
-   "int": 44,
-   "con": 132,
-   "spr": 40,
-   "foc": 58,
-   "agi": 32,
-   "luk": 12
+   "hp": 123000,
+   "mp": 2460,
+   "str": 46288,
+   "int": 18515,
+   "con": 28,
+   "spr": 18515,
+   "foc": 142,
+   "agi": 142,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -3376,9 +3376,9 @@
   "pv": 560,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 22000,
+   "exp": 492,
    "currencies": {
-    "coins": 11000
+    "coins": 184
    }
   },
   "actions": [
@@ -3480,15 +3480,15 @@
   "area": "渊脉裂隙",
   "desc": "裂隙壁上攀爬的兽类，四足生钩。",
   "stats": {
-   "hp": 14000,
-   "mp": 700,
-   "str": 142,
-   "int": 46,
-   "con": 126,
-   "spr": 42,
-   "foc": 60,
-   "agi": 40,
-   "luk": 12
+   "hp": 123000,
+   "mp": 2460,
+   "str": 46288,
+   "int": 18515,
+   "con": 28,
+   "spr": 18515,
+   "foc": 142,
+   "agi": 142,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -3502,9 +3502,9 @@
   "pv": 540,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 21000,
+   "exp": 492,
    "currencies": {
-    "coins": 10500
+    "coins": 184
    }
   },
   "actions": [
@@ -3616,15 +3616,15 @@
   "area": "脉核禁宫",
   "desc": "禁宫内游动的灵体，体心一点脉光。",
   "stats": {
-   "hp": 13000,
-   "mp": 1000,
-   "str": 126,
-   "int": 60,
-   "con": 116,
-   "spr": 58,
-   "foc": 66,
-   "agi": 46,
-   "luk": 16
+   "hp": 123000,
+   "mp": 2460,
+   "str": 46288,
+   "int": 18515,
+   "con": 28,
+   "spr": 18515,
+   "foc": 142,
+   "agi": 142,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -3638,9 +3638,9 @@
   "pv": 520,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 20000,
+   "exp": 492,
    "currencies": {
-    "coins": 10000
+    "coins": 184
    }
   },
   "actions": [
@@ -3727,15 +3727,15 @@
   "area": "脉心深窟",
   "desc": "深窟里的捕食者，张开的口能吞下石柱。",
   "stats": {
-   "hp": 30000,
-   "mp": 1400,
-   "str": 186,
-   "int": 60,
-   "con": 176,
-   "spr": 54,
-   "foc": 78,
-   "agi": 44,
-   "luk": 14
+   "hp": 263000,
+   "mp": 5260,
+   "str": 67328,
+   "int": 26931,
+   "con": 56,
+   "spr": 26931,
+   "foc": 142,
+   "agi": 142,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -3749,9 +3749,9 @@
   "pv": 1200,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 45000,
+   "exp": 1052,
    "currencies": {
-    "coins": 24000
+    "coins": 394
    }
   },
   "actions": [
@@ -3863,15 +3863,15 @@
   "area": "回响之厅",
   "desc": "由许多声音堆成的合唱之影，越打越响。",
   "stats": {
-   "hp": 28000,
-   "mp": 1800,
-   "str": 170,
-   "int": 78,
-   "con": 158,
-   "spr": 74,
-   "foc": 82,
-   "agi": 50,
-   "luk": 16
+   "hp": 263000,
+   "mp": 5260,
+   "str": 67328,
+   "int": 26931,
+   "con": 56,
+   "spr": 26931,
+   "foc": 142,
+   "agi": 142,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -3885,9 +3885,9 @@
   "pv": 1150,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 43000,
+   "exp": 1052,
    "currencies": {
-    "coins": 23000
+    "coins": 394
    }
   },
   "actions": [
@@ -3999,15 +3999,15 @@
   "area": "四脉祭坛",
   "desc": "四祭坛的看守者，四臂各持一脉法器。",
   "stats": {
-   "hp": 34000,
-   "mp": 1500,
-   "str": 194,
-   "int": 62,
-   "con": 196,
-   "spr": 58,
-   "foc": 76,
-   "agi": 42,
-   "luk": 14
+   "hp": 263000,
+   "mp": 5260,
+   "str": 67328,
+   "int": 26931,
+   "con": 56,
+   "spr": 26931,
+   "foc": 142,
+   "agi": 142,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -4021,9 +4021,9 @@
   "pv": 1400,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 50000,
+   "exp": 1052,
    "currencies": {
-    "coins": 26000
+    "coins": 394
    }
   },
   "actions": [
@@ -4121,15 +4121,15 @@
   "area": "渊脉裂隙",
   "desc": "裂隙深处只剩一张巨口，颚上生齿如林。",
   "stats": {
-   "hp": 32000,
-   "mp": 1600,
-   "str": 200,
-   "int": 66,
-   "con": 172,
-   "spr": 60,
-   "foc": 84,
-   "agi": 48,
-   "luk": 16
+   "hp": 263000,
+   "mp": 5260,
+   "str": 67328,
+   "int": 26931,
+   "con": 56,
+   "spr": 26931,
+   "foc": 142,
+   "agi": 142,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -4143,9 +4143,9 @@
   "pv": 1300,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 48000,
+   "exp": 1052,
    "currencies": {
-    "coins": 25000
+    "coins": 394
    }
   },
   "actions": [
@@ -4248,15 +4248,15 @@
   "area": "四脉祭坛",
   "desc": "四脉力量凝成的化身，身上同时亮着四种脉光。",
   "stats": {
-   "hp": 52000,
-   "mp": 2600,
-   "str": 220,
-   "int": 96,
-   "con": 208,
-   "spr": 92,
-   "foc": 96,
-   "agi": 56,
-   "luk": 18
+   "hp": 1325000,
+   "mp": 26500,
+   "str": 84160,
+   "int": 33664,
+   "con": 31,
+   "spr": 33664,
+   "foc": 163,
+   "agi": 163,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -4272,9 +4272,9 @@
   "pv": 2200,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 80000,
+   "exp": 5300,
    "currencies": {
-    "coins": 40000
+    "coins": 1987
    }
   },
   "actions": [
@@ -4406,15 +4406,15 @@
   "area": "渊脉裂隙",
   "desc": "裂隙底部的君王，形体半虚半实，随脉光涨落。",
   "stats": {
-   "hp": 60000,
-   "mp": 3000,
-   "str": 232,
-   "int": 104,
-   "con": 220,
-   "spr": 96,
-   "foc": 100,
-   "agi": 54,
-   "luk": 18
+   "hp": 1325000,
+   "mp": 26500,
+   "str": 84160,
+   "int": 33664,
+   "con": 31,
+   "spr": 33664,
+   "foc": 163,
+   "agi": 163,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -4429,9 +4429,9 @@
   "pv": 2600,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 95000,
+   "exp": 5300,
    "currencies": {
-    "coins": 48000
+    "coins": 1987
    }
   },
   "actions": [
@@ -4538,15 +4538,15 @@
   "area": "脉核禁宫",
   "desc": "禁宫最深处、坐在脉核之上的霸主，一动则地脉呻吟。",
   "stats": {
-   "hp": 75000,
-   "mp": 3600,
-   "str": 250,
-   "int": 110,
-   "con": 240,
-   "spr": 104,
-   "foc": 106,
-   "agi": 52,
-   "luk": 18
+   "hp": 1325000,
+   "mp": 26500,
+   "str": 84160,
+   "int": 33664,
+   "con": 31,
+   "spr": 33664,
+   "foc": 163,
+   "agi": 163,
+   "luk": 50
   },
   "weakness": {
    "types": [
@@ -4561,9 +4561,9 @@
   "pv": 3000,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 120000,
+   "exp": 5300,
    "currencies": {
-    "coins": 60000
+    "coins": 1987
    }
   },
   "actions": [
@@ -4691,13 +4691,13 @@
   "desc": "四脉试炼的主人，坐在终殿正中。传说它等一个能打穿它的人很久了。",
   "stats": {
    "hp": 1200000,
-   "mp": 20000,
-   "str": 900,
-   "int": 420,
-   "con": 900,
-   "spr": 420,
-   "foc": 520,
-   "agi": 320,
+   "mp": 50000,
+   "str": 88368,
+   "int": 8000,
+   "con": 31,
+   "spr": 8000,
+   "foc": 205,
+   "agi": 205,
    "luk": 60
   },
   "weakness": {
@@ -4714,7 +4714,7 @@
   "pv": 20000,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 1200000,
+   "exp": 400000,
    "currencies": {
     "coins": 800000
    }

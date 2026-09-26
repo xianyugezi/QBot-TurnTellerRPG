@@ -3,13 +3,13 @@
   "id": "heal_small",
   "name": "小回复",
   "type": "heal",
-  "power": 60
+  "power": 1200
  },
  {
   "id": "heal_mid",
   "name": "中回复",
   "type": "heal",
-  "power": 220
+  "power": 6000
  },
  {
   "id": "guard_stance",
@@ -32,7 +32,7 @@
   "id": "burn_dot",
   "name": "灼烧",
   "type": "dot",
-  "power": 25,
+  "power": 3000,
   "duration": 3,
   "target": "enemy",
   "desc": "每回合扣 25 点生命，持续 3 回合"
@@ -94,7 +94,7 @@
   "id": "bleed_dot",
   "name": "出血",
   "type": "dot",
-  "power": 30,
+  "power": 3600,
   "duration": 3,
   "target": "enemy",
   "desc": "每回合扣 30 点生命，持续 3 回合"
@@ -171,5 +171,17 @@
   "type": "status_apply",
   "target": "enemy",
   "status_id": "st_atk_down"
+ },
+ {
+  "id": "heal_high",
+  "name": "大回复",
+  "type": "heal",
+  "power": 30000
+ },
+ {
+  "id": "heal_full",
+  "name": "回天",
+  "type": "heal",
+  "power": 90000
  }
 ]

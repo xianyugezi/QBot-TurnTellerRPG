@@ -2,35 +2,31 @@
  "hp": {
   "name": "生命",
   "type": "resource",
-  "base": 120,
-  "max": 999999
+  "base": 16000,
+  "max": 99999999
  },
  "mp": {
   "name": "法力",
   "type": "resource",
-  "base": 60,
-  "max": 999999
+  "base": 300,
+  "max": 9999999
  },
- "str": {
-  "name": "力量",
+ "atk": {
+  "name": "攻击",
   "type": "combat",
-  "base": 10,
-  "growth": 2
+  "base": 100,
+  "growth": 99.0,
+  "max": 9999999
  },
- "int": {
-  "name": "智力",
+ "dfn": {
+  "name": "防御",
   "type": "combat",
-  "base": 10,
-  "growth": 2
+  "base": 20,
+  "growth": 3.46,
+  "max": 9999999
  },
- "con": {
-  "name": "体质",
-  "type": "combat",
-  "base": 10,
-  "growth": 2
- },
- "spr": {
-  "name": "精神",
+ "agi": {
+  "name": "敏捷",
   "type": "combat",
   "base": 10,
   "growth": 2
@@ -41,8 +37,8 @@
   "base": 10,
   "growth": 2
  },
- "agi": {
-  "name": "敏捷",
+ "spr": {
+  "name": "精神",
   "type": "combat",
   "base": 10,
   "growth": 2

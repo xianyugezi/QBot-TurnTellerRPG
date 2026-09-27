@@ -896,7 +896,7 @@
     "mode": "bidirectional"
    },
    "up": {
-    "to": "four_altars",
+    "to": "vein_abyss",
     "mode": "bidirectional"
    },
    "right": {
@@ -969,5 +969,34 @@
     "rarity": "normal"
    }
   ]
+ },
+ {
+  "id": "vein_abyss",
+  "name": "渊脉最底",
+  "area": null,
+  "desc": "渊脉裂隙再往下的最底一层，脉核的碎片在这里堆积成滩。",
+  "monsters": [
+   {
+    "enemy": "abyss_leech",
+    "count": 4,
+    "respawn_minutes": 120
+   },
+   {
+    "enemy": "core_warden",
+    "count": 1,
+    "respawn_minutes": 240
+   },
+   {
+    "enemy": "abyss_crawler",
+    "count": 3,
+    "respawn_minutes": 120
+   }
+  ],
+  "exits": {
+   "down": {
+    "to": "abyss_crevice",
+    "mode": "bidirectional"
+   }
+  }
  }
 ]

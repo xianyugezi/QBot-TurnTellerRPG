@@ -3102,9 +3102,9 @@
   "area": "脉心深窟",
   "desc": "深窟里游荡的亡骸，骨架被脉光缠住。",
   "stats": {
-   "hp": 123000,
-   "mp": 2460,
-   "str": 46288,
+   "hp": 1100000,
+   "mp": 22000,
+   "str": 118080,
    "int": 18515,
    "con": 28,
    "spr": 18515,
@@ -3124,9 +3124,9 @@
   "pv": 500,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 492,
+   "exp": 4400,
    "currencies": {
-    "coins": 184
+    "coins": 1650
    }
   },
   "actions": [
@@ -3203,6 +3203,26 @@
      "item": "bp_ac_70a",
      "chance": 12,
      "count": 1
+    },
+    {
+     "item": "bp_wp_staff_85",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_85b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_85d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_85b",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -3228,9 +3248,9 @@
   "area": "回响之厅",
   "desc": "厅中回声凝成的影体，说话声由远及近。",
   "stats": {
-   "hp": 123000,
-   "mp": 2460,
-   "str": 46288,
+   "hp": 1100000,
+   "mp": 22000,
+   "str": 118080,
    "int": 18515,
    "con": 28,
    "spr": 18515,
@@ -3250,9 +3270,9 @@
   "pv": 480,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 492,
+   "exp": 4400,
    "currencies": {
-    "coins": 184
+    "coins": 1650
    }
   },
   "actions": [
@@ -3329,6 +3349,26 @@
      "item": "bp_ac_70b",
      "chance": 12,
      "count": 1
+    },
+    {
+     "item": "bp_ar_head_85b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_85d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_85b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_85d",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -3354,9 +3394,9 @@
   "area": "四脉祭坛",
   "desc": "侍立在祭坛四角的石人，四脉各一。",
   "stats": {
-   "hp": 123000,
-   "mp": 2460,
-   "str": 46288,
+   "hp": 1100000,
+   "mp": 22000,
+   "str": 118080,
    "int": 18515,
    "con": 28,
    "spr": 18515,
@@ -3376,9 +3416,9 @@
   "pv": 560,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 492,
+   "exp": 4400,
    "currencies": {
-    "coins": 184
+    "coins": 1650
    }
   },
   "actions": [
@@ -3480,9 +3520,9 @@
   "area": "渊脉裂隙",
   "desc": "裂隙壁上攀爬的兽类，四足生钩。",
   "stats": {
-   "hp": 123000,
-   "mp": 2460,
-   "str": 46288,
+   "hp": 1100000,
+   "mp": 22000,
+   "str": 118080,
    "int": 18515,
    "con": 28,
    "spr": 18515,
@@ -3502,9 +3542,9 @@
   "pv": 540,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 492,
+   "exp": 4400,
    "currencies": {
-    "coins": 184
+    "coins": 1650
    }
   },
   "actions": [
@@ -3591,6 +3631,31 @@
      "item": "bp_ac_60c",
      "chance": 12,
      "count": 1
+    },
+    {
+     "item": "bp_wp_spear_85",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_85a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_85c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_85a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_85c",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -3616,9 +3681,9 @@
   "area": "脉核禁宫",
   "desc": "禁宫内游动的灵体，体心一点脉光。",
   "stats": {
-   "hp": 123000,
-   "mp": 2460,
-   "str": 46288,
+   "hp": 1100000,
+   "mp": 22000,
+   "str": 118080,
    "int": 18515,
    "con": 28,
    "spr": 18515,
@@ -3638,9 +3703,9 @@
   "pv": 520,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 492,
+   "exp": 4400,
    "currencies": {
-    "coins": 184
+    "coins": 1650
    }
   },
   "actions": [
@@ -3702,6 +3767,26 @@
      "item": "bp_ar_foot_80d",
      "chance": 12,
      "count": 1
+    },
+    {
+     "item": "bp_ar_head_85a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_85c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_85a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_foot_85c",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -3727,9 +3812,9 @@
   "area": "脉心深窟",
   "desc": "深窟里的捕食者，张开的口能吞下石柱。",
   "stats": {
-   "hp": 263000,
-   "mp": 5260,
-   "str": 67328,
+   "hp": 1810000,
+   "mp": 36200,
+   "str": 196800,
    "int": 26931,
    "con": 56,
    "spr": 26931,
@@ -3749,9 +3834,9 @@
   "pv": 1200,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 1052,
+   "exp": 7240,
    "currencies": {
-    "coins": 394
+    "coins": 2715
    }
   },
   "actions": [
@@ -3863,9 +3948,9 @@
   "area": "回响之厅",
   "desc": "由许多声音堆成的合唱之影，越打越响。",
   "stats": {
-   "hp": 263000,
-   "mp": 5260,
-   "str": 67328,
+   "hp": 1810000,
+   "mp": 36200,
+   "str": 196800,
    "int": 26931,
    "con": 56,
    "spr": 26931,
@@ -3885,9 +3970,9 @@
   "pv": 1150,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 1052,
+   "exp": 7240,
    "currencies": {
-    "coins": 394
+    "coins": 2715
    }
   },
   "actions": [
@@ -3999,9 +4084,9 @@
   "area": "四脉祭坛",
   "desc": "四祭坛的看守者，四臂各持一脉法器。",
   "stats": {
-   "hp": 263000,
-   "mp": 5260,
-   "str": 67328,
+   "hp": 1810000,
+   "mp": 36200,
+   "str": 196800,
    "int": 26931,
    "con": 56,
    "spr": 26931,
@@ -4021,9 +4106,9 @@
   "pv": 1400,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 1052,
+   "exp": 7240,
    "currencies": {
-    "coins": 394
+    "coins": 2715
    }
   },
   "actions": [
@@ -4121,9 +4206,9 @@
   "area": "渊脉裂隙",
   "desc": "裂隙深处只剩一张巨口，颚上生齿如林。",
   "stats": {
-   "hp": 263000,
-   "mp": 5260,
-   "str": 67328,
+   "hp": 1810000,
+   "mp": 36200,
+   "str": 196800,
    "int": 26931,
    "con": 56,
    "spr": 26931,
@@ -4143,9 +4228,9 @@
   "pv": 1300,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 1052,
+   "exp": 7240,
    "currencies": {
-    "coins": 394
+    "coins": 2715
    }
   },
   "actions": [
@@ -4248,11 +4333,11 @@
   "area": "四脉祭坛",
   "desc": "四脉力量凝成的化身，身上同时亮着四种脉光。",
   "stats": {
-   "hp": 1325000,
-   "mp": 26500,
-   "str": 84160,
+   "hp": 7270000,
+   "mp": 145400,
+   "str": 295200,
    "int": 33664,
-   "con": 31,
+   "con": 62,
    "spr": 33664,
    "foc": 163,
    "agi": 163,
@@ -4272,9 +4357,9 @@
   "pv": 2200,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 5300,
+   "exp": 29080,
    "currencies": {
-    "coins": 1987
+    "coins": 10905
    }
   },
   "actions": [
@@ -4406,11 +4491,11 @@
   "area": "渊脉裂隙",
   "desc": "裂隙底部的君王，形体半虚半实，随脉光涨落。",
   "stats": {
-   "hp": 1325000,
-   "mp": 26500,
-   "str": 84160,
+   "hp": 7270000,
+   "mp": 145400,
+   "str": 295200,
    "int": 33664,
-   "con": 31,
+   "con": 62,
    "spr": 33664,
    "foc": 163,
    "agi": 163,
@@ -4429,9 +4514,9 @@
   "pv": 2600,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 5300,
+   "exp": 29080,
    "currencies": {
-    "coins": 1987
+    "coins": 10905
    }
   },
   "actions": [
@@ -4538,11 +4623,11 @@
   "area": "脉核禁宫",
   "desc": "禁宫最深处、坐在脉核之上的霸主，一动则地脉呻吟。",
   "stats": {
-   "hp": 1325000,
-   "mp": 26500,
-   "str": 84160,
+   "hp": 7270000,
+   "mp": 145400,
+   "str": 295200,
    "int": 33664,
-   "con": 31,
+   "con": 62,
    "spr": 33664,
    "foc": 163,
    "agi": 163,
@@ -4561,9 +4646,9 @@
   "pv": 3000,
   "pv_recover": "battle_end",
   "rewards": {
-   "exp": 5300,
+   "exp": 29080,
    "currencies": {
-    "coins": 1987
+    "coins": 10905
    }
   },
   "actions": [
@@ -4836,6 +4921,200 @@
    {
     "unlock": 100,
     "desc": "击破它才算走完四脉试炼的路；满级后的秘境才是真正的开始。"
+   }
+  ]
+ },
+ {
+  "id": "abyss_leech",
+  "name": "渊噬水蛭",
+  "tier": "normal",
+  "area": "渊脉最底",
+  "desc": "缠在渊底碎滩里的巨蛭，吸血脉之力。",
+  "stats": {
+   "hp": 1100000,
+   "mp": 22000,
+   "str": 118080,
+   "int": 9000,
+   "con": 28,
+   "spr": 9000,
+   "foc": 210,
+   "agi": 210,
+   "luk": 60
+  },
+  "weakness": {
+   "types": [
+    "斩",
+    "魔"
+   ],
+   "elements": {
+    "crystal": 1.15
+   }
+  },
+  "pv": 9000,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 4400,
+   "currencies": {
+    "coins": 1650
+   }
+  },
+  "actions": [
+   {
+    "action": "en_void_gaze",
+    "probability": 1,
+    "weight": 30
+   },
+   {
+    "action": "en_bone_sweep",
+    "probability": 1,
+    "weight": 30
+   },
+   {
+    "action": "en_core_pulse",
+    "probability": 1,
+    "weight": 25
+   },
+   {
+    "action": "en_hardbody",
+    "probability": 1,
+    "weight": 15
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_core_shard",
+     "chance": 55,
+     "count": [
+      3,
+      8
+     ]
+    },
+    {
+     "item": "mat_echo_dust",
+     "chance": 45,
+     "count": [
+      3,
+      8
+     ]
+    },
+    {
+     "item": "mat_altar_relic",
+     "chance": 25,
+     "count": [
+      2,
+      6
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "缠在渊底碎滩里的巨蛭，吸血脉之力。"
+   },
+   {
+    "unlock": 100,
+    "desc": "渊底是脉核碎片的堆积处，满级后装备的料从这里来。"
+   }
+  ]
+ },
+ {
+  "id": "core_warden",
+  "name": "脉核守将",
+  "tier": "elite",
+  "area": "渊脉最底",
+  "desc": "脉核禁宫末位守将，半身已被脉核同化。",
+  "stats": {
+   "hp": 1810000,
+   "mp": 36200,
+   "str": 196800,
+   "int": 9000,
+   "con": 56,
+   "spr": 9000,
+   "foc": 210,
+   "agi": 210,
+   "luk": 60
+  },
+  "weakness": {
+   "types": [
+    "斩",
+    "魔"
+   ],
+   "elements": {
+    "crystal": 1.15
+   }
+  },
+  "pv": 9000,
+  "pv_recover": "battle_end",
+  "rewards": {
+   "exp": 7240,
+   "currencies": {
+    "coins": 2715
+   }
+  },
+  "actions": [
+   {
+    "action": "en_void_gaze",
+    "probability": 1,
+    "weight": 30
+   },
+   {
+    "action": "en_bone_sweep",
+    "probability": 1,
+    "weight": 30
+   },
+   {
+    "action": "en_core_pulse",
+    "probability": 1,
+    "weight": 25
+   },
+   {
+    "action": "en_hardbody",
+    "probability": 1,
+    "weight": 15
+   }
+  ],
+  "drops": {
+   "battle": [],
+   "special": [],
+   "death": [
+    {
+     "item": "mat_core_shard",
+     "chance": 55,
+     "count": [
+      3,
+      8
+     ]
+    },
+    {
+     "item": "mat_echo_dust",
+     "chance": 45,
+     "count": [
+      3,
+      8
+     ]
+    },
+    {
+     "item": "mat_altar_relic",
+     "chance": 25,
+     "count": [
+      2,
+      6
+     ]
+    }
+   ]
+  },
+  "lore": [
+   {
+    "unlock": 10,
+    "desc": "脉核禁宫末位守将，半身已被脉核同化。"
+   },
+   {
+    "unlock": 100,
+    "desc": "渊底是脉核碎片的堆积处，满级后装备的料从这里来。"
    }
   ]
  }

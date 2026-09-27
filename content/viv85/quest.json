@@ -2070,5 +2070,138 @@
   "main": false,
   "consume": false,
   "repeatable": false
+ },
+ {
+  "id": "eq16",
+  "name": "渊底讨伐",
+  "type": "讨伐",
+  "zone": "vein_abyss",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 5,
+    "param": "abyss_leech"
+   },
+   {
+    "var": "level",
+    "op": "ge",
+    "value": 85
+   }
+  ],
+  "reward": [
+   {
+    "exp": 400000
+   },
+   {
+    "coins": 300000
+   },
+   {
+    "item": "mat_core_shard",
+    "count": 10
+   }
+  ],
+  "desc": "清剿渊脉最底的水蛭，把路腾出来。",
+  "main": false,
+  "repeatable": false,
+  "npc": {
+   "id": "npc_core_recorder"
+  }
+ },
+ {
+  "id": "eq17",
+  "name": "满级图纸搜集",
+  "type": "采集",
+  "zone": "endgame_gate",
+  "conditions": [
+   {
+    "var": "item_count",
+    "op": "ge",
+    "value": 3,
+    "param": "bp_wp_sword_85"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 500000
+   },
+   {
+    "coins": 400000
+   },
+   {
+    "item": "mat_altar_relic",
+    "count": 5
+   }
+  ],
+  "desc": "刷出 3 张四脉圣剑图纸，摸清满级装备的做法。",
+  "main": false,
+  "repeatable": false,
+  "npc": {
+   "id": "npc_core_recorder"
+  }
+ },
+ {
+  "id": "eq18",
+  "name": "精英猎杀",
+  "type": "讨伐",
+  "zone": "vein_abyss",
+  "conditions": [
+   {
+    "var": "kill_count",
+    "op": "ge",
+    "value": 3,
+    "param": "core_warden"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 800000
+   },
+   {
+    "coins": 600000
+   },
+   {
+    "item": "mat_abyss_scale",
+    "count": 10
+   }
+  ],
+  "desc": "挑 3 个脉核守将，证明你配得上满级装备。",
+  "main": false,
+  "repeatable": false,
+  "npc": {
+   "id": "npc_core_recorder"
+  }
+ },
+ {
+  "id": "eq19",
+  "name": "渊底采料",
+  "type": "采集",
+  "zone": "endgame_gate",
+  "conditions": [
+   {
+    "var": "gain_count",
+    "op": "ge",
+    "value": 20,
+    "param": "mat_core_shard"
+   }
+  ],
+  "reward": [
+   {
+    "exp": 300000
+   },
+   {
+    "coins": 200000
+   },
+   {
+    "item": "mat_echo_dust",
+    "count": 10
+   }
+  ],
+  "desc": "在渊底采够 20 份脉核碎片。",
+  "main": false,
+  "repeatable": false,
+  "npc": {
+   "id": "npc_core_recorder"
+  }
  }
 ]

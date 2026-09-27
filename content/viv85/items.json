@@ -111,10 +111,10 @@
   "price": 800,
   "desc": "脉核崩落的碎片，满级装备的核心材料。",
   "material_tags": [
-   "crystal",
-   "core"
+   "core",
+   "crystal"
   ],
-  "material_level": 70,
+  "material_level": 85,
   "material_quality": "金",
   "craft_cost": 900
  },
@@ -155,10 +155,9 @@
   "desc": "四脉祭坛上的残破法器片段。",
   "material_tags": [
    "relic",
-   "core",
-   "blade"
+   "core"
   ],
-  "material_level": 68,
+  "material_level": 85,
   "material_quality": "金",
   "craft_cost": 800
  },
@@ -10374,5 +10373,1235 @@
    }
   ],
   "desc": "打造四脉·疾影符的图纸（80 级档）。材料越好，成品越强。"
+ },
+ {
+  "id": "wp_sword_85",
+  "name": "四脉·圣剑",
+  "type": "weapon",
+  "slot": "weapon",
+  "usable": true,
+  "bind": false,
+  "price": 900000,
+  "use_level": 85,
+  "atk": 141154,
+  "crit": 0.071,
+  "desc": "满级后由脉核材料打造的武器（档 85，比档 80 强一个台阶）。"
+ },
+ {
+  "id": "wp_hammer_85",
+  "name": "四脉·镇岳锤",
+  "type": "weapon",
+  "slot": "weapon",
+  "usable": true,
+  "bind": false,
+  "price": 900000,
+  "use_level": 85,
+  "atk": 141154,
+  "pierce_pct": 0.16,
+  "desc": "满级后由脉核材料打造的武器（档 85，比档 80 强一个台阶）。"
+ },
+ {
+  "id": "wp_spear_85",
+  "name": "四脉·天罡枪",
+  "type": "weapon",
+  "slot": "weapon",
+  "usable": true,
+  "bind": false,
+  "price": 900000,
+  "use_level": 85,
+  "atk": 141154,
+  "foc": 260,
+  "spd": 120,
+  "desc": "满级后由脉核材料打造的武器（档 85，比档 80 强一个台阶）。"
+ },
+ {
+  "id": "wp_staff_85",
+  "name": "四脉·玄天杖",
+  "type": "weapon",
+  "slot": "weapon",
+  "usable": true,
+  "bind": false,
+  "price": 900000,
+  "use_level": 85,
+  "atk": 141154,
+  "spr": 260,
+  "mag_pierce_pct": 0.16,
+  "desc": "满级后由脉核材料打造的武器（档 85，比档 80 强一个台阶）。"
+ },
+ {
+  "id": "ar_head_85a",
+  "name": "四脉·坚壁头甲",
+  "type": "armor",
+  "slot": "head",
+  "usable": true,
+  "bind": false,
+  "price": 260000,
+  "use_level": 85,
+  "dfn": 62,
+  "hp": 78500,
+  "desc": "满级后的坚壁款头甲（档 85）。"
+ },
+ {
+  "id": "ar_head_85b",
+  "name": "四脉·疾行头甲",
+  "type": "armor",
+  "slot": "head",
+  "usable": true,
+  "bind": false,
+  "price": 260000,
+  "use_level": 85,
+  "dfn": 37,
+  "hp": 78500,
+  "desc": "满级后的疾行款头甲（档 85）。",
+  "agi": 200
+ },
+ {
+  "id": "ar_head_85c",
+  "name": "四脉·破势头甲",
+  "type": "armor",
+  "slot": "head",
+  "usable": true,
+  "bind": false,
+  "price": 260000,
+  "use_level": 85,
+  "dfn": 25,
+  "hp": 78500,
+  "desc": "满级后的破势款头甲（档 85）。",
+  "atk": 8915
+ },
+ {
+  "id": "ar_head_85d",
+  "name": "四脉·灵纹头甲",
+  "type": "armor",
+  "slot": "head",
+  "usable": true,
+  "bind": false,
+  "price": 260000,
+  "use_level": 85,
+  "dfn": 31,
+  "hp": 78500,
+  "desc": "满级后的灵纹款头甲（档 85）。",
+  "spr": 300
+ },
+ {
+  "id": "ar_body_85a",
+  "name": "四脉·坚壁胸甲",
+  "type": "armor",
+  "slot": "body",
+  "usable": true,
+  "bind": false,
+  "price": 260000,
+  "use_level": 85,
+  "dfn": 62,
+  "hp": 78500,
+  "desc": "满级后的坚壁款胸甲（档 85）。"
+ },
+ {
+  "id": "ar_body_85b",
+  "name": "四脉·疾行胸甲",
+  "type": "armor",
+  "slot": "body",
+  "usable": true,
+  "bind": false,
+  "price": 260000,
+  "use_level": 85,
+  "dfn": 37,
+  "hp": 78500,
+  "desc": "满级后的疾行款胸甲（档 85）。",
+  "agi": 200
+ },
+ {
+  "id": "ar_body_85c",
+  "name": "四脉·破势胸甲",
+  "type": "armor",
+  "slot": "body",
+  "usable": true,
+  "bind": false,
+  "price": 260000,
+  "use_level": 85,
+  "dfn": 25,
+  "hp": 78500,
+  "desc": "满级后的破势款胸甲（档 85）。",
+  "atk": 8915
+ },
+ {
+  "id": "ar_body_85d",
+  "name": "四脉·灵纹胸甲",
+  "type": "armor",
+  "slot": "body",
+  "usable": true,
+  "bind": false,
+  "price": 260000,
+  "use_level": 85,
+  "dfn": 31,
+  "hp": 78500,
+  "desc": "满级后的灵纹款胸甲（档 85）。",
+  "spr": 300
+ },
+ {
+  "id": "ar_hand_85a",
+  "name": "四脉·坚壁护手",
+  "type": "armor",
+  "slot": "hand",
+  "usable": true,
+  "bind": false,
+  "price": 260000,
+  "use_level": 85,
+  "dfn": 62,
+  "hp": 78500,
+  "desc": "满级后的坚壁款护手（档 85）。"
+ },
+ {
+  "id": "ar_hand_85b",
+  "name": "四脉·疾行护手",
+  "type": "armor",
+  "slot": "hand",
+  "usable": true,
+  "bind": false,
+  "price": 260000,
+  "use_level": 85,
+  "dfn": 37,
+  "hp": 78500,
+  "desc": "满级后的疾行款护手（档 85）。",
+  "agi": 200
+ },
+ {
+  "id": "ar_hand_85c",
+  "name": "四脉·破势护手",
+  "type": "armor",
+  "slot": "hand",
+  "usable": true,
+  "bind": false,
+  "price": 260000,
+  "use_level": 85,
+  "dfn": 25,
+  "hp": 78500,
+  "desc": "满级后的破势款护手（档 85）。",
+  "atk": 8915
+ },
+ {
+  "id": "ar_hand_85d",
+  "name": "四脉·灵纹护手",
+  "type": "armor",
+  "slot": "hand",
+  "usable": true,
+  "bind": false,
+  "price": 260000,
+  "use_level": 85,
+  "dfn": 31,
+  "hp": 78500,
+  "desc": "满级后的灵纹款护手（档 85）。",
+  "spr": 300
+ },
+ {
+  "id": "ar_leg_85a",
+  "name": "四脉·坚壁胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "usable": true,
+  "bind": false,
+  "price": 260000,
+  "use_level": 85,
+  "dfn": 62,
+  "hp": 78500,
+  "desc": "满级后的坚壁款胫甲（档 85）。"
+ },
+ {
+  "id": "ar_leg_85b",
+  "name": "四脉·疾行胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "usable": true,
+  "bind": false,
+  "price": 260000,
+  "use_level": 85,
+  "dfn": 37,
+  "hp": 78500,
+  "desc": "满级后的疾行款胫甲（档 85）。",
+  "agi": 200
+ },
+ {
+  "id": "ar_leg_85c",
+  "name": "四脉·破势胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "usable": true,
+  "bind": false,
+  "price": 260000,
+  "use_level": 85,
+  "dfn": 25,
+  "hp": 78500,
+  "desc": "满级后的破势款胫甲（档 85）。",
+  "atk": 8915
+ },
+ {
+  "id": "ar_leg_85d",
+  "name": "四脉·灵纹胫甲",
+  "type": "armor",
+  "slot": "leg",
+  "usable": true,
+  "bind": false,
+  "price": 260000,
+  "use_level": 85,
+  "dfn": 31,
+  "hp": 78500,
+  "desc": "满级后的灵纹款胫甲（档 85）。",
+  "spr": 300
+ },
+ {
+  "id": "ar_foot_85a",
+  "name": "四脉·坚壁战靴",
+  "type": "armor",
+  "slot": "foot",
+  "usable": true,
+  "bind": false,
+  "price": 260000,
+  "use_level": 85,
+  "dfn": 62,
+  "hp": 78500,
+  "desc": "满级后的坚壁款战靴（档 85）。"
+ },
+ {
+  "id": "ar_foot_85b",
+  "name": "四脉·疾行战靴",
+  "type": "armor",
+  "slot": "foot",
+  "usable": true,
+  "bind": false,
+  "price": 260000,
+  "use_level": 85,
+  "dfn": 37,
+  "hp": 78500,
+  "desc": "满级后的疾行款战靴（档 85）。",
+  "agi": 200
+ },
+ {
+  "id": "ar_foot_85c",
+  "name": "四脉·破势战靴",
+  "type": "armor",
+  "slot": "foot",
+  "usable": true,
+  "bind": false,
+  "price": 260000,
+  "use_level": 85,
+  "dfn": 25,
+  "hp": 78500,
+  "desc": "满级后的破势款战靴（档 85）。",
+  "atk": 8915
+ },
+ {
+  "id": "ar_foot_85d",
+  "name": "四脉·灵纹战靴",
+  "type": "armor",
+  "slot": "foot",
+  "usable": true,
+  "bind": false,
+  "price": 260000,
+  "use_level": 85,
+  "dfn": 31,
+  "hp": 78500,
+  "desc": "满级后的灵纹款战靴（档 85）。",
+  "spr": 300
+ },
+ {
+  "id": "ac_85a",
+  "name": "四脉·护命符",
+  "type": "accessory",
+  "slot": "accessory",
+  "usable": true,
+  "bind": false,
+  "price": 320000,
+  "use_level": 85,
+  "desc": "满级后的护命符（档 85）。"
+ },
+ {
+  "id": "ac_85b",
+  "name": "四脉·鸿运符",
+  "type": "accessory",
+  "slot": "accessory",
+  "usable": true,
+  "bind": false,
+  "price": 320000,
+  "use_level": 85,
+  "hp": 62800,
+  "lck": 420,
+  "desc": "满级后的鸿运符（档 85）。"
+ },
+ {
+  "id": "ac_85c",
+  "name": "四脉·疾影符",
+  "type": "accessory",
+  "slot": "accessory",
+  "usable": true,
+  "bind": false,
+  "price": 320000,
+  "use_level": 85,
+  "hp": 62800,
+  "agi": 420,
+  "desc": "满级后的疾影符（档 85）。"
+ },
+ {
+  "id": "bp_wp_sword_85",
+  "name": "四脉·圣剑图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "wp_sword_85",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_sword_85",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·圣剑的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_wp_hammer_85",
+  "name": "四脉·镇岳锤图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "wp_hammer_85",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_hammer_85",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·镇岳锤的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_wp_spear_85",
+  "name": "四脉·天罡枪图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "wp_spear_85",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_spear_85",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·天罡枪的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_wp_staff_85",
+  "name": "四脉·玄天杖图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "wp_staff_85",
+  "blueprint_slot": "weapon",
+  "blueprint_recipe": "rcp_wp_staff_85",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·玄天杖的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_ar_head_85a",
+  "name": "四脉·坚壁头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_head_85a",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_85a",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·坚壁头甲的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_ar_head_85b",
+  "name": "四脉·疾行头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_head_85b",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_85b",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·疾行头甲的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_ar_head_85c",
+  "name": "四脉·破势头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_head_85c",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_85c",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·破势头甲的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_ar_head_85d",
+  "name": "四脉·灵纹头甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_head_85d",
+  "blueprint_slot": "head",
+  "blueprint_recipe": "rcp_ar_head_85d",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·灵纹头甲的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_ar_body_85a",
+  "name": "四脉·坚壁胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_body_85a",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_85a",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·坚壁胸甲的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_ar_body_85b",
+  "name": "四脉·疾行胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_body_85b",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_85b",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·疾行胸甲的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_ar_body_85c",
+  "name": "四脉·破势胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_body_85c",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_85c",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·破势胸甲的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_ar_body_85d",
+  "name": "四脉·灵纹胸甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_body_85d",
+  "blueprint_slot": "body",
+  "blueprint_recipe": "rcp_ar_body_85d",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·灵纹胸甲的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_ar_hand_85a",
+  "name": "四脉·坚壁护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_hand_85a",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_85a",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·坚壁护手的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_ar_hand_85b",
+  "name": "四脉·疾行护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_hand_85b",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_85b",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·疾行护手的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_ar_hand_85c",
+  "name": "四脉·破势护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_hand_85c",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_85c",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·破势护手的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_ar_hand_85d",
+  "name": "四脉·灵纹护手图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_hand_85d",
+  "blueprint_slot": "hand",
+  "blueprint_recipe": "rcp_ar_hand_85d",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·灵纹护手的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_ar_leg_85a",
+  "name": "四脉·坚壁胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_leg_85a",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_85a",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·坚壁胫甲的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_ar_leg_85b",
+  "name": "四脉·疾行胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_leg_85b",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_85b",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·疾行胫甲的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_ar_leg_85c",
+  "name": "四脉·破势胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_leg_85c",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_85c",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·破势胫甲的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_ar_leg_85d",
+  "name": "四脉·灵纹胫甲图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_leg_85d",
+  "blueprint_slot": "leg",
+  "blueprint_recipe": "rcp_ar_leg_85d",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·灵纹胫甲的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_ar_foot_85a",
+  "name": "四脉·坚壁战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_foot_85a",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_85a",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·坚壁战靴的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_ar_foot_85b",
+  "name": "四脉·疾行战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_foot_85b",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_85b",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·疾行战靴的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_ar_foot_85c",
+  "name": "四脉·破势战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_foot_85c",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_85c",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·破势战靴的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_ar_foot_85d",
+  "name": "四脉·灵纹战靴图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ar_foot_85d",
+  "blueprint_slot": "foot",
+  "blueprint_recipe": "rcp_ar_foot_85d",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·灵纹战靴的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_ac_85a",
+  "name": "四脉·护命符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ac_85a",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_85a",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·护命符的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_ac_85b",
+  "name": "四脉·鸿运符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ac_85b",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_85b",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·鸿运符的图纸（满级后专属）。只由满级怪掉落。"
+ },
+ {
+  "id": "bp_ac_85c",
+  "name": "四脉·疾影符图纸",
+  "type": "blueprint",
+  "price": 0,
+  "usable": true,
+  "bind": true,
+  "blueprint_grade": "彩",
+  "blueprint_output": "ac_85c",
+  "blueprint_slot": "accessory",
+  "blueprint_recipe": "rcp_ac_85c",
+  "blueprint_level_band": {
+   "min": 85,
+   "max": 85
+  },
+  "blueprint_cost_cap": 436,
+  "blueprint_material_slots": [
+   {
+    "role": "main",
+    "tag": "core",
+    "count": 2,
+    "weight": 0.6
+   },
+   {
+    "role": "free",
+    "tag": "relic",
+    "count": 1,
+    "weight": 0.4
+   }
+  ],
+  "desc": "打造四脉·疾影符的图纸（满级后专属）。只由满级怪掉落。"
  }
 ]

@@ -6316,5 +6316,707 @@
    "coins": 100000,
    "gem": 0
   }
+ },
+ {
+  "id": "rcp_wp_sword_85",
+  "name": "四脉·圣剑基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_altar_relic",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_sword_85",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_hammer_85",
+  "name": "四脉·镇岳锤基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_abyss_scale",
+    "count": 2
+   },
+   {
+    "id": "mat_core_shard",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_hammer_85",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_spear_85",
+  "name": "四脉·天罡枪基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_echo_dust",
+    "count": 2
+   },
+   {
+    "id": "mat_abyss_scale",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_spear_85",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_wp_staff_85",
+  "name": "四脉·玄天杖基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_altar_relic",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "wp_staff_85",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_85a",
+  "name": "四脉·坚壁头甲基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_85a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_85b",
+  "name": "四脉·疾行头甲基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_85b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_85c",
+  "name": "四脉·破势头甲基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_85c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_head_85d",
+  "name": "四脉·灵纹头甲基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_head_85d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_85a",
+  "name": "四脉·坚壁胸甲基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_85a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_85b",
+  "name": "四脉·疾行胸甲基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_85b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_85c",
+  "name": "四脉·破势胸甲基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_85c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_body_85d",
+  "name": "四脉·灵纹胸甲基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_body_85d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_85a",
+  "name": "四脉·坚壁护手基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_85a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_85b",
+  "name": "四脉·疾行护手基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_85b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_85c",
+  "name": "四脉·破势护手基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_85c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_hand_85d",
+  "name": "四脉·灵纹护手基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_hand_85d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_85a",
+  "name": "四脉·坚壁胫甲基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_85a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_85b",
+  "name": "四脉·疾行胫甲基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_85b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_85c",
+  "name": "四脉·破势胫甲基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_85c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_leg_85d",
+  "name": "四脉·灵纹胫甲基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_leg_85d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_85a",
+  "name": "四脉·坚壁战靴基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_85a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_85b",
+  "name": "四脉·疾行战靴基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_85b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_85c",
+  "name": "四脉·破势战靴基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_85c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ar_foot_85d",
+  "name": "四脉·灵纹战靴基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ar_foot_85d",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_85a",
+  "name": "四脉·护命符基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_85a",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_85b",
+  "name": "四脉·鸿运符基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_85b",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
+ },
+ {
+  "id": "rcp_ac_85c",
+  "name": "四脉·疾影符基合成",
+  "kind": "craft",
+  "level": 85,
+  "synth_allowed": true,
+  "master_only": false,
+  "materials": [
+   {
+    "id": "mat_core_shard",
+    "count": 2
+   },
+   {
+    "id": "mat_echo_dust",
+    "count": 1
+   }
+  ],
+  "output": {
+   "item": "ac_85c",
+   "count": 1
+  },
+  "cost": {
+   "coins": 180000,
+   "gem": 0
+  }
  }
 ]

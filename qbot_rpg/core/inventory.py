@@ -154,6 +154,11 @@ class InventoryEngine:
     @staticmethod
     def _row_with(row: ItemInstance, **changes: Any) -> ItemInstance:
         """按变更重建 frozen 行（dataclasses.replace，保留全部字段与子类扩展字段）。"""
+        # dict 行（asdict 往返形态）→ 复制后改键，避免 dataclasses.replace 报错。
+        if isinstance(row, Mapping):
+            new = dict(row)
+            new.update(changes)
+            return new  # type: ignore[return-value]
         return replace(row, **changes)
 
     def _purge_expired(
@@ -169,9 +174,9 @@ class InventoryEngine:
         kept: List[ItemInstance] = []
         purged: List[str] = []
         for row in inv:
-            expires_at = getattr(row, "expires_at", None)
+            expires_at = self.row_get(row, "expires_at", None)
             if expires_at is not None and int(expires_at) <= now:
-                purged.append(row.item_id)
+                purged.append(str(self.row_get(row, "item_id", "") or ""))
                 continue
             kept.append(row)
         if purged:
@@ -253,11 +258,12 @@ class InventoryEngine:
                     break
                 if not self._mergeable(row, item):
                     continue
-                space = row.stack_max - row.count
+                # 同 `remove_item`：行可能来自 asdict 往返（dict 形态）→ 走双读。
+                space = int(self.row_get(row, "stack_max", 1) or 1) - int(self.row_get(row, "count", 0) or 0)
                 if space <= 0:
                     continue
                 take = min(space, remaining)
-                working[idx] = self._row_with(row, count=row.count + take)
+                working[idx] = self._row_with(row, count=int(self.row_get(row, "count", 0) or 0) + take)
                 remaining -= take
             # INV-02：余量按上限拆新行（满行 + 余量；每行独立 uid，批40 · H4）
             while remaining > 0:
@@ -275,7 +281,7 @@ class InventoryEngine:
                 }
 
         inv[:] = working + plan
-        new_rows = [r.item_id for r in plan]  # 本次实际新增行（INV-01/02/03 计划产出）
+        new_rows = [str(self.row_get(r, "item_id", "") or "") for r in plan]  # 本次实际新增行
         result: dict = {
             "ok": True,
             "added": count,
@@ -295,6 +301,21 @@ class InventoryEngine:
         if isinstance(row, Mapping):
             return str(row.get("uid") or "")
         return str(getattr(row, "uid", "") or "")
+
+    @staticmethod
+    def row_get(row: Any, key: str, default: Any = None) -> Any:
+        """背包行字段双读（ItemInstance 实例 / dict 行；与 `row_uid_of` 同口径）。
+
+        存在理由（2026-09-26 实机修复）：`commands/use_commands._resolve_player` 会把
+        Player dataclass 经 `dataclasses.asdict` 转成 dict 写回 ctx（该文件的 2026-09-05
+        修复），此后 `player["inventory"]` 的行是 **dict**；而 `remove_item` 原先只用
+        `getattr(r, "item_id")` 取键 → dict 行永远取到空串 → 判「背包里没有这个物品」，
+        导致 `/使用 <消耗品>` 恒定失败（`/使用` 是穿戴/消耗的唯一入口）。
+        `row_uid_of` 早已是双读口径，此处把同一口径补齐到整行字段。
+        """
+        if isinstance(row, Mapping):
+            return row.get(key, default)
+        return getattr(row, key, default)
 
     def find_by_uid(self, player: Any, uid: str) -> Any:
         """按 uid 精确取背包行（批40 · H4）；无 uid/未命中 → None。
@@ -338,26 +359,27 @@ class InventoryEngine:
             row = next(
                 (r for r in inv
                  if self.row_uid_of(r) == str(uid)
-                 and str(getattr(r, "item_id", "") or "") == item_id),
+                 and str(self.row_get(r, "item_id", "") or "") == item_id),
                 None,
             )
-            if row is None or int(getattr(row, "count", 0) or 0) < count:
+            if row is None or int(self.row_get(row, "count", 0) or 0) < count:
                 return {
                     "ok": False, "reason": "not_enough",
-                    "message": f"背包里只有 {int(getattr(row, 'count', 0) or 0) if row else 0} 个{item_id}",
+                    "message": (f"背包里只有 "
+                                f"{int(self.row_get(row, 'count', 0) or 0) if row else 0} 个{item_id}"),
                 }
-            if getattr(row, "bound", False):
+            if self.row_get(row, "bound", False):
                 return {
                     "ok": False, "reason": "bound",
                     "message": f"{item_id} 是绑定物品，不可出售/赠送/丢弃",
                 }
-            left = int(row.count) - count
+            left = int(self.row_get(row, "count", 0) or 0) - count
             # **同一性**定位（不用 list.remove/index：uid compare=False，结构等价两件
             # 会被 == 命中首件 → 误删错行）；row 由 uid 精确取得，此处必命中。
             pos = next((i for i, r in enumerate(inv) if r is row), None)
             if pos is None:
                 return {"ok": False, "reason": "not_enough",
-                        "message": f"背包里只有 {int(row.count)} 个{item_id}"}
+                        "message": f"背包里只有 {int(self.row_get(row, 'count', 0) or 0)} 个{item_id}"}
             if left <= 0:
                 del inv[pos]  # INV-04：count=0 整行清理
             else:
@@ -365,11 +387,11 @@ class InventoryEngine:
             return {"ok": True, "removed": count, "item_id": item_id, "uid": str(uid)}
 
         # 命中行按「非绑定优先」排序（INV-07：绑定行与未绑定行分开成行）
-        hits = [r for r in inv if r.item_id == item_id]
-        hits_unbound = [r for r in hits if not r.bound]
-        hits_bound = [r for r in hits if r.bound]
-        total = sum(r.count for r in hits)
-        unbound_total = sum(r.count for r in hits_unbound)
+        hits = [r for r in inv if str(self.row_get(r, "item_id", "") or "") == item_id]
+        hits_unbound = [r for r in hits if not self.row_get(r, "bound", False)]
+        hits_bound = [r for r in hits if self.row_get(r, "bound", False)]
+        total = sum(int(self.row_get(r, "count", 0) or 0) for r in hits)
+        unbound_total = sum(int(self.row_get(r, "count", 0) or 0) for r in hits_unbound)
 
         if total < count:
             # INV-05：不足 → 拒绝，不部分扣减
@@ -387,15 +409,16 @@ class InventoryEngine:
         remaining = count
         for idx in range(len(inv) - 1, -1, -1):
             row = inv[idx]
-            if row.item_id != item_id or row.bound:
+            if str(self.row_get(row, "item_id", "") or "") != item_id or self.row_get(row, "bound", False):
                 continue
             if remaining <= 0:
                 break
-            if row.count <= remaining:
-                remaining -= row.count
+            row_count = int(self.row_get(row, "count", 0) or 0)
+            if row_count <= remaining:
+                remaining -= row_count
                 del inv[idx]  # INV-04：count=0 整行清理
             else:
-                inv[idx] = self._row_with(row, count=row.count - remaining)
+                inv[idx] = self._row_with(row, count=row_count - remaining)
                 remaining = 0
         return {"ok": True, "removed": count, "item_id": item_id}
 
@@ -409,7 +432,8 @@ class InventoryEngine:
         inv = self._as_list(player)
         self._purge_expired(player, self._now())  # INV-10 惰性移除
         return sum(
-            1 if r.stack_max <= 1 else r.count
+            1 if int(self.row_get(r, "stack_max", 1) or 1) <= 1
+            else int(self.row_get(r, "count", 0) or 0)
             for r in inv
-            if r.item_id == item_id
+            if str(self.row_get(r, "item_id", "") or "") == item_id
         )

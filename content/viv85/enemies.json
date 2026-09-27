@@ -3210,12 +3210,7 @@
      "count": 1
     },
     {
-     "item": "bp_ar_body_85b",
-     "chance": 12,
-     "count": 1
-    },
-    {
-     "item": "bp_ar_hand_85d",
+     "item": "bp_ar_hand_85a",
      "chance": 12,
      "count": 1
     },
@@ -3356,12 +3351,7 @@
      "count": 1
     },
     {
-     "item": "bp_ar_body_85d",
-     "chance": 12,
-     "count": 1
-    },
-    {
-     "item": "bp_ar_leg_85b",
+     "item": "bp_ar_hand_85c",
      "chance": 12,
      "count": 1
     },
@@ -3493,6 +3483,21 @@
     },
     {
      "item": "bp_ac_70c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_85c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_hand_85d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_85a",
      "chance": 12,
      "count": 1
     }
@@ -3638,22 +3643,12 @@
      "count": 1
     },
     {
-     "item": "bp_ar_body_85a",
-     "chance": 12,
-     "count": 1
-    },
-    {
-     "item": "bp_ar_hand_85c",
+     "item": "bp_ar_body_85d",
      "chance": 12,
      "count": 1
     },
     {
      "item": "bp_ar_foot_85a",
-     "chance": 12,
-     "count": 1
-    },
-    {
-     "item": "bp_ac_85c",
      "chance": 12,
      "count": 1
     }
@@ -3774,12 +3769,7 @@
      "count": 1
     },
     {
-     "item": "bp_ar_body_85c",
-     "chance": 12,
-     "count": 1
-    },
-    {
-     "item": "bp_ar_leg_85a",
+     "item": "bp_ar_hand_85b",
      "chance": 12,
      "count": 1
     },
@@ -3907,6 +3897,21 @@
     },
     {
      "item": "bp_ac_80a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_head_85d",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_85a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_85b",
      "chance": 12,
      "count": 1
     }
@@ -4043,6 +4048,21 @@
     },
     {
      "item": "bp_ac_80b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_85a",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_85b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ac_85c",
      "chance": 12,
      "count": 1
     }
@@ -5007,6 +5027,21 @@
       2,
       6
      ]
+    },
+    {
+     "item": "bp_wp_sword_85",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_85b",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_85c",
+     "chance": 12,
+     "count": 1
     }
    ]
   },
@@ -5104,6 +5139,21 @@
       2,
       6
      ]
+    },
+    {
+     "item": "bp_wp_hammer_85",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_body_85c",
+     "chance": 12,
+     "count": 1
+    },
+    {
+     "item": "bp_ar_leg_85d",
+     "chance": 12,
+     "count": 1
     }
    ]
   },

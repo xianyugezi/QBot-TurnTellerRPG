@@ -2,7 +2,7 @@
  "hp": {
   "name": "生命",
   "type": "resource",
-  "base": 16000,
+  "base": 120,
   "max": 99999999
  },
  "mp": {
@@ -23,7 +23,7 @@
   "type": "combat",
   "base": 20,
   "growth": 3.46,
-  "max": 9999999
+  "max": 99999
  },
  "agi": {
   "name": "敏捷",

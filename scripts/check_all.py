@@ -7,19 +7,21 @@
   - scripts/run_all_tests.py      全量回归（M0~M7 门禁 + 覆盖率 ≥80% + 静态门禁 + 全量 pytest）
   - scripts/check_architecture.py G0 架构分层门禁（TC-01~04）
   - scripts/check_m7_content.py  内容包校验器（隐藏要素可达性 / 条件键白名单 / 模板占位符）
+  - scripts/check_docs_consistency.py 文档一致性门禁（份数声明 / 索引链接 / 归档索引三项硬事实）
   - scripts/verify/verify_mN.py  各里程碑门禁（N=0~7）
 
 用法：
-  python scripts/check_all.py             # 快速检查：静态+架构+内容包+单测（默认）
+  python scripts/check_all.py             # 快速检查：静态+架构+内容包+文档一致性+单测（默认）
   python scripts/check_all.py --full      # 全量回归（含里程碑门禁+覆盖率，慢 ~5 分钟）
   python scripts/check_all.py --arch      # 仅架构门禁
+  python scripts/check_all.py --docs      # 仅文档一致性（份数/链接/归档索引）
   python scripts/check_all.py --lint      # 仅 ruff/mypy 静态
   python scripts/check_all.py --content   # 仅内容包校验
   python scripts/check_all.py --unit      # 仅单元测试（tests/unit）
   python scripts/check_all.py --verify 7  # 仅里程碑门禁（N=0~7）
   python scripts/check_all.py --fast      # 冒烟模式（性质用例抽样 + 跳过覆盖率，配 --full 用）
   python scripts/check_all.py --skip-lint # 跳过静态门禁（run_all_tests 逃生口，配 --full 用）
-  可组合：python scripts/check_all.py --lint --arch --content
+  可组合：python scripts/check_all.py --lint --arch --content --docs
 
 输出：控制台统一摘要 + docs/verify/check_report.md（时间戳归档，供复查）。
 退出码：0 = 全部通过；1 = 有失败；2 = 参数错误。
@@ -103,6 +105,8 @@ def main() -> int:
                     help="全量回归（里程碑门禁+覆盖率，慢）")
     ap.add_argument("--lint", action="store_true", help="仅 ruff/mypy 静态检查")
     ap.add_argument("--arch", action="store_true", help="仅架构门禁")
+    ap.add_argument("--docs", action="store_true",
+                    help="仅文档一致性（份数声明 / 索引链接 / 归档索引）")
     ap.add_argument("--content", action="store_true", help="仅内容包校验（check_m7_content）")
     ap.add_argument("--unit", action="store_true", help="仅单元测试")
     ap.add_argument("--verify", type=str, default="", help="仅里程碑门禁（0~7，如 --verify 7）")
@@ -121,18 +125,21 @@ def main() -> int:
         if args.skip_lint:
             extra.append("--skip-lint")
         _run("全量回归 run_all_tests", ["scripts/run_all_tests.py", *extra])
+        _run("文档一致性 check_docs_consistency", ["scripts/check_docs_consistency.py"])
     else:
-        # 无参默认：静态 + 架构 + 内容包 + 单测
-        picks = [args.lint, args.arch, args.content, args.unit]
+        # 无参默认：静态 + 架构 + 内容包 + 文档一致性 + 单测
+        picks = [args.lint, args.arch, args.docs, args.content, args.unit]
         if not any(picks):
-            picks = [True, True, True, True]  # 默认快速检查
+            picks = [True, True, True, True, True]  # 默认快速检查
         if picks[0]:
             _lint()
         if picks[1]:
             _run("架构门禁 check_architecture", ["scripts/check_architecture.py"])
         if picks[2]:
-            _run("内容包校验 check_m7_content", ["scripts/check_m7_content.py"])
+            _run("文档一致性 check_docs_consistency", ["scripts/check_docs_consistency.py"])
         if picks[3]:
+            _run("内容包校验 check_m7_content", ["scripts/check_m7_content.py"])
+        if picks[4]:
             _pytest_unit()
         if args.verify:
             n = args.verify

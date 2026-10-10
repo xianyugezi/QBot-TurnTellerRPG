@@ -1,5 +1,13 @@
 # 云海包（`origin/cloudsea-pack`）框架层增量审计报告
 
+> **快照元数据（doc_meta · 2026-10-10 补登）**
+> `type: AUDIT` · `status: HISTORICAL` · `snapshot_commit: 4a409bf（被审分支 origin/cloudsea-pack）` ·
+> `snapshot_date: 2026-09-2x（正文未记日）` · `baseline_commit: 3131c5a（我方 origin/main）` ·
+> `scope: 框架层增量（云海包分支）` · `verified_at: 2026-10-10` · `verified_commit: 3a621a1`
+> **读法**：审计对象与被审 SHA 见正文首节（原文口径：`origin/cloudsea-pack @4a409bf`，
+> 我方基线 `origin/main @3131c5a`）；与当前 HEAD 不符处**以代码 + 门禁脚本为准**
+> （判据见 `docs/审查/审计与方案/API手册_3_权责与勿当bug修.md` §3.7）。
+
 - **审计对象**：`origin/cloudsea-pack` @ `4a409bf`（= `/tmp/cs_audit` 工作树，二者 HEAD 相同）
 - **我方基线**：`origin/main` @ `3131c5a`（含消息模板重构终态 813/809 键全量表、CTB 行动条战斗重写、Web 编辑器重写、字段展示元数据下放）
 - **共同祖先**：`4ae3eaa`（2026-09-09）

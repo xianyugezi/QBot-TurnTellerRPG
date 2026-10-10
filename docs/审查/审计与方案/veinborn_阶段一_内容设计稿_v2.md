@@ -1,5 +1,12 @@
 # veinborn 阶段一内容设计稿 v2（对齐 Primal 卡表 v1.6 结构）
 
+> **快照元数据（doc_meta · 2026-10-10 批量补登）**
+> `type: DESIGN` · `status: CURRENT` · `snapshot_commit: 不适用（设计稿：以代码与门禁为准）` ·
+> `last_modified_commit: 4e7887f（2026-09-21）` · `scope: 见正文首节` ·
+> `verified_at: 2026-10-10` · `verified_commit: 3a621a1`
+> **读法**：本文件描述**当时**的仓库状态；与当前 HEAD 不符处，**以代码 + 门禁脚本为准**
+> （判据见 `docs/审查/审计与方案/API手册_3_权责与勿当bug修.md` §3.7）。
+
 > 铁律：纯配置（零新字段零删减）；技能少而深（记规则不记技能名）；装备 8 部位。
 > 依据：Primal_Complete_Card_List_v1.6（猎手卡 322 + 怪物卡 940）结构映射。
 

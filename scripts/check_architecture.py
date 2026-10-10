@@ -11,6 +11,7 @@
             · core/world/storage/content/data 之间无环（Kahn 拓扑）
             · commands/web 不被任何层 import
             · 依赖方向符合 §1.4 矩阵（web→{content,core,storage,data} 等，反向即违规）→ R3 / D-05
+  TC-05   core 内部直调边冻结（新增 core→core import 即失败；日研 Q1）
   TC-04   data/ 五类（Player/BattleSnapshot/StatusInstance/ItemInstance/WorldState）
           各定义一次（全仓唯一）且 dataclass(frozen=True) → D-03 / U1
 
@@ -23,7 +24,7 @@ import argparse
 import ast
 import os
 import sys
-from typing import Dict, Iterator, List, Optional, Sequence, Set, Tuple
+from typing import Dict, FrozenSet, Iterator, List, Optional, Sequence, Set, Tuple
 
 # 零 NoneBot 五层（TC-01 扫描范围；web 属平台无关但不在此 5 层扫描集，见细化_3a TC-01）
 ZERO_NB_LAYERS: Tuple[str, ...] = ("core", "world", "storage", "content", "data")
@@ -45,6 +46,205 @@ ALLOWED_DEP: Dict[str, Set[str]] = {
     "assembly": {"commands", "core", "world", "storage", "content", "data"},
     "root": set(),  # qbot_rpg/__init__.py 包元信息；不参与方向约束（M0 无业务 import）
 }
+# TC-05 · core 内部「业务模块直调」冻结基线（2026-10-10 · 日研 Q1 口子）
+# 口径：core/ 下 **文件级** import 边（同层互引在 §1.4 矩阵下合法，但按用户口径
+# 「L1 业务模块间禁直调、必须走事件」——先**冻结现状**，禁止新增直调边；
+# 新增边须走事件/注册表，或在**本表**登记并写明理由（治理元数据例外：登记即承诺）。
+# 由脚本自身扫描口径生成（`collect_import_edges`），共 192 条。
+CORE_EDGE_BASELINE: FrozenSet[str] = frozenset((
+"qbot_rpg/core/achievements.py -> qbot_rpg/core/condition_engine.py",
+    "qbot_rpg/core/achievements.py -> qbot_rpg/core/event_bus.py",
+    "qbot_rpg/core/adventure_log.py -> qbot_rpg/core/event_bus.py",
+    "qbot_rpg/core/alchemy_affinity.py -> qbot_rpg/core/affinity.py",
+    "qbot_rpg/core/alchemy_affinity.py -> qbot_rpg/core/deep_craft.py",
+    "qbot_rpg/core/alchemy_auto.py -> qbot_rpg/core/quality.py",
+    "qbot_rpg/core/alchemy_battle.py -> qbot_rpg/core/alchemy_core.py",
+    "qbot_rpg/core/alchemy_battle.py -> qbot_rpg/core/energy_bar.py",
+    "qbot_rpg/core/alchemy_battle.py -> qbot_rpg/core/proficiency.py",
+    "qbot_rpg/core/alchemy_battle.py -> qbot_rpg/core/templates/__init__.py",
+    "qbot_rpg/core/alchemy_core.py -> qbot_rpg/core/affinity.py",
+    "qbot_rpg/core/alchemy_core.py -> qbot_rpg/core/templates/__init__.py",
+    "qbot_rpg/core/alchemy_deep.py -> qbot_rpg/core/alchemy_core.py",
+    "qbot_rpg/core/alchemy_deep.py -> qbot_rpg/core/alchemy_session.py",
+    "qbot_rpg/core/alchemy_deep.py -> qbot_rpg/core/quality.py",
+    "qbot_rpg/core/alchemy_deep.py -> qbot_rpg/core/reward.py",
+    "qbot_rpg/core/alchemy_deep.py -> qbot_rpg/core/templates/__init__.py",
+    "qbot_rpg/core/alchemy_harvest.py -> qbot_rpg/core/quality.py",
+    "qbot_rpg/core/alchemy_harvest.py -> qbot_rpg/core/reward.py",
+    "qbot_rpg/core/alchemy_harvest.py -> qbot_rpg/core/templates/__init__.py",
+    "qbot_rpg/core/alchemy_helper.py -> qbot_rpg/core/alchemy_core.py",
+    "qbot_rpg/core/alchemy_helper.py -> qbot_rpg/core/proficiency.py",
+    "qbot_rpg/core/alchemy_helper.py -> qbot_rpg/core/synthesis.py",
+    "qbot_rpg/core/alchemy_helper.py -> qbot_rpg/core/templates/__init__.py",
+    "qbot_rpg/core/alchemy_meta.py -> qbot_rpg/core/codex.py",
+    "qbot_rpg/core/alchemy_meta.py -> qbot_rpg/core/proficiency.py",
+    "qbot_rpg/core/alchemy_settle.py -> qbot_rpg/core/alchemy_affinity.py",
+    "qbot_rpg/core/alchemy_settle.py -> qbot_rpg/core/alchemy_core.py",
+    "qbot_rpg/core/alchemy_settle.py -> qbot_rpg/core/quality.py",
+    "qbot_rpg/core/alchemy_settle.py -> qbot_rpg/core/templates/__init__.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/__init__.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/battle_season.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/combo.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/combo_settle.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/combo_table.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/ctb_rules.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/ctb_scheduler.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/damage.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/damage_stats.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/effects.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/equip_mods.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/event_dispatcher.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/formula_engine.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/formula_loader.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/marks.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/monster_ai.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/monster_chains.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/position.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/resource_axis.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/resource_lifecycle.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/season_events.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/skill_season.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/transform.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/transform_revert.py",
+    "qbot_rpg/core/battle_reward.py -> qbot_rpg/core/levelup.py",
+    "qbot_rpg/core/battle_reward.py -> qbot_rpg/core/reward.py",
+    "qbot_rpg/core/checkin.py -> qbot_rpg/core/dayroll.py",
+    "qbot_rpg/core/checkin.py -> qbot_rpg/core/event_bus.py",
+    "qbot_rpg/core/checkin.py -> qbot_rpg/core/reward.py",
+    "qbot_rpg/core/checkin.py -> qbot_rpg/core/templates/__init__.py",
+    "qbot_rpg/core/codex.py -> qbot_rpg/core/adventure_log.py",
+    "qbot_rpg/core/codex.py -> qbot_rpg/core/event_bus.py",
+    "qbot_rpg/core/codex_milestones.py -> qbot_rpg/core/adventure_log.py",
+    "qbot_rpg/core/codex_milestones.py -> qbot_rpg/core/codex.py",
+    "qbot_rpg/core/codex_milestones.py -> qbot_rpg/core/event_bus.py",
+    "qbot_rpg/core/combo.py -> qbot_rpg/core/position.py",
+    "qbot_rpg/core/combo_settle.py -> qbot_rpg/core/combo_table.py",
+    "qbot_rpg/core/combo_table.py -> qbot_rpg/core/__init__.py",
+    "qbot_rpg/core/combo_table.py -> qbot_rpg/core/resource_axis.py",
+    "qbot_rpg/core/ctb_config.py -> qbot_rpg/core/ctb_rules.py",
+    "qbot_rpg/core/ctb_scheduler.py -> qbot_rpg/core/ctb_rules.py",
+    "qbot_rpg/core/decompose.py -> qbot_rpg/core/temper.py",
+    "qbot_rpg/core/deep_craft.py -> qbot_rpg/core/affinity.py",
+    "qbot_rpg/core/dialog.py -> qbot_rpg/core/condition_engine.py",
+    "qbot_rpg/core/dialog.py -> qbot_rpg/core/message_format/__init__.py",
+    "qbot_rpg/core/dungeon.py -> qbot_rpg/core/event_bus.py",
+    "qbot_rpg/core/dungeon_boss.py -> qbot_rpg/core/monster_phases.py",
+    "qbot_rpg/core/effects.py -> qbot_rpg/core/combo.py",
+    "qbot_rpg/core/effects.py -> qbot_rpg/core/effect_types.py",
+    "qbot_rpg/core/effects.py -> qbot_rpg/core/formula_engine.py",
+    "qbot_rpg/core/effects.py -> qbot_rpg/core/marks.py",
+    "qbot_rpg/core/enhance_affix.py -> qbot_rpg/core/affinity.py",
+    "qbot_rpg/core/enhance_affix.py -> qbot_rpg/core/deep_craft.py",
+    "qbot_rpg/core/environment_events.py -> qbot_rpg/core/condition_engine.py",
+    "qbot_rpg/core/environment_events.py -> qbot_rpg/core/event_bus.py",
+    "qbot_rpg/core/environment_lore.py -> qbot_rpg/core/codex.py",
+    "qbot_rpg/core/environment_lore.py -> qbot_rpg/core/condition_engine.py",
+    "qbot_rpg/core/environment_lore.py -> qbot_rpg/core/investigate.py",
+    "qbot_rpg/core/environment_lore.py -> qbot_rpg/core/templates/__init__.py",
+    "qbot_rpg/core/equip_mods.py -> qbot_rpg/core/equipment.py",
+    "qbot_rpg/core/equipment.py -> qbot_rpg/core/panel_budget.py",
+    "qbot_rpg/core/equipment.py -> qbot_rpg/core/player_attributes.py",
+    "qbot_rpg/core/equipment.py -> qbot_rpg/core/runes.py",
+    "qbot_rpg/core/event_dispatcher.py -> qbot_rpg/core/effect_types.py",
+    "qbot_rpg/core/event_dispatcher.py -> qbot_rpg/core/effects.py",
+    "qbot_rpg/core/fishing.py -> qbot_rpg/core/dayroll.py",
+    "qbot_rpg/core/fishing.py -> qbot_rpg/core/fishing_settings.py",
+    "qbot_rpg/core/fishing_bait.py -> qbot_rpg/core/fishing_settings.py",
+    "qbot_rpg/core/fishing_cast.py -> qbot_rpg/core/fishing.py",
+    "qbot_rpg/core/fishing_codex.py -> qbot_rpg/core/adventure_log.py",
+    "qbot_rpg/core/fishing_codex.py -> qbot_rpg/core/event_bus.py",
+    "qbot_rpg/core/fishing_codex.py -> qbot_rpg/core/fishing_crown.py",
+    "qbot_rpg/core/fishing_crown.py -> qbot_rpg/core/fishing_settings.py",
+    "qbot_rpg/core/fishing_economy.py -> qbot_rpg/core/fishing_settings.py",
+    "qbot_rpg/core/fishing_job.py -> qbot_rpg/core/fishing_codex.py",
+    "qbot_rpg/core/fishing_job.py -> qbot_rpg/core/proficiency.py",
+    "qbot_rpg/core/fishing_king.py -> qbot_rpg/core/dayroll.py",
+    "qbot_rpg/core/fishing_king.py -> qbot_rpg/core/fishing_codex.py",
+    "qbot_rpg/core/fishing_king.py -> qbot_rpg/core/fishing_settings.py",
+    "qbot_rpg/core/fishing_mode.py -> qbot_rpg/core/fishing_settings.py",
+    "qbot_rpg/core/fishing_roll.py -> qbot_rpg/core/fishing_bait.py",
+    "qbot_rpg/core/fishing_roll.py -> qbot_rpg/core/fishing_settings.py",
+    "qbot_rpg/core/fishing_settle.py -> qbot_rpg/core/fishing_codex.py",
+    "qbot_rpg/core/fishing_settle.py -> qbot_rpg/core/fishing_crown.py",
+    "qbot_rpg/core/fishing_settle.py -> qbot_rpg/core/fishing_settings.py",
+    "qbot_rpg/core/fishing_settle.py -> qbot_rpg/core/reward.py",
+    "qbot_rpg/core/forge_augments.py -> qbot_rpg/core/forge_job.py",
+    "qbot_rpg/core/forge_augments.py -> qbot_rpg/core/forge_sp.py",
+    "qbot_rpg/core/forge_bounds.py -> qbot_rpg/core/alchemy_core.py",
+    "qbot_rpg/core/forge_deadlock.py -> qbot_rpg/core/forge_material.py",
+    "qbot_rpg/core/forge_job.py -> qbot_rpg/core/forge_tree.py",
+    "qbot_rpg/core/forge_job.py -> qbot_rpg/core/proficiency.py",
+    "qbot_rpg/core/forge_king.py -> qbot_rpg/core/codex.py",
+    "qbot_rpg/core/forge_king.py -> qbot_rpg/core/forge_tree.py",
+    "qbot_rpg/core/forge_king.py -> qbot_rpg/core/proficiency.py",
+    "qbot_rpg/core/forge_material.py -> qbot_rpg/core/forge_tree.py",
+    "qbot_rpg/core/forge_material.py -> qbot_rpg/core/proficiency.py",
+    "qbot_rpg/core/forge_progress.py -> qbot_rpg/core/forge_tree.py",
+    "qbot_rpg/core/forge_set_skills.py -> qbot_rpg/core/forge_sets.py",
+    "qbot_rpg/core/forge_sets.py -> qbot_rpg/core/equipment.py",
+    "qbot_rpg/core/forge_sp.py -> qbot_rpg/core/forge_job.py",
+    "qbot_rpg/core/forge_sp.py -> qbot_rpg/core/forge_tree.py",
+    "qbot_rpg/core/forge_sp.py -> qbot_rpg/core/proficiency.py",
+    "qbot_rpg/core/formula_loader.py -> qbot_rpg/core/damage.py",
+    "qbot_rpg/core/gathering.py -> qbot_rpg/core/weather_consumers.py",
+    "qbot_rpg/core/gem_wallet.py -> qbot_rpg/core/quality.py",
+    "qbot_rpg/core/hidden_trigger.py -> qbot_rpg/core/adventure_log.py",
+    "qbot_rpg/core/hidden_trigger.py -> qbot_rpg/core/condition_engine.py",
+    "qbot_rpg/core/hidden_trigger.py -> qbot_rpg/core/templates/__init__.py",
+    "qbot_rpg/core/inventory.py -> qbot_rpg/core/player_attributes.py",
+    "qbot_rpg/core/investigate.py -> qbot_rpg/core/adventure_log.py",
+    "qbot_rpg/core/investigate.py -> qbot_rpg/core/condition_engine.py",
+    "qbot_rpg/core/investigate.py -> qbot_rpg/core/templates/__init__.py",
+    "qbot_rpg/core/jewel.py -> qbot_rpg/core/equipment.py",
+    "qbot_rpg/core/jewel.py -> qbot_rpg/core/quality.py",
+    "qbot_rpg/core/jewel.py -> qbot_rpg/core/runes.py",
+    "qbot_rpg/core/job_slots.py -> qbot_rpg/core/skill_slots.py",
+    "qbot_rpg/core/levelup.py -> qbot_rpg/core/event_bus.py",
+    "qbot_rpg/core/levelup.py -> qbot_rpg/core/player_attributes.py",
+    "qbot_rpg/core/message_format/battle_render.py -> qbot_rpg/core/message_format/list_render.py",
+    "qbot_rpg/core/message_format/battle_render.py -> qbot_rpg/core/message_format/prefix_render.py",
+    "qbot_rpg/core/message_format/battle_render.py -> qbot_rpg/core/reward.py",
+    "qbot_rpg/core/message_format/battle_render.py -> qbot_rpg/core/templates/__init__.py",
+    "qbot_rpg/core/message_format/panel_render.py -> qbot_rpg/core/message_format/prefix_render.py",
+    "qbot_rpg/core/message_format/panel_render.py -> qbot_rpg/core/player_attributes.py",
+    "qbot_rpg/core/monster_ai.py -> qbot_rpg/core/monster_chains.py",
+    "qbot_rpg/core/monster_ai.py -> qbot_rpg/core/monster_conditions.py",
+    "qbot_rpg/core/monster_ai.py -> qbot_rpg/core/monster_intent.py",
+    "qbot_rpg/core/monster_ai.py -> qbot_rpg/core/monster_phases.py",
+    "qbot_rpg/core/monster_conditions.py -> qbot_rpg/core/position.py",
+    "qbot_rpg/core/npc.py -> qbot_rpg/core/condition_engine.py",
+    "qbot_rpg/core/npc.py -> qbot_rpg/core/dayroll.py",
+    "qbot_rpg/core/npc.py -> qbot_rpg/core/quest.py",
+    "qbot_rpg/core/npc.py -> qbot_rpg/core/reward.py",
+    "qbot_rpg/core/player_attributes.py -> qbot_rpg/core/damage.py",
+    "qbot_rpg/core/pvp.py -> qbot_rpg/core/battle.py",
+    "qbot_rpg/core/pvp.py -> qbot_rpg/core/equip_mods.py",
+    "qbot_rpg/core/pvp.py -> qbot_rpg/core/reward.py",
+    "qbot_rpg/core/pvp.py -> qbot_rpg/core/skill_slots_battle.py",
+    "qbot_rpg/core/quest.py -> qbot_rpg/core/adventure_log.py",
+    "qbot_rpg/core/quest.py -> qbot_rpg/core/condition_engine.py",
+    "qbot_rpg/core/quest.py -> qbot_rpg/core/dayroll.py",
+    "qbot_rpg/core/quest.py -> qbot_rpg/core/reward.py",
+    "qbot_rpg/core/reward.py -> qbot_rpg/core/codex.py",
+    "qbot_rpg/core/reward.py -> qbot_rpg/core/codex_milestones.py",
+    "qbot_rpg/core/rune_battle.py -> qbot_rpg/core/equipment.py",
+    "qbot_rpg/core/rune_battle.py -> qbot_rpg/core/jewel.py",
+    "qbot_rpg/core/runes.py -> qbot_rpg/core/affinity.py",
+    "qbot_rpg/core/shop.py -> qbot_rpg/core/condition_engine.py",
+    "qbot_rpg/core/shop.py -> qbot_rpg/core/dayroll.py",
+    "qbot_rpg/core/shop.py -> qbot_rpg/core/reward.py",
+    "qbot_rpg/core/shop.py -> qbot_rpg/core/templates/__init__.py",
+    "qbot_rpg/core/synthesis.py -> qbot_rpg/core/proficiency.py",
+    "qbot_rpg/core/synthesis.py -> qbot_rpg/core/reward.py",
+    "qbot_rpg/core/templates/__init__.py -> qbot_rpg/core/templates/base.py",
+    "qbot_rpg/core/time_query.py -> qbot_rpg/core/worldtime.py",
+    "qbot_rpg/core/trait_inherit.py -> qbot_rpg/core/alchemy_core.py",
+    "qbot_rpg/core/upgrade.py -> qbot_rpg/core/quality.py",
+    "qbot_rpg/core/upgrade.py -> qbot_rpg/core/reward.py",
+    "qbot_rpg/core/upgrade.py -> qbot_rpg/core/runes.py",
+    "qbot_rpg/core/weather_conditions.py -> qbot_rpg/core/worldtime.py",
+    "qbot_rpg/core/weather_consumers.py -> qbot_rpg/core/weather_conditions.py",
+))
 # TC-04 五类（细化_3a §3.2 / D-03）
 REQUIRED_TYPES: Tuple[str, ...] = (
     "Player", "BattleSnapshot", "StatusInstance", "ItemInstance", "WorldState",
@@ -162,6 +362,13 @@ def find_nonebot_imports(tree: ast.Module, file: str) -> List[Tuple[str, str, in
     for f, desc in _importlib_dynamic(tree, file):
         hits.append((f, desc, 0))
     return hits
+
+
+def _edge_key(root: str, src: str, dst: str) -> str:
+    """相对仓库根的稳定边键：`qbot_rpg/core/a.py -> qbot_rpg/core/b.py`。"""
+    rel_src = os.path.relpath(src, root).replace(os.sep, "/")
+    rel_dst = os.path.relpath(dst, root).replace(os.sep, "/")
+    return f"{rel_src} -> {rel_dst}"
 
 
 def check_tc01(root: str, files: List[str]) -> None:
@@ -419,9 +626,46 @@ def check_tc04(root: str, files: List[str]) -> None:
         print("  ✓ 通过（Player/BattleSnapshot/StatusInstance/ItemInstance/WorldState 各一次 + frozen）")
 
 
+def check_tc05(root: str, files: List[str]) -> None:
+    """TC-05：core 内部直调边冻结 —— **新增** core→core import 边即失败（日研 Q1）。
+
+    口径：同层互引在 §1.4 矩阵下合法（TC-03 有意放行），但按用户 2026-10-10 口径
+    「L1 业务模块间禁直调、必须走事件」，先冻结现状：现有边登记在 `CORE_EDGE_BASELINE`
+    （single source），**新增边**须改走事件/注册表，或在基线中登记并写明理由。
+    边**减少**（重构合并）只提示不失败，避免「改好了反而红」。
+    """
+    print("TC-05  core 内部直调边冻结：新增 core→core import 边即失败（日研 Q1）")
+    current: Set[str] = set()
+    for file in files:
+        if layer_of(file) != "core":
+            continue
+        try:
+            tree = ast.parse(open(file, "r", encoding="utf-8").read(), filename=file)
+        except SyntaxError:
+            continue
+        for tgt in collect_import_edges(tree, file, root):
+            if tgt == file or layer_of(tgt) != "core":
+                continue
+            current.add(_edge_key(root, file, tgt))
+
+    added = sorted(current - CORE_EDGE_BASELINE)
+    removed = sorted(CORE_EDGE_BASELINE - current)
+    if added:
+        for e in added:
+            _fail(
+                f"TC-05 新增 core 内部直调边：{e} —— 按口径应改走事件/注册表；"
+                "确需直调请在 scripts/check_architecture.py:CORE_EDGE_BASELINE 登记并写明理由"
+            )
+    if removed:
+        print(f"  · 提示：{len(removed)} 条基线边已不存在（重构删边，非违规）：{removed[:3]}"
+              + (" …" if len(removed) > 3 else ""))
+    if not added:
+        print(f"  ✓ 通过（当前 {len(current)} 条 core 内部边，基线 {len(CORE_EDGE_BASELINE)} 条，无新增）")
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     global _OK
-    parser = argparse.ArgumentParser(description="G0 架构检查（细化_3a TC-01~04）")
+    parser = argparse.ArgumentParser(description="G0 架构检查（细化_3a TC-01~05）")
     parser.add_argument(
         "--path", default=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         help="仓库根目录（默认脚本父目录）",
@@ -439,9 +683,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     check_tc02(root, files)
     check_tc03(root, files)
     check_tc04(root, files)
+    check_tc05(root, files)
 
     if _OK:
-        print("ARCH-OK  TC-01/TC-02/TC-03/TC-04 全部通过（细化_3a 分层契约满足）")
+        print("ARCH-OK  TC-01/TC-02/TC-03/TC-04/TC-05 全部通过（细化_3a 分层契约满足）")
         return 0
     print("ARCH-FAIL 存在违规，详见上方清单（质量门禁红）")
     return 1
@@ -449,3 +694,4 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

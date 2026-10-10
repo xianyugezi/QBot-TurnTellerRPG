@@ -8,13 +8,15 @@
   - scripts/check_architecture.py G0 架构分层门禁（TC-01~04）
   - scripts/check_m7_content.py  内容包校验器（隐藏要素可达性 / 条件键白名单 / 模板占位符）
   - scripts/check_docs_consistency.py 文档一致性门禁（份数声明 / 索引链接 / 归档索引三项硬事实）
+  - scripts/check_capability_closure.py 能力闭环门禁（特效轴消费点声明 / 待接轴冻结）
   - scripts/verify/verify_mN.py  各里程碑门禁（N=0~7）
 
 用法：
-  python scripts/check_all.py             # 快速检查：静态+架构+内容包+文档一致性+单测（默认）
+  python scripts/check_all.py             # 快速检查：静态+架构+文档一致性+能力闭环+内容包+单测
   python scripts/check_all.py --full      # 全量回归（含里程碑门禁+覆盖率，慢 ~5 分钟）
   python scripts/check_all.py --arch      # 仅架构门禁
   python scripts/check_all.py --docs      # 仅文档一致性（份数/链接/归档索引）
+  python scripts/check_all.py --closure   # 仅能力闭环（特效轴消费点）
   python scripts/check_all.py --lint      # 仅 ruff/mypy 静态
   python scripts/check_all.py --content   # 仅内容包校验
   python scripts/check_all.py --unit      # 仅单元测试（tests/unit）
@@ -107,6 +109,8 @@ def main() -> int:
     ap.add_argument("--arch", action="store_true", help="仅架构门禁")
     ap.add_argument("--docs", action="store_true",
                     help="仅文档一致性（份数声明 / 索引链接 / 归档索引）")
+    ap.add_argument("--closure", action="store_true",
+                    help="仅能力闭环（特效轴消费点声明 / 待接轴冻结）")
     ap.add_argument("--content", action="store_true", help="仅内容包校验（check_m7_content）")
     ap.add_argument("--unit", action="store_true", help="仅单元测试")
     ap.add_argument("--verify", type=str, default="", help="仅里程碑门禁（0~7，如 --verify 7）")
@@ -126,20 +130,23 @@ def main() -> int:
             extra.append("--skip-lint")
         _run("全量回归 run_all_tests", ["scripts/run_all_tests.py", *extra])
         _run("文档一致性 check_docs_consistency", ["scripts/check_docs_consistency.py"])
+        _run("能力闭环 check_capability_closure", ["scripts/check_capability_closure.py"])
     else:
-        # 无参默认：静态 + 架构 + 内容包 + 文档一致性 + 单测
-        picks = [args.lint, args.arch, args.docs, args.content, args.unit]
+        # 无参默认：静态 + 架构 + 文档一致性 + 能力闭环 + 内容包 + 单测
+        picks = [args.lint, args.arch, args.docs, args.closure, args.content, args.unit]
         if not any(picks):
-            picks = [True, True, True, True, True]  # 默认快速检查
+            picks = [True] * 6  # 默认快速检查
         if picks[0]:
             _lint()
-        if picks[1]:
-            _run("架构门禁 check_architecture", ["scripts/check_architecture.py"])
-        if picks[2]:
-            _run("文档一致性 check_docs_consistency", ["scripts/check_docs_consistency.py"])
-        if picks[3]:
-            _run("内容包校验 check_m7_content", ["scripts/check_m7_content.py"])
-        if picks[4]:
+        for enabled, name, script in (
+            (picks[1], "架构门禁 check_architecture", "scripts/check_architecture.py"),
+            (picks[2], "文档一致性 check_docs_consistency", "scripts/check_docs_consistency.py"),
+            (picks[3], "能力闭环 check_capability_closure", "scripts/check_capability_closure.py"),
+            (picks[4], "内容包校验 check_m7_content", "scripts/check_m7_content.py"),
+        ):
+            if enabled:
+                _run(name, [script])
+        if picks[5]:
             _pytest_unit()
         if args.verify:
             n = args.verify

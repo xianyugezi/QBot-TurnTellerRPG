@@ -1,5 +1,12 @@
 # 可行性评估：把内容编辑器做成「Windows 桌面 GUI 应用」麻不麻烦？
 
+> **快照元数据（doc_meta · 2026-10-10 批量补登）**
+> `type: DESIGN` · `status: CURRENT` · `snapshot_commit: 不适用（设计稿：以代码与门禁为准）` ·
+> `last_modified_commit: 4e7887f（2026-09-21）` · `scope: 见正文首节` ·
+> `verified_at: 2026-10-10` · `verified_commit: 3a621a1`
+> **读法**：本文件描述**当时**的仓库状态；与当前 HEAD 不符处，**以代码 + 门禁脚本为准**
+> （判据见 `docs/审查/审计与方案/API手册_3_权责与勿当bug修.md` §3.7）。
+
 > 状态：**已完成**（2026-09-20）；骨架先行、逐节写回。
 > 纪律：**只读仓库**，除本报告外不改仓库任何文件；每条结论带 `file:line` 或「命令 + 输出摘要」；不写实现代码。
 > 取证环境：`/root/QBot-TurnTellerRPG`（本机即那台服务器，见 `/root/deliverables/编辑器部署_方案.md` §一）。

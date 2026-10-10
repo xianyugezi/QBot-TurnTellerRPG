@@ -14,6 +14,24 @@
 
 ### Added
 
+- **日研批（2026-10-10）**：**外部日研线程（12 篇）评估落地 —— 三道新门禁 + 文档漂移闭环**。
+  **① Q1 架构直调边冻结（TC-05）**：`scripts/check_architecture.py` 新增 `CORE_EDGE_BASELINE`
+  （core 内部文件级 import 边 **192** 条基线）+ `check_tc05`——**新增** core→core 直调边即 FAIL
+  （提示「改走事件/注册表，或在基线登记并写明理由」），边**减少**只提示不失败（不惩罚重构）。
+  用户口径（2026-10-10）：「L1 业务模块间禁直调、必须走事件」；先冻结现状，再按
+  `docs/审查/审计与方案/日研261010_core直调边跨域分析.md` 分批收敛（跨族业务边口径①108 / 口径②52）。
+  **② Q3 能力闭环门禁**：`scripts/check_capability_closure.py`（唯一源 = 既有
+  `data/gear_stats.py` EFFECT_AXIS_SPECS，**不新建中央清单**）：D-01 每轴须有 `consumer`
+  与 `consumer_note`（红拦）；D-02「消费点待接」哨兵轴集合**冻结**（现 1 条 `reward_mult_pct`，
+  新增/接线后未移除 → 红拦）；D-03 `consumer` 标识可定位性黄提示（9 可定位 / 8 仅契约命名）。
+  配套 `tests/unit/test_check_capability_closure.py`（7 例）。
+  **③ 文档一致性门禁**：`scripts/check_docs_consistency.py`（D-01 份数声明一致 / D-02 索引链接可达 /
+  D-03 归档 INDEX 所列文件存在；**只查硬事实、不查内容**）。三道门禁均挂入
+  `scripts/check_all.py`（默认快速检查 + `--full` + 新 `--docs` / `--closure`）。
+  **④ 文档漂移修正**：`README.md` 目录树份数与编辑器口径按实况对齐；`docs/细化规划总索引.md`
+  74 条悬空链接修复（0 失效）+ 份数口径写明；`docs/审查/审计与方案/` 39 份补 `doc_meta`
+  快照元数据头。
+
 - **批82（2026-09-23）**：**手册 §六剩余项收口（用户 4 条裁决 + 可直接执行项 + Q1~Q8 入册）**。
   依据 `/root/deliverables/手册剩余项_核清与口径.md`。
   **① D1（pvp.mode 保留+写明暂未生效）**：`settings.pvp.mode` 零逻辑改动，仅

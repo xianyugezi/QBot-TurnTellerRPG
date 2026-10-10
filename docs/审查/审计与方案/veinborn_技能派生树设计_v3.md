@@ -1,5 +1,12 @@
 # veinborn 阶段一技能设计 v3 —— 怪猎式武器派生树（脊剑士 = 太刀）
 
+> **快照元数据（doc_meta · 2026-10-10 批量补登）**
+> `type: DESIGN` · `status: CURRENT` · `snapshot_commit: 不适用（设计稿：以代码与门禁为准）` ·
+> `last_modified_commit: 4e7887f（2026-09-21）` · `scope: 见正文首节` ·
+> `verified_at: 2026-10-10` · `verified_commit: 3a621a1`
+> **读法**：本文件描述**当时**的仓库状态；与当前 HEAD 不符处，**以代码 + 门禁脚本为准**
+> （判据见 `docs/审查/审计与方案/API手册_3_权责与勿当bug修.md` §3.7）。
+
 > 铁律：纯配置（skill_chains 现有能力，零新字段零删减）
 > 参考：《太刀历代派生设计》+《太刀派生树汇总》（/root/docs_archive/派生设计/）
 > 核心思想：**每个职业 = 一把怪猎武器**。技能栏只有起手式，派生靠 skill_chains

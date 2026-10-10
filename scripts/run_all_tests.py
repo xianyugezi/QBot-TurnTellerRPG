@@ -21,8 +21,10 @@ verify_m9_b2~b7 分批门禁 + verify_m9_smoke 全链路冒烟，依赖序 b2→
 批6 门禁）。每脚本独立子进程真实可跑、幂等；未落盘按 VG-11 不假绿（置 fail，退出码非 0）。
 
 覆盖率门禁（M6 批7·路A，细化_M6_质量门禁 D7 COV 组）：阶段3 真实核算
-qbot_rpg/core + engine + content 三目录**各自** ≥80% 行覆盖（coverage 依赖实算，
+qbot_rpg/core + qbot_rpg/content 两目录**各自** ≥80% 行覆盖（coverage 依赖实算，
 禁合计稀释——总纲 ADR-04）；任一 <80% → 退出码非 0；报表归档 docs/verify/coverage_latest.txt。
+（原「core + engine + content 三目录」口径已作废：qbot_rpg/engine/ 于 2026-09-10 并入 core/，
+口径收敛为两目录——见下方 COV_DIRS 处注记；日研261009 修正本行遗留措辞。）
 
 静态检查声明（M5-11 登记表配套）：全仓渲染输出 emoji 扫描由
 tests/unit/test_emoji_discipline.py 承担（位于 L1 unit 层，随全量与 --only unit 执行；
@@ -111,7 +113,7 @@ def _pytest(paths: list[str], *, report: bool = False) -> int:
 
 
 # ---- M6 批7·路A（细化_M6_质量门禁 D7 · COV 组）----
-# COV-02/03：口径定死 = qbot_rpg/core + engine + content 三目录各自 ≥80% 行覆盖，禁合计稀释
+# COV-02/03：口径定死 = qbot_rpg/core + qbot_rpg/content 两目录各自 ≥80% 行覆盖，禁合计稀释
 # （总纲 ADR-04；批6B P1-2；D7 §1.4「合计稀释拦截」）
 # 2026-09-10 架构违规修复：原 engine/ 按契约 §2.3 更名 core/（源码已迁入 core），
 # 覆盖率口径目录随之收敛为 core + content 两目录（engine 不再独立存在，禁新增稀释）。

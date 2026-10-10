@@ -5,7 +5,8 @@
 【为什么有这个模块】（2026-09-10 G0 TC-03 循环 import 修复）
   原依赖环：qbot_rpg/core/effects.py ↔ qbot_rpg/core/event_dispatcher.py
     - effects.py L1712（函数内 lazy）→ event_dispatcher.dispatch_event
-    - event_dispatcher.py L138/180/188（函数内 lazy）→ effects.DamageCtx / _chance_roll / execute_action
+    - event_dispatcher.py L138/180/188（函数内 lazy）→ effects.DamageCtx /
+      _chance_roll / execute_action
   作者当时用「函数内 lazy import + noqa」规避 ImportError，但契约 R3「禁止循环 import」
   的判定口径是**文件级 import 图**（G0 TC-03 静态扫描），lazy 只在运行期遮住症状、
   未消除依赖环——一旦扫描器不再被其它违规掩盖，该环即暴露（本次修复即此情形）。

@@ -81,9 +81,9 @@
 | qbot_rpg/data/status.py | E501×1 | 2026-08-28 |
 | qbot_rpg/data/world_state.py | E501×1 | 2026-08-28 |
 | qbot_rpg/engine/condition_engine.py | E501×4, F401×1 | 2026-08-28 |
-| qbot_rpg/engine/weather_conditions.py | E501×1 | 2026-08-28 |
-| qbot_rpg/engine/weather_consumers.py | F401×1 | 2026-08-28 |
-| qbot_rpg/engine/worldtime.py | E501×17 | 2026-08-28 |
+| qbot_rpg/core/weather_conditions.py | E501×1 | 2026-08-28（路径同步 2026-10-10） |
+| qbot_rpg/core/weather_consumers.py | F401×1 | 2026-08-28（路径同步 2026-10-10） |
+| qbot_rpg/core/worldtime.py | E501×17 | 2026-08-28（路径同步 2026-10-10） |
 | qbot_rpg/storage/connection.py | E402×1, E501×1, F401×1 | 2026-08-28 |
 | qbot_rpg/storage/migrations.py | F401×4 | 2026-08-28 |
 | qbot_rpg/storage/pending.py | E501×2 | 2026-08-28 |

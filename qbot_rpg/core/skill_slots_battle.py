@@ -252,7 +252,8 @@ def set_skill_levels(ctx: Mapping[str, Any]) -> Dict[str, int]:
     """三源并集读表 → {技能 id: 等级}（批80 · 技能等级维度第一步；**纯读、不写存档**）。
 
     三源（各占独立来源容器，来源计数语义，P-8）：
-      ① 装备赋予 `ctx["equip_skills"]`（{skill_id: level}，`equip_mods.recompute_equip_skills` 产出）；
+      ① 装备赋予 `ctx["equip_skills"]`（{skill_id: level}，
+         `equip_mods.recompute_equip_skills` 产出）；
       ② 套装档位 `ctx["set_skills"]`（{skill_id: level}，`forge_set_skills` 产出）；
       ③ 学技能行 `ctx["skill_slots_state"]` 的 slots[].{skill_id, level}（`_grant_skill` 写入的
          行上等级；经 `slots_from_snapshot` 解析）。
@@ -301,7 +302,8 @@ def skill_level_cap(skill_def: object) -> Optional[int]:
 
 
 def skill_level_axis(skill_def: object) -> bool:
-    """技能是否进等级线（F18 `level` 为对象且 `max ≥ 2`；等价 `skill_level_cap(...) is not None`）。"""
+    """技能是否进等级线（F18 `level` 为对象且 `max ≥ 2`；
+    等价 `skill_level_cap(...) is not None`）。"""
     return skill_level_cap(skill_def) is not None
 
 

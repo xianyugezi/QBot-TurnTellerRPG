@@ -53,7 +53,8 @@ async def main() -> None:
 
     ctx = await make_context({"group_id": "g1", "user_id": "u_vbg3b", "qq_id": "u_vbg3b",
                               "message": "/攻击", "channel": "group"}, deps)
-    print(f"\nmake_context: in_battle={ctx.get('in_battle')} battle_engine={type(ctx.get('battle_engine')).__name__ if ctx.get('battle_engine') else None}")
+    _be = type(ctx.get("battle_engine")).__name__ if ctx.get("battle_engine") else None
+    print(f"\nmake_context: in_battle={ctx.get('in_battle')} battle_engine={_be}")
 
 
 if __name__ == "__main__":

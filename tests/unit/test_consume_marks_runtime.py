@@ -68,7 +68,8 @@ def test_consume_success_deducts_marks() -> None:
     """有足够印记 → 施放成功 + 印记扣除（AT-16）。"""
     eng = BattleEngine(defs=_skills())
     eng.start(_player(), _enemy())
-    # 预置 2 层 fire_mark 于玩家侧（apply_add 官方姿势，fire_mark appliable_to 含 self → attacker 侧）
+    # 预置 2 层 fire_mark 于玩家侧（apply_add 官方姿势，
+    # fire_mark appliable_to 含 self → attacker 侧）
     from qbot_rpg.core.marks import AddMark  # noqa: PLC0415
 
     eng.marks_manager().apply_add(AddMark(side="player", mark="fire_mark", count=2))

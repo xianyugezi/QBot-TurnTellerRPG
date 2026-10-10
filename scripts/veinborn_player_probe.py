@@ -4,7 +4,6 @@
 monkey-patch 收集（run_command 返回可能只是元数据 message，正文要走 pipeline）。
 """
 import asyncio
-import json
 import os
 import sys
 import traceback
@@ -16,7 +15,7 @@ os.environ["QBotRPG_PACK_DIR"] = "/root/QBot-TurnTellerRPG/content/veinborn"
 os.environ["QBotRPG_DB_PATH"] = "/tmp/rpg_veinborn_tester.db"
 
 from qbot_rpg.commands import battle_commands as BC  # noqa: E402
-from qbot_rpg.commands import battle_launch_commands as BLC  # noqa: E402
+from qbot_rpg.commands import battle_launch_commands as BLC  # noqa: E402,F401  # 副作用导入：触发指令注册
 
 _SENT: list = []
 _orig_send = BC.BattlePipeline.send
@@ -150,7 +149,8 @@ async def main() -> None:
         joined = " | ".join(_SENT)
         rep = _summarize(joined or rv, 160)
         blob = joined + str(rv)
-        if any(f in blob for f in ("战斗结束", "胜利", "win", "lose", "已死亡", "战败", "逃跑", "逃走")):
+        _END_WORDS = ("战斗结束", "胜利", "win", "lose", "已死亡", "战败", "逃跑", "逃走")
+        if any(f in blob for f in _END_WORDS):
             out(f"✅ 轮{i+1} → {rep}")
             done = True
             break
@@ -184,9 +184,10 @@ async def main() -> None:
     # 结果写盘
     # ============================================================
     out("=" * 20 + " 汇总 " + "=" * 20)
-    bugs = [l for l in LINES if l.startswith(("❌", "⚠️"))]
-    ok_n = len([l for l in LINES if l.startswith("✅")])
-    out(f"总指令行 {len(LINES)}，✅ {ok_n}，⚠️ {len([l for l in LINES if l.startswith('⚠️')])}，❌ {len([l for l in LINES if l.startswith('❌')])}")
+    ok_n = len([line for line in LINES if line.startswith("✅")])
+    warn_n = len([line for line in LINES if line.startswith("⚠️")])
+    bad_n = len([line for line in LINES if line.startswith("❌")])
+    out(f"总指令行 {len(LINES)}，✅ {ok_n}，⚠️ {warn_n}，❌ {bad_n}")
 
     Path("/tmp/veinborn_bug_report.txt").write_text(
         "\n".join(LINES), encoding="utf-8")

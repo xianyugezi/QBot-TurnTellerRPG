@@ -3,10 +3,10 @@
 验证 veinborn 在真实装配管线（非模拟 BattleEngine 直拼）下的表现：
   注册 → 选职业（脊剑士）→ 触发遭遇砾冕 → 四色出牌 → 部位破坏 → 困斗/宣泄 → 专精翻面
 
-用法：QBotRPG_PACK_DIR=/root/QBot-TurnTellerRPG/content/veinborn .venv/bin/python scripts/verify_veinborn_probe.py
+用法：QBotRPG_PACK_DIR=/root/QBot-TurnTellerRPG/content/veinborn
+      .venv/bin/python scripts/verify_veinborn_probe.py
 """
 import asyncio
-import json
 import os
 import sqlite3
 import sys
@@ -77,7 +77,8 @@ async def main() -> None:
     # ---- 3. 选脊剑士 ----
     print("\n== 3. 转职脊剑士 ==")
     resp = await say("/转职 脊剑士")
-    check("转职成功", "脊剑士" in resp and ("成功" in resp or "转职" in resp or "成为" in resp), resp[:150])
+    check("转职成功", "脊剑士" in resp and ("成功" in resp or "转职" in resp
+                                        or "成为" in resp), resp[:150])
 
     # ---- 4. 触发遭遇（地图/副本/打猎指令试探）----
     print("\n== 4. 触发战斗 ==")

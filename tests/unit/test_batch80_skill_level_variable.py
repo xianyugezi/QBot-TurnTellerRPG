@@ -159,7 +159,8 @@ def test_validator_red_on_max_and_growth_types():
         == ["skill_level_max_invalid"]
     assert [e["rule"] for e in _f18_errors([{"id": "x", "level": {"max": 2, "growth": "x"}}])] \
         == ["skill_level_growth_invalid"]
-    assert [e["rule"] for e in _f18_errors([{"id": "x", "level": {"max": 2, "growth": [1.0, "a"]}}])] \
+    assert [e["rule"] for e in
+            _f18_errors([{"id": "x", "level": {"max": 2, "growth": [1.0, "a"]}}])] \
         == ["skill_level_growth_invalid"]
 
 

@@ -1,7 +1,6 @@
 """veinborn 实机 e2e：注册→锁定幼兽→连续攻击到战斗结束（验证完整 PvE 循环）。"""
 import asyncio
 import os
-import re
 import sys
 import uuid
 from pathlib import Path
@@ -53,7 +52,8 @@ async def main() -> None:
         await say("/攻击 脊斩")
         joined = " | ".join(_SENT)
         print(f"行动{i + 1}: {joined[:180]}")
-        if "死亡" in joined or "战斗结束" in joined or "胜利" in joined or "lose" in joined or "win" in joined:
+        _END_WORDS = ("死亡", "战斗结束", "胜利", "lose", "win")
+        if any(w in joined for w in _END_WORDS):
             print("战斗结束")
             break
         if not _SENT:

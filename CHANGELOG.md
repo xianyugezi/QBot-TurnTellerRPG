@@ -683,6 +683,14 @@
 
 ### Fixed
 
+- **CI 长期红灯根因修复（2026-10-11）**：`requirements.txt` **缺 `httpx`** —— `fastapi.testclient`
+  （`TestClient`）经 `starlette.testclient` **硬依赖** httpx，而
+  `tests/unit/test_editor_api_host.py` / `test_batch34_csv_host.py` / `test_batch35_job_tree_editor.py`
+  在**收集期**即导入它 → `pytest` 直接 `Interrupted: 3 errors during collection` → 阶段1 失败 → CI 红
+  （本地 `.venv` 恰好装过 httpx，所以一直没暴露）。已按规则⑧锁版本补登 `httpx==0.28.1`，
+  并在 **Python 3.11 + 仅 requirements/dev 的复刻环境**验证收集通过（根因定位方式：用复刻环境
+  `pytest tests --collect-only` 复现，日志需仓库管理员权限、拿不到）。
+
 - **lint 存量分档（2026-10-11）**：**阶段0 静态门从「两红」恢复为绿，并按用户拍板改分档口径**。
   **① ruff 全仓清零（40 → 0）**：其中 3 条为**挪位失配**（2026-09-10 `qbot_rpg/engine/` 并入 `core/`
   后 pyproject 豁免路径仍写旧路径：`worldtime.py` E501×17 / `weather_conditions.py` E501×1 /

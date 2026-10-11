@@ -15,6 +15,11 @@ uvicorn==0.34.3
 # ---- 开发/测试 ----
 pytest==9.1.1
 pytest-asyncio==1.4.0
+# fastapi.testclient（TestClient）→ starlette.testclient **硬依赖** httpx；
+# 编辑器宿主类用例（test_editor_api_host / test_batch34_csv_host / test_batch35_job_tree_editor）
+# 在收集期即导入 testclient → 缺 httpx 会让 pytest 收集失败（CI 自 2026-09 起一直红在此）。
+# 2026-10-11 补登（本地 .venv 恰好装过 httpx 故一直未暴露）。
+httpx==0.28.1
 # M6 批7·路B（细化_M6_质量门禁 D7 LNT-03）：ruff/mypy 锁版本（与 pyproject dev 组宽松范围并存）
 ruff==0.16.5
 mypy==2.3.1

@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-from typing import Mapping
+from typing import Any, Dict, Mapping
 
 from qbot_rpg.core.upgrade import UpgradeEngine
 from qbot_rpg.data.runes import MIN_RUNE_TIER, MAX_RUNE_TIER, rune_tier_of
@@ -58,7 +58,7 @@ def test_f3_rune_tier_output_recipe_fallback_bitwise() -> None:
     """③ 产出端配方回退（output.rune_tier / cfg.rune_tier）：与批前逐位一致。"""
     eng = _engine()
     for raw, expect in _PRE_BATCH_TIER_CASES:
-        ctx = {"runes": {}, "items": {}}
+        ctx: Dict[str, Any] = {"runes": {}, "items": {}}
         got_out = eng._rune_tier_of("r", ctx, {"output": {"rune_tier": raw}}, output=True)
         got_cfg = eng._rune_tier_of("r", ctx, {"rune_tier": raw}, output=True)
         assert got_out == expect, ("output", raw, got_out, expect)
@@ -74,7 +74,7 @@ def test_f3_uses_unique_source_scale() -> None:
     assert (MIN_RUNE_TIER, MAX_RUNE_TIER) == (1, 3)
     eng = _engine()
     for t in (MIN_RUNE_TIER, 2, MAX_RUNE_TIER):
-        ctx = {"runes": {"r": {"tier": t}}, "items": {}}
+        ctx: Dict[str, Any] = {"runes": {"r": {"tier": t}}, "items": {}}
         assert eng._rune_tier_of("r", ctx, {}, output=False) == rune_tier_of({"tier": t}) == t
     # float 整值：唯一源接受、升级路径严格 int（保批前行为）→ 二者在此明确分道
     assert rune_tier_of({"tier": 2.0}) == 2

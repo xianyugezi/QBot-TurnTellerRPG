@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List, cast
 
 from qbot_rpg.content.field_meta import default_field_meta_table
 from qbot_rpg.content.validator import check_pack
@@ -66,14 +66,16 @@ def _mp(eng: BattleEngine) -> int:
 # ---------------------------------------------------------------------------
 def test_b1_metadata_registered() -> None:
     tbl = default_field_meta_table()
-    fm = tbl.module("skills").fields.get("hp_cost")
+    _sk = tbl.module("skills")
+    assert _sk is not None
+    fm = _sk.fields.get("hp_cost")
     assert fm is not None, "skills 缺 hp_cost 登记"
     assert fm.type == "int"
     assert fm.range_min == 0 and fm.range_max == 9999
     assert fm.unit == "点"
     assert fm.label == "生命消耗"
     assert fm.help, "hp_cost 缺中文说明（说明卡）"
-    assert tbl.module("skills").field_groups.get("hp_cost") == "数值"
+    assert _sk.field_groups.get("hp_cost") == "数值"
 
 
 def test_b1_editor_visible(tmp_path: Path) -> None:
@@ -260,7 +262,7 @@ def test_b1_e2e_temp_content_root(tmp_path: Path) -> None:
         {"id": "blood_rage", "name": "血怒", "type": "active", "kind": "damage",
          "power": 120, "hp_cost": 20}], ensure_ascii=False), encoding="utf-8")
     pack, _changed = build_pack(root)
-    defs = {e["id"]: dict(e) for e in pack.modules["skills"]}
+    defs = {e["id"]: dict(e) for e in cast("List[Dict[str, Any]]", pack.modules["skills"])}
     assert defs["blood_rage"]["hp_cost"] == 20
 
     eng = _engine(defs, hp=100)

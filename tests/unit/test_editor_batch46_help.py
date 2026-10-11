@@ -630,6 +630,7 @@ def test_help_js_semantics(tmp_path: Path) -> None:
     src = tmp_path / "help_module.js"
     src.write_text(_marked_block("/* EDITOR_HELP_BEGIN */", "/* EDITOR_HELP_END */"),
                    encoding="utf-8")
+    assert NODE is not None
     proc = subprocess.run([NODE, "-e", _JS_HARNESS, str(src)],
                           capture_output=True, text=True, timeout=60)
     assert proc.returncode == 0, proc.stderr

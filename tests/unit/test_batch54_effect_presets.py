@@ -25,6 +25,7 @@
 """
 from __future__ import annotations
 
+import importlib
 import inspect
 import json
 import sys
@@ -252,7 +253,7 @@ def test_http_equipment_presets_visible_and_land(temp_pack: Path) -> None:
     """HTTP 链路：预设可选（中文名 + help 齐备）；POST 创建按预设落档。"""
     from fastapi.testclient import TestClient
 
-    from editor_host import create_app
+    create_app = getattr(importlib.import_module("editor_host"), "create_app")
 
     with TestClient(create_app(pack="tp", root=str(temp_pack), role="owner")) as client:
         got = client.get("/api/pack/tp/module/equipment/new").json()

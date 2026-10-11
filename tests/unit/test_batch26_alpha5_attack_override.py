@@ -49,7 +49,7 @@ class FakeRNG:
 
 
 def _make_ctx(item_def: dict, *, roll: int = 1, granted: bool = True,
-              learned: list = ()) -> dict:
+              learned: tuple = ()) -> dict:
     snapshot = {
         "slots": [{"slot": "basic", "skill_id": "basic_atk"}]
         + [{"slot": "active", "skill_id": s} for s in learned],
@@ -84,7 +84,9 @@ OVERRIDE = {
 def test_a5_metadata_registered() -> None:
     tbl = default_field_meta_table()
     for mod in ("items", "equipment"):
-        fm = tbl.module(mod).fields.get("attack_override")
+        _mod = tbl.module(mod)
+        assert _mod is not None
+        fm = _mod.fields.get("attack_override")
         assert fm is not None, f"{mod} 缺 attack_override 登记"
         assert fm.type == "obj"
         kids = fm.children
@@ -92,7 +94,9 @@ def test_a5_metadata_registered() -> None:
         assert kids["skill"].type == "ref" and kids["skill"].ref_target == "skill"
         assert kids["chance"].type == "int"
         assert kids["chance"].range_min == 0 and kids["chance"].range_max == 100
-    assert tbl.module("equipment").field_groups.get("attack_override") == "effects"
+    _eq = tbl.module("equipment")
+    assert _eq is not None
+    assert _eq.field_groups.get("attack_override") == "effects"
 
 
 def test_a5_editor_visible(tmp_path: Path) -> None:

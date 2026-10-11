@@ -16,7 +16,7 @@
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Mapping, Optional, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Tuple, cast
 
 from qbot_rpg.core import event_dispatcher as ed
 from qbot_rpg.core.effects import EffectRuntime
@@ -278,7 +278,7 @@ def _engine(effects: Optional[Dict[str, dict]] = None,
 
     reg = Reg(effects, statuses)
     eng = BattleEngine(registry=reg, config={})
-    eng._rng = QueueRNG(SEQ)  # noqa: SLF001
+    eng._rng = cast(Any, QueueRNG(SEQ))  # noqa: SLF001
     return eng
 
 
@@ -494,7 +494,7 @@ def test_validator_known_but_undispatched_yellow_y24() -> None:
         errs, warns = _rules(rep)
         assert errs == [], (trig, errs)
         assert warns == ["trigger_event_no_dispatch"], (trig, warns)
-        d = rep.warnings[0].detail
+        d: Any = rep.warnings[0].detail
         assert d.get("event") == trig
         assert "派发点" in str(d.get("msg") or "")
         # 建议里只出现有派发点的时点
@@ -512,7 +512,8 @@ def test_validator_unknown_event_point_yellow() -> None:
     errs, warns = _rules(rep)
     assert errs == []
     assert warns == ["trigger_event_unknown"]
-    assert "on_kill" in rep.warnings[0].detail.get("key_space", [])
+    detail: Any = rep.warnings[0].detail
+    assert "on_kill" in detail.get("key_space", [])
 
 
 def test_validator_non_string_trigger_red() -> None:

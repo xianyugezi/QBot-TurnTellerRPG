@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import random
 from types import SimpleNamespace
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 
 from qbot_rpg.content.field_meta import default_field_meta_table
 from qbot_rpg.content.validator import check_pack
@@ -87,7 +87,7 @@ _FULL_STATS = {"atk": 100.0, "hp": 50.0, "atk_pct": 20.0, "crit": 7.0, "pierce_p
 # ===========================================================================
 def test_off_switch_matches_reference_field_by_field() -> None:
     """开关缺省 / 显式 false：aggregate_bonus 与该系统引入前口径**逐字段相等**。"""
-    scenarios = [
+    scenarios: List[Any] = [
         # (背包装备, 穿戴表)
         ([_item("sword", "weapon", _FULL_STATS)], {"weapon": {"item_id": "sword"}}),
         # 主手件放进副手槽（关闭时不允许装配，但直接构造状态仍应逐字段一致）
@@ -137,7 +137,7 @@ def test_on_switch_stats_pct_hook_deactivated() -> None:
     """`stats_pct` 钩子（对象行形态，getattr 读取）在副手折算槽不激活；开关关 → 照常聚合。"""
     row = SimpleNamespace(item_id="sword", slot="weapon", stats_bonus={},
                           stats_pct={"atk": 9.0})
-    p = _player([row], {"offhand": {"item_id": "sword"}})
+    p = _player([cast(ItemInstance, row)], {"offhand": {"item_id": "sword"}})
     assert EquipmentEngine(slots=SLOTS, offhand=ON).aggregate_bonus(p)["pct"] == {}
     assert EquipmentEngine(slots=SLOTS, offhand=None).aggregate_bonus(p)["pct"] == {"atk": 9.0}
 

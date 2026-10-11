@@ -27,7 +27,7 @@ from __future__ import annotations
 import json
 import shutil
 from pathlib import Path
-from typing import Any, Dict, Mapping
+from typing import Any, Dict, Mapping, cast
 
 import pytest
 
@@ -38,7 +38,8 @@ REPO = Path(api.repo_root())
 CONTENT = REPO / "content"
 HTML = REPO / "qbot_rpg" / "web" / "static" / "index.html"
 
-SETTINGS_META = api.default_field_meta_table().module("settings")
+SETTINGS_META: ModuleMeta = cast(
+    ModuleMeta, api.default_field_meta_table().module("settings"))
 
 
 def _by_key(fields) -> Dict[str, Dict[str, Any]]:
@@ -97,7 +98,9 @@ def test_objform_control_is_generic_not_module_specific() -> None:
             }),
         }),
     })
-    assert api.control_for(meta.module("m").fields["o"], "obj") == "objform"
+    _m = meta.module("m")
+    assert _m is not None
+    assert api.control_for(_m.fields["o"], "obj") == "objform"
     assert api.is_editable_control("objform") is True
 
 

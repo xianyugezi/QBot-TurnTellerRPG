@@ -27,7 +27,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 
 from qbot_rpg.commands.job_commands import cmd_job
 from qbot_rpg.content.field_meta import JOBS_SUBGROUP_LABELS, default_field_meta_table
@@ -305,8 +305,8 @@ def test_d1_no_inherit_matches_assemble_slots_baseline() -> None:
     for job_id in ("solo", "plain"):
         jobs = {job_id: {"id": job_id, "name": job_id}}
         skills = _skills_with_own_job(job_id)
-        ctx = {"skills": {s["id"]: s for s in skills}, "jobs": jobs,
-               "active_order": ["own_act2", "own_act1"]}
+        ctx: Dict[str, Any] = {"skills": {s["id"]: s for s in skills}, "jobs": jobs,
+                               "active_order": ["own_act2", "own_act1"]}
         got = rearrange_job_slots(ctx, job_id)
         want = assemble_slots(list(ctx["skills"].values()),
                               {"job_id": job_id, "active_order": ["own_act2", "own_act1"]})
@@ -367,12 +367,12 @@ def test_e1_e2e_inherit_and_gate(tmp_path: Path) -> None:
 
     _write_pack(tmp_path / "pack_e2e_b35")
     pack, _ = build_pack(tmp_path / "pack_e2e_b35")
-    jobs = {e["id"]: dict(e) for e in pack.modules["jobs"]}
-    skills = {e["id"]: dict(e) for e in pack.modules["skills"]}
+    jobs = {e["id"]: dict(e) for e in cast("List[Dict[str, Any]]", pack.modules["jobs"])}
+    skills = {e["id"]: dict(e) for e in cast("List[Dict[str, Any]]", pack.modules["skills"])}
 
     # 前置不满足（等级不足）→ 被拒；技能位不落档、job_id 不变
-    bad = {"player": {"job_id": "job_a", "level": 3, "persistent_state": {}},
-           "jobs": jobs, "skills": skills}
+    bad: Dict[str, Any] = {"player": {"job_id": "job_a", "level": 3, "persistent_state": {}},
+                           "jobs": jobs, "skills": skills}
     out = cmd_job(_parsed("乙职"), bad)
     assert "5" in out and "❌" in out, out
     assert bad["player"]["job_id"] == "job_a"
@@ -380,8 +380,8 @@ def test_e1_e2e_inherit_and_gate(tmp_path: Path) -> None:
     assert "skill_slots" not in bad["player"]["persistent_state"]
 
     # 前置满足 → 转职；技能位含继承来的甲职技能 + 乙职自身技能
-    good = {"player": {"job_id": "job_a", "level": 5, "persistent_state": {}},
-            "jobs": jobs, "skills": skills}
+    good: Dict[str, Any] = {"player": {"job_id": "job_a", "level": 5, "persistent_state": {}},
+                            "jobs": jobs, "skills": skills}
     ok = cmd_job(_parsed("乙职"), good)
     assert ok.startswith("✅"), ok
     assert good["player"]["job_id"] == "job_b"

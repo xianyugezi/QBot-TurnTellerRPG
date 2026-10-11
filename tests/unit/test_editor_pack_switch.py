@@ -20,11 +20,12 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
 import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import pytest
 
@@ -35,7 +36,7 @@ for _p in (str(_REPO), str(_REPO / "scripts")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-import editor_verify_packs as evp  # noqa: E402
+evp: Any = importlib.import_module("editor_verify_packs")
 
 CONTENT = _REPO / "content"
 SCRIPT = _REPO / "scripts" / "editor_verify_packs.py"

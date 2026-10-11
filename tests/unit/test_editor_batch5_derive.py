@@ -165,7 +165,10 @@ def test_condition_rows_levels_and_combine() -> None:
 def test_condition_spec_from_metadata_and_unregistered() -> None:
     table = fm_mod.default_field_meta_table()
     sc = table.module("skill_chains")
-    cond = sc.fields["steps"].element.children["condition"]
+    assert sc is not None
+    _steps_elem = sc.fields["steps"].element
+    assert _steps_elem is not None
+    cond = _steps_elem.children["condition"]
     spec = api.condition_spec(cond)
     assert spec["declared"] is True
     assert {s["key"] for s in spec["subjects"]} == set(fm_mod.CHAIN_CONDITION_SUBJECTS)
@@ -433,7 +436,11 @@ def js_out(tmp_path_factory: pytest.TempPathFactory) -> Dict[str, Any]:
         + "\nvar EditorMap=module.exports;\n" + fn_src, encoding="utf-8")
     meta = tmp_path_factory.mktemp("b5meta") / "meta.json"
     table = fm_mod.default_field_meta_table()
-    cond = table.module("skill_chains").fields["steps"].element.children["condition"]
+    _sc = table.module("skill_chains")
+    assert _sc is not None
+    _steps_elem = _sc.fields["steps"].element
+    assert _steps_elem is not None
+    cond = _steps_elem.children["condition"]
     meta.write_text(json.dumps(api.condition_spec(cond), ensure_ascii=False), encoding="utf-8")
     runner = tmp_path_factory.mktemp("b5run") / "run.js"
     runner.write_text(_COND_HARNESS, encoding="utf-8")

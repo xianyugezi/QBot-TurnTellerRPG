@@ -38,8 +38,8 @@ class FakeRegistry:
 
 def _snap() -> dict:
     """最小战斗快照（功能二同款形态：五块在顶层）。"""
-    ss = {"player": [], "enemy": []}
-    ms = {"player": [], "enemy": []}
+    ss: Dict[str, list] = {"player": [], "enemy": []}
+    ms: Dict[str, list] = {"player": [], "enemy": []}
     return {
         "player": {"hp": 400, "max_hp": 500, "mp": 100, "atk": 50, "dfn": 50},
         "enemy": {"hp": 300, "max_hp": 300, "atk": 40, "dfn": 30},

@@ -80,7 +80,8 @@ def test_nested_control_vocabulary_is_control_based() -> None:
     """嵌套判定只是「控件形态」的函数：嵌套控件 True、标量控件 False。"""
     for c in NESTED_CONTROLS:
         assert api.is_nested_control(c) is True, c
-    for c in SCALAR_CONTROLS + ("", None):
+    _scalars: List[Any] = [*SCALAR_CONTROLS, "", None]
+    for c in _scalars:
         assert api.is_nested_control(c) is False, c
 
 

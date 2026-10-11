@@ -16,7 +16,7 @@ import json
 import shutil
 import zipfile
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import pytest
 
@@ -27,8 +27,8 @@ _REPO = Path(api.repo_root())
 _REAL_CONTENT = _REPO / "content"
 _SPEC = importlib.util.spec_from_file_location(
     "pack_transfer_cli", _REPO / "scripts" / "pack_transfer.py")
-cli = importlib.util.module_from_spec(_SPEC)
 assert _SPEC and _SPEC.loader
+cli = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(cli)
 
 
@@ -54,7 +54,7 @@ def _repackage(entries: Dict[str, bytes]) -> bytes:
 def _resign(entries: Dict[str, bytes]) -> Dict[str, bytes]:
     out = dict(entries)
     meta = json.loads(out[pt.EXPORT_META_NAME])
-    rows = []
+    rows: List[Dict[str, Any]] = []
     for name in sorted(out):
         if name == pt.EXPORT_META_NAME:
             continue

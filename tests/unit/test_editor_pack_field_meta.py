@@ -101,7 +101,9 @@ def test_read_layer_provides_display_metadata(pack: str) -> None:
     assert fw_skills is not None and mg_skills is not None
     assert not fw_skills.fields["power"].label          # 批B：框架已无展示文案
     assert mg_skills.fields["power"].label == "威力"      # 包声明补齐
-    assert merged.module("enemies").group_labels          # 组显示名来自包声明
+    mg_enemies = merged.module("enemies")
+    assert mg_enemies is not None
+    assert mg_enemies.group_labels          # 组显示名来自包声明
 
 
 def test_declaration_actually_changes_output_guard(tmp_path: Path) -> None:

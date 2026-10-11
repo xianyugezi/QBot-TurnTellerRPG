@@ -18,7 +18,7 @@ import asyncio
 import json
 import shutil
 from pathlib import Path
-from typing import Any, Dict, Mapping
+from typing import Any, Dict, List, Mapping
 
 import pytest
 
@@ -107,7 +107,8 @@ def test_path_matrix_combinations() -> None:
 
 def test_default_is_status_quo_field_by_field() -> None:
     """缺省（不配置）：合成 + 炼金开、打造关 —— 与今天逐字段一致。"""
-    for settings in ({}, {"alchemy": {}}, {"alchemy": {"mode": None}}):
+    settings_list: List[Dict[str, Any]] = [{}, {"alchemy": {}}, {"alchemy": {"mode": None}}]
+    for settings in settings_list:
         got = resolve_paths(settings)
         assert got == {"mode": MODE_FULL, "forge_switch": False,
                        PATH_SYNTHESIS: True, PATH_ALCHEMY: True,

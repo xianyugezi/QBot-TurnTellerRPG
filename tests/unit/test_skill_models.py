@@ -26,7 +26,7 @@ qbot_rpg/content/skill_models.py）
 """
 from __future__ import annotations
 
-from typing import Dict, Mapping, cast
+from typing import Any, Dict, Mapping, cast
 
 from qbot_rpg.content.models import ActionDef
 from qbot_rpg.content.skill_models import (
@@ -317,7 +317,7 @@ def test_action_core_dual_library_isomorphic() -> None:
     assert s.power == a.raw.get("power")              # F04
     assert s.attack_type == a.raw.get("attack_type")  # F05
     assert s.element == a.raw.get("element")          # F06
-    assert s.effects == tuple(a.raw.get("effects") or ())  # F07
+    assert s.effects == tuple(cast(Any, a.raw.get("effects") or ()))  # F07
     # F03 kind 双库同构：BaseDef.kind 为注册表 kind（"action"），ActionCore kind
     # 经 raw.get("kind") 读取（ActionDef docstring 明示），与 SkillDef.skill_kind 同源
     assert a.raw.get("kind") == "damage"

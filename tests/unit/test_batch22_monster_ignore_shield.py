@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import copy
+from typing import Any, cast
 
 from qbot_rpg.core.battle import BattleEngine
 
@@ -33,7 +34,7 @@ class _QueueRNG:
 
 def _monster_attack(ignore_shield: bool):
     eng = BattleEngine(defs={"sh": SHIELD_FX})
-    eng._rng = _QueueRNG(SEQ)
+    eng._rng = cast(Any, _QueueRNG(SEQ))
     eng.start(copy.deepcopy(PLAYER), copy.deepcopy(ENEMY), random_seed=7)
     eng.set_effect_ids("player", ["sh"])
     action = {"type": "normal", "mult": 1.0}

@@ -100,7 +100,9 @@ def test_a3_reward_axis_is_visible_in_editor_metadata() -> None:
     """编辑器可见：items/equipment 字段表覆盖该轴，中文名 + 说明 + range_min=0 齐备。"""
     table = default_field_meta_table()
     for mod in ("items", "equipment"):
-        fields = table.module(mod).fields
+        _mod = table.module(mod)
+        assert _mod is not None
+        fields = _mod.fields
         assert REWARD_AXIS in fields, mod
         fm = fields[REWARD_AXIS]
         assert fm.label == _spec(REWARD_AXIS)["display"]["label"]
@@ -170,7 +172,7 @@ def test_b5_zero_cap_means_no_overheal() -> None:
 
 def test_b6_cap_applies_through_engine_heal_action() -> None:
     """引擎级证据：EffectRuntime 技能治疗经同一收口封顶（BV-1 不只纯函数）。"""
-    snap = {"player": {"hp": 1000, "max_hp": 1000, "defenses": {}},
+    snap: Dict[str, Any] = {"player": {"hp": 1000, "max_hp": 1000, "defenses": {}},
             "enemy": {"hp": 500, "max_hp": 500, "defenses": {}},
             "status_state": {"player": [], "enemy": []},
             "marks_state": {"player": [], "enemy": []},

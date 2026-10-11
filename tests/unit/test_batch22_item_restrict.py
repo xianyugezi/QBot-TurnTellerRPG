@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Dict, List, Mapping, cast
 
 from qbot_rpg.commands.basic_commands import EquipmentEngineAdapter
 from qbot_rpg.content.field_meta import default_field_meta_table
@@ -61,13 +61,15 @@ def _temp_pack(tmp_path: Path, pack_id: str, modules: Mapping[str, Any]) -> Path
 def test_a1_metadata_registered_items_and_equipment() -> None:
     tbl = default_field_meta_table()
     for mod in ("items", "equipment"):
-        fm = tbl.module(mod).fields.get("job_restrict")
+        _mod = tbl.module(mod)
+        assert _mod is not None
+        fm = _mod.fields.get("job_restrict")
         assert fm is not None, f"{mod} 缺 job_restrict 登记"
         assert fm.type == "list"
         assert fm.element is not None and fm.element.type == "ref"
         assert fm.element.ref_target == "job"      # 引用注册表 kind（jobs L2322 kind="job"）
         assert fm.label, f"{mod}.job_restrict 缺中文名"
-        assert tbl.module(mod).field_groups.get("job_restrict") == "base"
+        assert _mod.field_groups.get("job_restrict") == "base"
 
 
 def test_a1_editor_visible(tmp_path: Path) -> None:
@@ -172,12 +174,14 @@ def test_a1_e2e_temp_content_root(tmp_path: Path) -> None:
 def test_a2_metadata_registered_items_and_equipment() -> None:
     tbl = default_field_meta_table()
     for mod in ("items", "equipment"):
-        fm = tbl.module(mod).fields.get("use_level")
+        _mod = tbl.module(mod)
+        assert _mod is not None
+        fm = _mod.fields.get("use_level")
         assert fm is not None, f"{mod} 缺 use_level 登记"
         assert fm.type == "int"
         assert fm.range_min == 1 and fm.range_max == 999
         assert fm.label and fm.unit == "级"
-        assert tbl.module(mod).field_groups.get("use_level") == "base"
+        assert _mod.field_groups.get("use_level") == "base"
 
 
 def test_a2_editor_visible(tmp_path: Path) -> None:
@@ -268,7 +272,7 @@ def test_a1_a2_e2e_loader_then_equip(tmp_path: Path) -> None:
                        "job_restrict": ["warrior"], "use_level": 5}],
     })
     pack, _changed = build_pack(root)
-    defs = {e["id"]: e for e in pack.modules["equipment"]}
+    defs = {e["id"]: e for e in cast(List[Dict[str, Any]], pack.modules["equipment"])}
 
     c_job = _ctx([_item_row("axe", "战斧", "weapon")], defs, job_id="mage", level=9)
     assert c_job["equip_engine"].equip_wear(1, c_job) == {

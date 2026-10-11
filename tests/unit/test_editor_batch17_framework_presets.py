@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 import shutil
 import sys
@@ -46,6 +47,7 @@ EXPECTED = [
 
 def _items_keys() -> set:
     mmeta = default_field_meta_table().module("items")
+    assert mmeta is not None
     return {str(k) for k in mmeta.fields}
 
 
@@ -272,7 +274,7 @@ def test_create_without_preset_is_regression(blank_root: Path) -> None:
 def test_http_blank_pack_framework_presets(blank_root: Path) -> None:
     from fastapi.testclient import TestClient
 
-    from editor_host import create_app
+    create_app = getattr(importlib.import_module("editor_host"), "create_app")
 
     with TestClient(create_app(pack="blank", root=str(blank_root), role="owner")) as client:
         got = client.get("/api/pack/blank/module/items/new").json()

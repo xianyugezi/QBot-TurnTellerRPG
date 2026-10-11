@@ -64,14 +64,20 @@ def make_ctx(**over: Any) -> dict:
 # ---------------------------------------------------------------------------
 def test_h2_metadata_registered() -> None:
     tbl = default_field_meta_table()
-    cost = tbl.module("npc").fields["interactions"].element.children["cost"]
+    _npc = tbl.module("npc")
+    assert _npc is not None
+    _inter = _npc.fields["interactions"].element
+    assert _inter is not None
+    cost = _inter.children["cost"]
     assert cost.type == "obj"
     for k in ("coins", "gem", "diamond", "items"):
         assert k in cost.children, f"cost 缺 {k} 子键登记"
     assert cost.children["coins"].type == "int"
     assert cost.children["diamond"].label == "钻石"
     assert cost.children["items"].type == "list"
-    assert cost.children["items"].element.children["count"].type == "int"
+    _items = cost.children["items"].element
+    assert _items is not None
+    assert _items.children["count"].type == "int"
 
 
 def test_h2_editor_visible(tmp_path: Path) -> None:

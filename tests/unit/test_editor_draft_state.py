@@ -57,6 +57,7 @@ def _draft_source() -> str:
 def test_draft_js_semantics(tmp_path: Path) -> None:
     src = tmp_path / "draft.js"
     src.write_text(_draft_source(), encoding="utf-8")
+    assert NODE is not None
     proc = subprocess.run([NODE, "-e", _NODE_HARNESS, str(src)],
                           capture_output=True, text=True, timeout=60)
     assert proc.returncode == 0, proc.stderr

@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 from qbot_rpg.content.field_meta import default_field_meta_table
 from qbot_rpg.content.validator import check_pack
@@ -77,11 +77,13 @@ def _engine(*, enemy_dead: bool = False) -> BattleEngine:
 # ---------------------------------------------------------------------------
 def test_b4_metadata_registered() -> None:
     tbl = default_field_meta_table()
-    fm = tbl.module("skills").fields.get("revive")
+    skills_mod = tbl.module("skills")
+    assert skills_mod is not None
+    fm = skills_mod.fields.get("revive")
     assert fm is not None, "skills 缺 revive 登记"
     assert fm.type == "bool"
     assert fm.label == "复活技能" and fm.help
-    assert tbl.module("skills").field_groups.get("revive") == "基本"
+    assert skills_mod.field_groups.get("revive") == "基本"
 
 
 def test_b4_editor_visible(tmp_path: Path) -> None:
@@ -196,7 +198,7 @@ def test_b4_e2e_temp_content_root(tmp_path: Path) -> None:
          "power": 0}],
         ensure_ascii=False), encoding="utf-8")
     pack, _changed = build_pack(root)
-    defs = {e["id"]: dict(e) for e in pack.modules["skills"]}
+    defs = {e["id"]: dict(e) for e in cast(Any, pack.modules["skills"])}
     assert defs["soul_return"]["revive"] is True and "revive" not in defs["plain_heal"]
 
     eng = BattleEngine(defs=defs, config={})

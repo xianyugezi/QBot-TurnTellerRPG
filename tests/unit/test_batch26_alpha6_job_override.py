@@ -84,14 +84,18 @@ def _remove(ctx: dict, slot: str = "weapon") -> dict:
 def test_a6_metadata_registered() -> None:
     tbl = default_field_meta_table()
     for mod in ("items", "equipment"):
-        fm = tbl.module(mod).fields.get("job_override")
+        mod_meta = tbl.module(mod)
+        assert mod_meta is not None
+        fm = mod_meta.fields.get("job_override")
         assert fm is not None, f"{mod} 缺 job_override 登记"
         assert fm.type == "obj"
         kids = fm.children
         assert kids["job"].type == "ref" and kids["job"].ref_target == "job"
         assert kids["level_reset"].type == "bool"
         assert kids["name_override"].type == "str"
-    assert tbl.module("equipment").field_groups.get("job_override") == "effects"
+    eq_mod = tbl.module("equipment")
+    assert eq_mod is not None
+    assert eq_mod.field_groups.get("job_override") == "effects"
 
 
 def test_a6_editor_visible(tmp_path: Path) -> None:

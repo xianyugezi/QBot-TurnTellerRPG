@@ -12,7 +12,7 @@
 """
 from __future__ import annotations
 
-from typing import List, Tuple
+from typing import Any, List, Tuple
 
 from qbot_rpg.content.validator import check_pack
 from qbot_rpg.data.event_points import EVENT_POINT_TABLE, undispatched_points
@@ -41,7 +41,7 @@ def test_undispatched_points_warn_y24_not_red() -> None:
         errs, warns = _rules(rep)
         assert errs == [], (trig, errs)          # **不红拦**
         assert warns == ["trigger_event_no_dispatch"], (trig, warns)
-        d = rep.warnings[0].detail
+        d: Any = rep.warnings[0].detail
         assert d.get("event") == trig
         assert "无派发点（二期）" in str(d.get("msg") or "")
         assert d.get("dispatched_key_space")

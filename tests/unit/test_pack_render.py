@@ -175,8 +175,12 @@ def test_apply_timeout_uses_default_and_logs(caplog) -> None:
 def test_hook_not_called_for_unlisted_event() -> None:
     """未命中事件 → 钩子函数**一次都不被调用**（返回默认文本）。"""
     calls: list = []
-    hook = _hook(lambda e, d, t: calls.append(e) or "X",
-                 events=frozenset({EVENT_BATTLE_ROUND}))
+
+    def _rec(e, d, t):
+        calls.append(e)
+        return "X"
+
+    hook = _hook(_rec, events=frozenset({EVENT_BATTLE_ROUND}))
     assert hook.apply(EVENT_COMMAND_REPLY, {}, "正文") == "正文"
     assert calls == []
 
@@ -371,6 +375,7 @@ def test_second_pack_same_structure_works(tmp_path: Path) -> None:
     )
     res = load_pack_render_hook(root, settings={"ext": {"enabled": True}}, cli=True)
     assert res.ok and res.loaded and res.pack_id == "zz_other_render"
+    assert res.hook is not None
     assert res.hook.apply(EVENT_COMMAND_REPLY, {}, "正文") == "正文[其他包]"
 
 
@@ -421,7 +426,12 @@ def _make_sender(deps, ctx, command=""):
 def test_runner_hook_applies_after_prefix() -> None:
     """钩子位置 = 前缀注入后、Sender.send 前：拿到的是含前缀的最终文本。"""
     seen: list = []
-    hook = _cmd_only_hook(lambda e, d, t: seen.append(t) or t + "【改写】")
+
+    def _rec(e, d, t):
+        seen.append(t)
+        return t + "【改写】"
+
+    hook = _cmd_only_hook(_rec)
     deps = SimpleNamespace(sender=RecordingSender(), pack_render_hook=hook)
     ctx = _runner_ctx()
     sender, state = _make_sender(deps, ctx, command="状态")
@@ -477,8 +487,12 @@ def test_runner_hook_failure_still_sends_default(caplog) -> None:
 def test_runner_command_event_not_hooked_when_not_declared() -> None:
     """钩子不接 command.reply → 调用计数 0、文本默认。"""
     calls: list = []
-    hook = _hook(lambda e, d, t: calls.append(e) or "X",
-                 events=frozenset({EVENT_BATTLE_ROUND}))
+
+    def _rec(e, d, t):
+        calls.append(e)
+        return "X"
+
+    hook = _hook(_rec, events=frozenset({EVENT_BATTLE_ROUND}))
     deps = SimpleNamespace(sender=RecordingSender(), pack_render_hook=hook)
     ctx = _runner_ctx()
     sender, _ = _make_sender(deps, ctx, command="状态")

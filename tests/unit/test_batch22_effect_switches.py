@@ -60,12 +60,14 @@ def _ctx(snap, raw, variables=None):
 # B2 元数据登记 + 编辑器可见
 # ---------------------------------------------------------------------------
 def test_b2_metadata_registered() -> None:
-    fields = default_field_meta_table().module("effects").fields
+    _effects = default_field_meta_table().module("effects")
+    assert _effects is not None
+    fields = _effects.fields
     for k in ("ignore_shield", "ignore_immune"):
         fm = fields.get(k)
         assert fm is not None, f"effects 缺 {k} 登记"
         assert fm.type == "bool" and fm.label
-    subgroups = default_field_meta_table().module("effects").field_subgroups
+    subgroups = _effects.field_subgroups
     assert subgroups.get("ignore_shield") == "behavior"
     assert subgroups.get("ignore_immune") == "behavior"
 

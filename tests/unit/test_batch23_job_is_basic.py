@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List, cast
 
 from qbot_rpg.commands.job_commands import _job_list_render
 from qbot_rpg.commands.register_commands import default_job
@@ -29,16 +29,24 @@ from qbot_rpg.content.validator import check_pack
 from qbot_rpg.web import api
 
 
+def _job_id(ctx: Any) -> Any:
+    job = default_job(ctx)
+    assert job is not None
+    return job["id"]
+
+
 # ---------------------------------------------------------------------------
 # C2 元数据登记 + 编辑器可见
 # ---------------------------------------------------------------------------
 def test_c2_metadata_registered() -> None:
     tbl = default_field_meta_table()
-    fm = tbl.module("jobs").fields.get("is_basic")
+    _jobs = tbl.module("jobs")
+    assert _jobs is not None
+    fm = _jobs.fields.get("is_basic")
     assert fm is not None, "jobs 缺 is_basic 登记"
     assert fm.type == "bool"
     assert fm.label and fm.help
-    assert tbl.module("jobs").field_subgroups.get("is_basic") == "base"
+    assert _jobs.field_subgroups.get("is_basic") == "base"
 
 
 def test_c2_editor_visible(tmp_path: Path) -> None:
@@ -80,7 +88,7 @@ def test_c2_default_job_prefers_basic() -> None:
         "a": {"name": "甲"},
         "b": {"name": "乙", "is_basic": True},
     }}
-    assert default_job(ctx)["id"] == "b"  # 首个 is_basic
+    assert _job_id(ctx) == "b"  # 首个 is_basic
 
 
 def test_c2_default_job_id_wins() -> None:
@@ -88,7 +96,7 @@ def test_c2_default_job_id_wins() -> None:
         "settings": {"default_job_id": "a"},
         "jobs": {"a": {"name": "甲"}, "b": {"name": "乙", "is_basic": True}},
     }
-    assert default_job(ctx)["id"] == "a"
+    assert _job_id(ctx) == "a"
 
 
 def test_c2_recommended_newbie_wins_over_basic() -> None:
@@ -96,18 +104,18 @@ def test_c2_recommended_newbie_wins_over_basic() -> None:
         "a": {"name": "甲", "is_basic": True},
         "b": {"name": "乙", "recommended_newbie": True},
     }}
-    assert default_job(ctx)["id"] == "b"  # 推荐优先于初始（既有语义不翻转）
+    assert _job_id(ctx) == "b"  # 推荐优先于初始（既有语义不翻转）
 
 
 def test_c2_regression_without_field_identical() -> None:
     """回归：不带 is_basic → 兜底链与现状逐字段一致（首个推荐 → jobs 首条）。"""
     ctx1: Dict[str, Any] = {"jobs": {"a": {"name": "甲"}, "b": {"name": "乙"}}}
-    assert default_job(ctx1)["id"] == "a"          # jobs 首条（现状）
+    assert _job_id(ctx1) == "a"          # jobs 首条（现状）
     ctx2: Dict[str, Any] = {"jobs": {
         "a": {"name": "甲"},
         "b": {"name": "乙", "recommended_newbie": True},
     }}
-    assert default_job(ctx2)["id"] == "b"          # 首个推荐（现状）
+    assert _job_id(ctx2) == "b"          # 首个推荐（现状）
     # 空 jobs → None（现状）
     assert default_job({"jobs": {}}) is None
 
@@ -143,5 +151,5 @@ def test_c2_e2e_temp_content_root(tmp_path: Path) -> None:
         {"id": "novice", "name": "新手", "is_basic": True}],
         ensure_ascii=False), encoding="utf-8")
     pack, _changed = build_pack(root)
-    jobs = {e["id"]: dict(e) for e in pack.modules["jobs"]}
-    assert default_job({"jobs": jobs})["id"] == "novice"
+    jobs = {e["id"]: dict(e) for e in cast("List[Dict[str, Any]]", pack.modules["jobs"])}
+    assert _job_id({"jobs": jobs}) == "novice"

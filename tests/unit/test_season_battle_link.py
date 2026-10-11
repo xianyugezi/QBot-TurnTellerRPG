@@ -262,7 +262,9 @@ def test_out_of_season_skill_rejected_no_turn_consumed() -> None:
     assert "零时间成本" in out.message
     # CTB：被拒 = 该行动从未发生，行动条不前进（action_seq 不变），仍可立即重试
     assert eng.battle_state()["action_seq"] == seq_before, "被拒行动应零时间成本"
-    assert eng._ctb.paused is True, "被拒后玩家拍保持待命，可立即换指令"
+    _ctb = eng._ctb
+    assert _ctb is not None
+    assert _ctb.paused is True, "被拒后玩家拍保持待命，可立即换指令"
 
 
 def test_out_of_season_reject_preserves_combo_and_mp() -> None:

@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 import re
 import shutil
@@ -617,7 +618,7 @@ def http_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Any
     monkeypatch.setattr(api, "_META_TABLE", META)
     monkeypatch.setattr(api, "default_field_meta_table", lambda: META)
     monkeypatch.setattr(validator_mod, "default_field_meta_table", lambda: META)
-    from editor_host import create_app
+    create_app = getattr(importlib.import_module("editor_host"), "create_app")
     from fastapi.testclient import TestClient
 
     with TestClient(create_app(pack="http_pack", root=str(_http_pack(tmp_path)),

@@ -19,6 +19,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 import os
 import shutil
@@ -370,7 +371,7 @@ def _client(root: Path, pack: str, role: str = "owner") -> Any:
         sys.path.insert(0, str(REPO))
     if str(REPO / "scripts") not in sys.path:
         sys.path.insert(0, str(REPO / "scripts"))
-    from editor_host import create_app  # noqa: E402
+    create_app = getattr(importlib.import_module("editor_host"), "create_app")  # noqa: E402
     from fastapi.testclient import TestClient  # noqa: E402
     return TestClient(create_app(pack=pack, root=str(root), role=role))
 

@@ -126,7 +126,9 @@ async def say(env: dict, mid: str, qid: str = "10001", group: str = "g1") -> str
 # 元数据 + 校验
 # ---------------------------------------------------------------------------
 def test_k3_metadata_registered() -> None:
-    fields = default_field_meta_table().module("settings").fields
+    _m = default_field_meta_table().module("settings")
+    assert _m is not None
+    fields = _m.fields
     rl = fields.get("rate_limit")
     assert rl is not None and rl.type == "obj"
     for k in ("interval_sec", "count", "scope"):

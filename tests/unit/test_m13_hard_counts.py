@@ -60,6 +60,7 @@
 from __future__ import annotations
 
 import inspect
+from types import ModuleType
 from typing import Any, Dict, List, Mapping, Set, Tuple
 
 from qbot_rpg.content.job_models import (
@@ -174,6 +175,7 @@ def _v_functions(module: Any) -> Dict[str, str]:
     import qbot_rpg.content.resource_axis_validator as _rax_mod
     import qbot_rpg.content.skill_validator as _skv_mod
 
+    mod: ModuleType
     if module == "qbot_rpg.content.skill_validator":
         mod = _skv_mod
         prefix = "V-"
@@ -343,7 +345,7 @@ def test_6b_jobs_fields_exact_count() -> None:
     """
     fields = jobs_fields()
     assert len(fields) == 14  # 顶层 §1.1 #1~#11 + 批23 advance + is_basic + 批35 inherit
-    transform_children: Mapping[str, object] = fields["transform"].children
+    transform_children: Mapping[str, Any] = fields["transform"].children
     growth_children: Mapping[str, object] = fields["growth"].children
     advance_children: Mapping[str, object] = fields["advance"].children
     inherit_children: Mapping[str, object] = fields["inherit"].children

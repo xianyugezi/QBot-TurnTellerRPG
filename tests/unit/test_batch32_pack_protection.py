@@ -164,12 +164,16 @@ def test_metadata_registered() -> None:
     assert fm is not None and fm.type == "obj"
     assert "enabled" in fm.children and fm.children["enabled"].type == "bool"
     # 编辑器可见（框架登记即显示；缺省 = 空表单，不改现状）
-    fields = default_field_meta_table().module("settings").fields
+    _m = default_field_meta_table().module("settings")
+    assert _m is not None
+    fields = _m.fields
     assert "pack_protection" in fields
 
 
 def test_meta_table_has_field() -> None:
-    fields = default_field_meta_table().module("settings").fields
+    _m = default_field_meta_table().module("settings")
+    assert _m is not None
+    fields = _m.fields
     fm = fields.get("pack_protection")
     assert fm is not None and fm.label == "数据包保护"
 

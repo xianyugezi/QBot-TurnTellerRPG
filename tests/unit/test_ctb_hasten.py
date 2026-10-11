@@ -49,6 +49,7 @@ def _setup_player_resigned() -> CTBScheduler:
 def test_hasten_moves_next_ready_back_exactly() -> None:
     sched = _setup_player_resigned()
     player = sched.get_actor("player")
+    assert player is not None
     before = player.next_ready
     assert sched.battle_time == 100.0
     assert before == 200.0  # 重签后明显在未来（距当前 100，返还 60 不触发钳制）
@@ -63,6 +64,7 @@ def test_hasten_moves_next_ready_back_exactly() -> None:
     assert sched.is_ticket_stale(player.ticket) is False
     # 平移体现在真实推进上：玩家下一拍 @140（而非 200）
     ev = sched.advance_to_next_ready()
+    assert ev is not None
     assert ev["event"] == CtbEvent.ACTOR_READY
     assert ev["actor_id"] == "player"
     assert ev["time"] == 140.0
@@ -74,6 +76,7 @@ def test_hasten_moves_next_ready_back_exactly() -> None:
 def test_hasten_clamps_at_current_time() -> None:
     sched = _setup_player_resigned()
     player = sched.get_actor("player")
+    assert player is not None
     assert player.next_ready - sched.battle_time == 100.0  # 距当前（100）不足 200
 
     assert sched.hasten_actor("player", 200) is True
@@ -89,6 +92,7 @@ def test_hasten_clamps_at_current_time() -> None:
 def test_hasten_non_positive_refund_is_noop() -> None:
     sched = _setup_player_resigned()
     player = sched.get_actor("player")
+    assert player is not None
     before = player.next_ready
     gen_before = sched.generation
 
@@ -118,6 +122,7 @@ def test_hasten_unknown_or_dead_actor_returns_false() -> None:
 def test_hasten_keeps_sibling_timing_unchanged() -> None:
     sched = _setup_player_resigned()
     enemy = sched.get_actor("enemy")
+    assert enemy is not None
     enemy_ready_before = enemy.next_ready
     gen_before = sched.generation
 
@@ -154,6 +159,7 @@ def test_counter_refund_config_defaults_and_overrides() -> None:
 def test_delay_and_hasten_are_dual_time_shifts() -> None:
     sched = _setup_player_resigned()
     player = sched.get_actor("player")
+    assert player is not None
     base = player.next_ready  # 200.0
 
     assert sched.delay_actor("player", 100) is True

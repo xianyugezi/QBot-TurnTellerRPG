@@ -49,7 +49,7 @@ def _row(item_id: str, name: str, slot: str = "weapon") -> ItemInstance:
 
 
 def _make_ctx(inventory: list, items: Mapping[str, Any], *,
-              learned: list = ()) -> dict:
+              learned: list = []) -> dict:
     snapshot = {
         "slots": [{"slot": "basic", "skill_id": "basic_atk"}]
         + [{"slot": "active", "skill_id": s} for s in learned],
@@ -88,13 +88,19 @@ def _remove(ctx: dict, slot: str = "weapon") -> dict:
 def test_a1_metadata_registered() -> None:
     tbl = default_field_meta_table()
     for mod in ("items", "equipment"):
-        fm = tbl.module(mod).fields.get("grant_skills")
+        _mm = tbl.module(mod)
+        assert _mm is not None
+        fm = _mm.fields.get("grant_skills")
         assert fm is not None, f"{mod} 缺 grant_skills 登记"
         assert fm.type == "list"
-        kids = fm.element.children
+        _el = fm.element
+        assert _el is not None
+        kids = _el.children
         assert kids["skill"].type == "ref" and kids["skill"].ref_target == "skill"
         assert kids["level"].type == "int" and kids["level"].range_min == 1
-    assert tbl.module("equipment").field_groups.get("grant_skills") == "effects"
+    _eq = tbl.module("equipment")
+    assert _eq is not None
+    assert _eq.field_groups.get("grant_skills") == "effects"
 
 
 def test_a1_editor_visible(tmp_path: Path) -> None:

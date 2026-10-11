@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, List, Mapping, cast
+from typing import Any, Dict, List, Mapping, cast
 
 from qbot_rpg.core.forge_sets import (
     derive_set_max_pieces,
@@ -541,8 +541,10 @@ def test_derive_max_pieces_prefers_explicit_config() -> None:
 
 def test_derive_max_pieces_unbounded_without_slot_defs() -> None:
     """缺 slot_defs/推导不出 → 不设上限（None，不崩、不误报、不回退写死 5）。"""
-    for mods in ({}, {"settings": {}}, {"settings": {"slot_defs": {}}},
-                 {"settings": {"slot_defs": {"weapon": {"name": "武器", "kind": "weapon"}}}}):
+    cases: List[Dict[str, Any]] = [
+        {}, {"settings": {}}, {"settings": {"slot_defs": {}}},
+        {"settings": {"slot_defs": {"weapon": {"name": "武器", "kind": "weapon"}}}}]
+    for mods in cases:
         assert derive_set_max_pieces(mods) is None
     bad = _alpha_set(pieces=["n_head_a", "n_body_a", "n_hand_a", "n_leg_a", "n_foot_a", "n_x"])
     res = validate_sets(_modules([bad]))  # 无 settings → 无上限

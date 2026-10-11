@@ -10,14 +10,14 @@
 """
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional
 
 from qbot_rpg.core.effects import DamageCtx, EffectRuntime, execute_action
 
 
 def _snap(player_hp: int = 300) -> dict:
-    ss = {"player": [], "enemy": []}
-    ms = {"player": [], "enemy": []}
+    ss: Dict[str, List[Any]] = {"player": [], "enemy": []}
+    ms: Dict[str, List[Any]] = {"player": [], "enemy": []}
     return {
         "player": {"hp": player_hp, "max_hp": 500, "atk": 50, "dfn": 50},
         "enemy": {"hp": 300, "max_hp": 300, "atk": 40, "dfn": 30},

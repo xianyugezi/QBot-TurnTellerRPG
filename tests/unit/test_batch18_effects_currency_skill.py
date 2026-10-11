@@ -209,7 +209,8 @@ def test_gain_currency_uses_injected_rng_single_source() -> None:
     """注入的 ctx["rng"] 即唯一随机源：同种子 → 同序列（不引入新随机源）。"""
     item, eff = _pouch({"id": "rnd", "name": "随机", "type": "gain_currency",
                         "currency": "coins", "amount_min": 1, "amount_max": 100})
-    seq_a, seq_b = [], []
+    seq_a: List[Any] = []
+    seq_b: List[Any] = []
     for seq in (seq_a, seq_b):
         rng = random.Random(7)
         for _ in range(5):
@@ -344,7 +345,9 @@ def test_editor_new_effect_fields_visible_and_editable() -> None:
 
 
 def test_editor_effects_keys_registered() -> None:
-    known = {str(k) for k in default_field_meta_table().module("effects").fields}
+    effects_mod = default_field_meta_table().module("effects")
+    assert effects_mod is not None
+    known = {str(k) for k in effects_mod.fields}
     for key in FROZEN_KEYS:
         assert key in known
 

@@ -13,7 +13,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 
 from qbot_rpg.commands.battle_commands import (
     _battle_composition_summary,
@@ -222,7 +222,7 @@ def _run_end(engine: _StubEngine, *, player: Any = None) -> Dict[str, Any]:
         "player": player if player is not None else {"persistent_state": {}},
     }
     pipe = _StubPipeline()
-    _dispatch_battle_end(engine, _StubReport(), pipe, ctx,
+    _dispatch_battle_end(engine, _StubReport(), cast(Any, pipe), ctx,
                          {"id": "dummy_light", "name": "训练木桩"},
                          "训练木桩", {"exp": 0, "gold": 0, "drops": ()})
     return {"ctx": ctx, "pipe": pipe}

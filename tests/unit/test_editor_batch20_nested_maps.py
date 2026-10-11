@@ -135,7 +135,9 @@ def test_unregistered_map_key_fallback_control_and_note() -> None:
             }),
         }),
     })
-    fm = meta.module("m").fields["o"]
+    m_mod = meta.module("m")
+    assert m_mod is not None
+    fm = m_mod.fields["o"]
     view = _PackView(CONTENT / "veinborn", {"modules": []})
     # ① 值全为标量 → scalar 模式：单列「值」按样本推断，列标注「元数据未登记」
     d = _descriptor("o", fm, {"known": 1, "extra": "x"}, True, meta.module("m"), view, 0)

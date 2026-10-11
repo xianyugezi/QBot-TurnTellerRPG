@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import random
+from typing import Any, Dict
 
 from qbot_rpg.core.gathering import (
     DEFAULT_RESPAWN_MINUTES,
@@ -54,7 +55,7 @@ def _node(**over):
 
 
 def _point(**over) -> GatherPoint:
-    base = dict(id="gp1", item="herb", rate=0.5, rarity="normal", name="gp1")
+    base: Dict[str, Any] = dict(id="gp1", item="herb", rate=0.5, rarity="normal", name="gp1")
     base.update(over)
     return GatherPoint(**base)
 

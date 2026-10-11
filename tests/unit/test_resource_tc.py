@@ -45,7 +45,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Mapping, MutableMapping
+from typing import Any, Dict, List, Mapping, MutableMapping, cast
 
 import pytest
 
@@ -200,7 +200,7 @@ def test_tc01_demo_pack_skills_carry_energy_fields() -> None:
 
     pack, _changed = build_pack(DEMO_DIR)
     assert pack.report.errors == ()  # 零红拦
-    skills = pack.modules["skills"]
+    skills = cast(List[Dict[str, Any]], pack.modules["skills"])
     by_id = {s["id"]: s for s in skills}
     # 狂暴：energy_cost {rage:100}（§1.5 消耗实例【狂战士 L76】）
     assert by_id["rage_burst"]["energy_cost"] == {"rage": 100}

@@ -19,10 +19,11 @@
 
 from __future__ import annotations
 
+import importlib
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Tuple
+from typing import Any, Dict, List, Mapping, Tuple, cast
 
 import pytest
 
@@ -34,7 +35,7 @@ for _p in (str(_REPO), str(_REPO / "scripts")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-import editor_verify_packs as evp  # noqa: E402  （路径注入后导入，避免 E402）
+evp = cast("Any", importlib.import_module("editor_verify_packs"))  # noqa: E402  （路径注入后导入，避免 E402）
 
 CONTENT = _REPO / "content"
 FRAMEWORK_DIR = _REPO / "qbot_rpg"

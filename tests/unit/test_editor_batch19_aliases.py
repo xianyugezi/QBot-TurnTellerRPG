@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Dict
 
 from qbot_rpg.assembly import editor_aliases
 from qbot_rpg.assembly.router_setup import framework_builtin_aliases
@@ -51,7 +52,7 @@ def test_framework_builtin_aliases_read_from_command_specs() -> None:
     r = Router()
     for reg in REGISTER_GROUPS:
         reg(r, make_context=None)
-    expected = {}
+    expected: Dict[str, str] = {}
     for name in r.names():
         for alias in getattr(r.get(name), "aliases", None) or []:
             expected.setdefault(str(alias), str(name))

@@ -256,7 +256,8 @@ LEGACY_BONUS: Dict[str, Any] = {
 
 def test_b1_route_bonus_field_by_field_identical_for_legacy_keys() -> None:
     """零变化对拍①：既有键（含悬空/占位键）路由结果与批50 之前**逐字段一致**。"""
-    flat, pct = {}, {}
+    flat: Dict[str, float] = {}
+    pct: Dict[str, float] = {}
     route_bonus_into(LEGACY_BONUS, flat, pct)
     ref_flat, ref_pct = _reference_route(LEGACY_BONUS)
     assert flat == ref_flat
@@ -267,7 +268,8 @@ def test_b1_route_bonus_field_by_field_identical_for_legacy_keys() -> None:
 
 def test_b2_combatant_bridge_field_by_field_identical_for_legacy_keys() -> None:
     """零变化对拍②：战斗桥输出与批50 之前逐字段一致（缺省不新增任何键）。"""
-    flat, _pct = {}, {}
+    flat: Dict[str, float] = {}
+    _pct: Dict[str, float] = {}
     route_bonus_into(LEGACY_BONUS, flat, _pct)
     assert combatant_updates(flat) == _reference_bridge(flat)
     assert combatant_updates({}) == {}
@@ -276,7 +278,8 @@ def test_b2_combatant_bridge_field_by_field_identical_for_legacy_keys() -> None:
 
 def test_b3_effect_keys_absent_or_zero_add_nothing() -> None:
     """零变化对拍③：EFFECT 键缺省 0 / 不存在 → 战斗桥输出不新增任何键。"""
-    flat, pct = {}, {}
+    flat: Dict[str, float] = {}
+    pct: Dict[str, float] = {}
     route_bonus_into({k: 0 for k in GEAR_EFFECT_KEYS}, flat, pct)
     assert all(float(v) == 0.0 for v in flat.values())  # 加算轴进 flat 但值为 0
     assert pct == {}
@@ -292,7 +295,8 @@ def test_b3_effect_keys_absent_or_zero_add_nothing() -> None:
 
 def test_b4_effect_keys_stay_flat_and_never_enter_pct_layer() -> None:
     """EFFECT 键 = COMBAT 同规则例外：**留 flat、不进属性 pct 层**（理由同 pierce_pct）。"""
-    flat, pct = {}, {}
+    flat: Dict[str, float] = {}
+    pct: Dict[str, float] = {}
     route_bonus_into({k: 5.0 for k in GEAR_EFFECT_KEYS}, flat, pct)
     assert set(flat) == set(GEAR_EFFECT_KEYS)
     assert pct == {}
@@ -403,7 +407,9 @@ def test_d1_items_and_equipment_cover_effect_keys_with_label_help() -> None:
     """字段元数据：items/equipment 全覆盖 EFFECT 键，中文名 + 说明齐备。"""
     table = default_field_meta_table()
     for mod in ("items", "equipment"):
-        fields = table.module(mod).fields
+        _mod = table.module(mod)
+        assert _mod is not None
+        fields = _mod.fields
         missing = [k for k in GEAR_EFFECT_KEYS if k not in fields]
         assert not missing, missing
         for k in GEAR_EFFECT_KEYS:
@@ -438,7 +444,9 @@ def test_d3_settings_effect_axes_section_registered_with_label_and_help() -> Non
         assert child.label, name
         assert child.help, name
     # 段确实挂在 settings 模块上（编辑器条目列表可见）
-    assert "effect_axes" in default_field_meta_table().module("settings").fields
+    _settings_mod = default_field_meta_table().module("settings")
+    assert _settings_mod is not None
+    assert "effect_axes" in _settings_mod.fields
 
 
 # =====================================================================================

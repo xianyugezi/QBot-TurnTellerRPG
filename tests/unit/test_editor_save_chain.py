@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 import sys
 from pathlib import Path
@@ -309,7 +310,7 @@ def _http_pack(tmp_path: Path) -> Path:
 
 @pytest.fixture()
 def http_client(tmp_path: Path) -> Iterator[Any]:
-    from editor_host import create_app
+    create_app = getattr(importlib.import_module("editor_host"), "create_app")
     from fastapi.testclient import TestClient
 
     with TestClient(create_app(pack="http_pack", root=str(_http_pack(tmp_path)),

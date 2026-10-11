@@ -198,6 +198,7 @@ def _marked_block(begin: str, end: str) -> str:
 
 @pytest.mark.skipif(NODE is None, reason="本机无 node，跳过纯 JS 分组/草稿语义执行")
 def test_group_js_semantics_and_draft_survives_switch(tmp_path: Path) -> None:
+    assert NODE is not None
     draft_src = tmp_path / "draft.js"
     draft_src.write_text(_marked_block("/* EDITOR_DRAFT_BEGIN */", "/* EDITOR_DRAFT_END */"),
                          encoding="utf-8")

@@ -30,7 +30,7 @@ V8_DURATION, X_PREFIX}。
 """
 from __future__ import annotations
 
-from typing import Dict, Mapping, Optional, Set
+from typing import Any, Dict, Mapping, Optional, Set
 
 from qbot_rpg.content.job_validator_v58 import (
     MODULE_NAME,
@@ -84,7 +84,7 @@ def _ok_job(**over: object) -> dict:
 
 def _ok_skill(**over: object) -> dict:
     """形态组内合法技能（job_form 钉定形态；无挂点字段 → 无引用可查）。"""
-    s = {
+    s: Dict[str, object] = {
         "id": "berserk",
         "name": "狂暴",
         "kind": "status",
@@ -145,7 +145,7 @@ def _no_red(report: _Report) -> None:
     assert report.errors == [], f"应红拦零命中，got {report.errors}"
 
 
-def _find_error(report: _Report, rule: str) -> Optional[Dict[str, object]]:
+def _find_error(report: _Report, rule: str) -> Optional[Dict[str, Any]]:
     """按 rule 名找错误记录（避免 errors[0] 索引假设——前面可能先收集其他错误）。"""
     for e in report.errors:
         if e["detail"].get("rule") == rule:
@@ -421,7 +421,7 @@ def test_report_list_form() -> None:
     assert report[0]["kind"] == "V8"
 
 
-def _report_checker() -> object:
+def _report_checker() -> Any:
     """构造一个 _Checker 形态收集器（_err/_warn 三形态之一）。
 
     经 qbot_rpg.content.validator 模块取私有 _Checker（不直接 import 符号，

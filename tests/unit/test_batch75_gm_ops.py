@@ -132,11 +132,13 @@ def test_g5_toggle_two_states() -> None:
     backend = GmBackend()
     ctx = _ctx(ROLE_ADMIN, backend=backend)
     r1 = handle_gm_command(_parsed("/调试"), ctx)
+    assert r1.message is not None
     assert r1.ok and "调试模式：开" in r1.message
     assert "日志级别：DEBUG" in r1.message
     assert _last(ctx)["command"] == GM_CMD_DEBUG
     assert _last(ctx)["result"] == "success"
     r2 = handle_gm_command(_parsed("/调试"), ctx)
+    assert r2.message is not None
     assert r2.ok and "调试模式：关" in r2.message
     assert "日志级别：INFO" in r2.message
     assert backend._debug_enabled is False
@@ -207,6 +209,7 @@ def test_g6_smoke_passes_readonly(tmp_path: Path) -> None:
     r = handle_gm_command(_parsed("/测试"), ctx)
     after = _digest_files(cdir)
     assert before == after, "只读冒烟不得改动内容目录"
+    assert r.message is not None
     assert r.ok and "冒烟通过" in r.message
     assert _last(ctx)["command"] == GM_CMD_TEST
     assert _last(ctx)["result"] == "success"
@@ -223,6 +226,7 @@ def test_g6_smoke_failure_lists_first(tmp_path: Path) -> None:
     r = handle_gm_command(_parsed("/测试"), ctx)
     assert _digest_files(cdir) == before
     assert not r.ok and not r.silent
+    assert r.message is not None
     assert "冒烟失败" in r.message and "broken.json" in r.message
     assert _last(ctx)["result"] == "failed"
 
@@ -279,6 +283,7 @@ def test_g7_push_ok_multiword() -> None:
     assert r.ok, r
     assert calls and calls[0][0] == "系统 维护 通知"
     assert calls[0][1] is None  # 定时未接线 → schedule=None（不做假调度）
+    assert r.message is not None
     assert "群 5" in r.message and "私聊 12" in r.message
     assert _last(ctx)["command"] == GM_CMD_BROADCAST
     assert _last(ctx)["result"] == "success"
@@ -290,11 +295,15 @@ def test_g7_oversize_blocked() -> None:
     from qbot_rpg.commands.gm_commands import BROADCAST_MAX_CHARS
 
     calls: list = []
-    ctx = _ctx(ROLE_ADMIN, backend=GmBackend(),
-               announce=lambda *a, **k: calls.append(a) or {"groups": 1, "dms": 0})
+    def _announce(*a: Any, **k: Any) -> dict:
+        calls.append(a)
+        return {"groups": 1, "dms": 0}
+
+    ctx = _ctx(ROLE_ADMIN, backend=GmBackend(), announce=_announce)
     long_msg = "字" * (BROADCAST_MAX_CHARS + 1)
     r = handle_gm_command(_parsed("/广播 " + long_msg), ctx)
     assert not r.ok and not r.silent
+    assert r.message is not None
     assert f"{BROADCAST_MAX_CHARS + 1}/{BROADCAST_MAX_CHARS}" in r.message
     assert calls == [], "超长不得推送"
     assert _last(ctx)["result"] == "failed"
@@ -303,11 +312,14 @@ def test_g7_oversize_blocked() -> None:
 def test_g7_schedule_registered_as_gap() -> None:
     """含 `定时=` → 只做即时广播 + 结果附「暂不支持（已登记）」缺口说明。"""
     calls: list = []
-    ctx = _ctx(ROLE_ADMIN, backend=GmBackend(),
-               announce=lambda text, schedule=None, groups=None: calls.append(text)
-               or {"groups": 2, "dms": 3})
+    def _announce(text: Any, schedule: Any = None, groups: Any = None) -> dict:
+        calls.append(text)
+        return {"groups": 2, "dms": 3}
+
+    ctx = _ctx(ROLE_ADMIN, backend=GmBackend(), announce=_announce)
     r = handle_gm_command(_parsed("/广播 通知 定时=2000"), ctx)
     assert r.ok and calls == ["通知"], "定时请求仍做即时广播"
+    assert r.message is not None
     assert "定时=暂不支持" in r.message
     assert "定时=2000" in _last(ctx)["detail"]
     assert "定时=2000" in _last(ctx)["params"]
@@ -329,6 +341,7 @@ def test_g7_missing_arg_and_degrade() -> None:
     """缺参 → TPL-12；机主 + 无后端 → 降级 failed；普通玩家静默。"""
     ctx1 = _ctx(ROLE_ADMIN, backend=GmBackend())
     r1 = handle_gm_command(_parsed("/广播"), ctx1)
+    assert r1.message is not None
     assert not r1.ok and "指令不正确" in r1.message
     ctx2 = _ctx(ROLE_ADMIN, backend=None)
     r2 = handle_gm_command(_parsed("/广播 通知"), ctx2)
@@ -384,6 +397,7 @@ def test_g9_masked_summary() -> None:
     ctx = _ctx(ROLE_ADMIN, backend=GmBackend(), player_lookup=_lookup_rich)
     r = handle_gm_command(_parsed("/玩家查询 123456789"), ctx)
     assert r.ok, r
+    assert r.message is not None
     assert "123456789" not in r.message, "明文 QQ 不得回显"
     assert "12*****89" in r.message, r.message
     assert "Lv.32" in r.message and "coins 12450" in r.message
@@ -400,6 +414,7 @@ def test_g9_not_found_error_template() -> None:
     ctx = _ctx(ROLE_ADMIN, backend=GmBackend(), player_lookup=lambda qq: None)
     r = handle_gm_command(_parsed("/玩家查询 123456789"), ctx)
     assert not r.ok and not r.silent
+    assert r.message is not None
     assert "不在册" in r.message
     assert "123456789" not in r.message
     assert _last(ctx)["target_qq"] == "123456789"
@@ -410,8 +425,10 @@ def test_g9_invalid_and_missing_args() -> None:
     """QQ 非纯数字 / 缺参 → TPL-12。"""
     ctx = _ctx(ROLE_ADMIN, backend=GmBackend(), player_lookup=_lookup_rich)
     r1 = handle_gm_command(_parsed("/玩家查询 abc"), ctx)
+    assert r1.message is not None
     assert not r1.ok and "指令不正确" in r1.message
     r2 = handle_gm_command(_parsed("/玩家查询"), ctx)
+    assert r2.message is not None
     assert not r2.ok and "指令不正确" in r2.message
 
 
@@ -488,6 +505,7 @@ def test_g11_unban_success() -> None:
     ctx = _ctx(ROLE_ADMIN, backend=GmBackend(), ban_store=store)
     r = handle_gm_command(_parsed("/解封 123456789"), ctx)
     assert r.ok, r
+    assert r.message is not None
     assert "已解封 123456789" in r.message
     assert store.banned == set()
     assert _last(ctx)["command"] == GM_CMD_UNBAN
@@ -503,6 +521,7 @@ def test_g11_not_in_list_error_template() -> None:
     ctx = _ctx(ROLE_ADMIN, backend=GmBackend(), ban_store=store)
     r = handle_gm_command(_parsed("/解封 123456789"), ctx)
     assert not r.ok and not r.silent
+    assert r.message is not None
     assert "不在封禁名单" in r.message and "/封禁列表" in r.message
     assert store.banned == set()
     assert _last(ctx)["command"] == GM_CMD_UNBAN
@@ -516,6 +535,7 @@ def test_g11_invalid_and_missing_args() -> None:
     ctx = _ctx(ROLE_ADMIN, backend=GmBackend(), ban_store=store)
     for raw in ("/解封 abc", "/解封"):
         r = handle_gm_command(_parsed(raw), ctx)
+        assert r.message is not None
         assert not r.ok and "指令不正确" in r.message, raw
     assert store.banned == {"123456789"}
 

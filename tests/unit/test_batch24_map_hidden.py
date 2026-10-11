@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 
 from qbot_rpg.commands.explore_commands import cmd_enter, cmd_map
 from qbot_rpg.commands.parsers import parse_command
@@ -76,14 +76,18 @@ def _ctx(map_id: str = "town", discovered: Any = None) -> dict:
 # ---------------------------------------------------------------------------
 def test_e1_metadata_registered() -> None:
     tbl = default_field_meta_table()
-    fm = tbl.module("maps").fields.get("hidden")
+    _maps = tbl.module("maps")
+    assert _maps is not None
+    fm = _maps.fields.get("hidden")
     assert fm is not None, "maps 缺 hidden 登记"
     assert fm.type == "bool"
     assert fm.label == "隐藏（禁直接传送）"
     assert fm.help, "hidden 缺中文说明（说明卡）"
-    assert tbl.module("maps").field_groups.get("hidden") == "base"
+    assert _maps.field_groups.get("hidden") == "base"
     # 与隐藏要素视图不同层：monsters.hidden_boss 仍是另一个键（不混用）
-    mrow = tbl.module("maps").fields["monsters"].element.children
+    _mon = _maps.fields["monsters"].element
+    assert _mon is not None
+    mrow = _mon.children
     assert mrow.get("hidden_boss") is not None and "hidden" not in mrow
 
 
@@ -200,7 +204,7 @@ def test_e1_e2e_temp_content_root(tmp_path: Path) -> None:
         ensure_ascii=False), encoding="utf-8")
     (root / "maps.json").write_text(json.dumps(_MAPS, ensure_ascii=False), encoding="utf-8")
     pack, _changed = build_pack(root)
-    maps = pack.modules["maps"]
+    maps = cast("List[Dict[str, Any]]", pack.modules["maps"])
     secret = next(m for m in maps if m["id"] == "secret_grove")
     assert secret["hidden"] is True
 

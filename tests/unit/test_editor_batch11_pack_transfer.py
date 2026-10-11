@@ -579,7 +579,7 @@ def test_unknown_role_defaults_readonly(tmp_path: Path) -> None:
 def http_env(tmp_path: Path) -> Iterator[Tuple[Any, Path]]:
     _ensure_scripts_on_path()
     from fastapi.testclient import TestClient
-    from editor_host import create_app
+    create_app = __import__("editor_host").create_app
 
     content = tmp_path / "content"
     content.mkdir()

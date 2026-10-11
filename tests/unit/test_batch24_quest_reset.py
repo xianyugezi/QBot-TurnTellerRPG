@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List, cast
 
 from qbot_rpg.content.field_meta import default_field_meta_table
 from qbot_rpg.content.models import RESET_UNITS
@@ -66,7 +66,9 @@ def _carry(ctx: Dict[str, Any], now: int, daily: Any) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 def test_g1_metadata_registered() -> None:
     tbl = default_field_meta_table()
-    fm = tbl.module("quest").fields.get("daily")
+    _quest = tbl.module("quest")
+    assert _quest is not None
+    fm = _quest.fields.get("daily")
     assert fm is not None
     assert set(fm.children) >= {"count", "unit", "reset"}
     assert fm.children["unit"].enum == RESET_UNITS
@@ -110,7 +112,7 @@ def test_g1_validator_count_range_red() -> None:
 
 def test_g1_validator_bool_compat_ok() -> None:
     for ok in (True, False, None):
-        quest = {"id": "q", "name": "Q"}
+        quest: Dict[str, Any] = {"id": "q", "name": "Q"}
         if ok is not None:
             quest["daily"] = ok
         r = check_pack({"quest": [quest]})
@@ -216,7 +218,7 @@ def test_g1_e2e_temp_content_root(tmp_path: Path) -> None:
         [{"id": "q_reset", "name": "周期任务", "repeatable": False, "conditions": [],
           "daily": {"count": 1, "unit": "日"}}], ensure_ascii=False), encoding="utf-8")
     pack, _changed = build_pack(root)
-    quests = {q["id"]: q for q in pack.modules["quest"]}
+    quests = {q["id"]: q for q in cast(List[Dict[str, Any]], pack.modules["quest"])}
     ctx = _ctx(_BASE_TS)
     ctx["quests"] = quests
     assert Q.quest_accept("q_reset", ctx)["ok"] is True

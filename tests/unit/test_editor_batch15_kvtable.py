@@ -223,6 +223,7 @@ process.stdout.write(JSON.stringify(out));
 
 @pytest.mark.skipif(NODE is None, reason="本机无 node，跳过纯 JS 键值表格语义执行")
 def test_editor_kv_js_semantics(tmp_path: Path) -> None:
+    assert NODE is not None
     src = tmp_path / "kv.js"
     src.write_text(_marked_block("/* EDITOR_KV_BEGIN */", "/* EDITOR_KV_END */"),
                    encoding="utf-8")

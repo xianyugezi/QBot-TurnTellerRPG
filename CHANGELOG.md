@@ -681,6 +681,14 @@
 - **M0（2026-08-25）**：实现层框架骨架实装——data/storage/content/core 四层 + G0 架构检查 +
   测试体系 + verify_m0 门禁（M0 复查三批 P0×2 / P1×31 全部修复）。
 
+### Changed
+
+- **mypy ③段债务收敛（2026-10-11）**：`tests/**` **399 处 → 0**（130 文件，3 路并行子 agent 分区修）+
+  `scripts/**` **4 处 → 0**；口径「**不许新增 `# type: ignore`**、不改断言语义」，改法以
+  类型注解收紧 / `typing.cast` / `getattr` 能力门控 / 必要处 `assert x is not None`（仅限确知非 None）为主。
+  父 agent 统一验收：`ruff check .` 绿、`mypy tests` 在 tests 下 0 error、**串行全量 pytest 100% 无 F/E**、
+  架构门禁 TC-01~06 绿。债务清单 `docs/verify/mypy_debt.txt` 随之收窄（③段剩余 ≈ 0）。
+
 ### Fixed
 
 - **CI 长期红灯根因修复（2026-10-11）**：`requirements.txt` **缺 `httpx`** —— `fastapi.testclient`

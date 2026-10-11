@@ -72,8 +72,9 @@ def test_header_extra_keys_use_star_prefix() -> None:
     schema = cc.schema_for(LIST_META, extra_keys=["excludes"])
     header = schema.header_cells()
     assert "*excludes" in header
-    assert schema.column("excludes") is not None
-    assert schema.column("excludes").json is True
+    _col = schema.column("excludes")
+    assert _col is not None
+    assert _col.json is True
 
 
 def test_map_schema_key_column_and_value_children() -> None:

@@ -101,14 +101,14 @@ def test_editor_decoration_adds_where_and_keeps_rule_code() -> None:
 # =====================================================================================
 def _pairs() -> List[Tuple[str, str, Dict[str, Any]]]:
     rows = _human()
-    by_rule = {}
+    by_rule: Dict[str, Any] = {}
     for r in rows:
         by_rule.setdefault(r["rule"], r)
     out = []
     for rule in ("type", "enum", "required_missing", "ref_missing", "negative", "dead_range"):
-        r = by_rule.get(rule)
-        if r is not None:
-            out.append((rule, r["message"], r))
+        row = by_rule.get(rule)
+        if row is not None:
+            out.append((rule, row["message"], row))
     return out
 
 

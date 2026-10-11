@@ -284,7 +284,7 @@ async def test_testing_helpers_use_in_memory_db(probe_copy: Path) -> None:
     """测试辅助的装配以内存库为默认（不碰真实玩家库）。"""
     deps = await pkt.build_pack_deps(probe_copy)
     try:
-        assert deps.testing_db_owned is True
+        assert getattr(deps, "testing_db_owned") is True
         assert deps.repo.db._is_memory is True
     finally:
         await pkt.close_pack_deps(deps)

@@ -17,7 +17,7 @@ import contextlib
 import json
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, Optional
 
 from qbot_rpg.assembly.context import AssemblyDeps, make_context
 from qbot_rpg.assembly.runner import run_command
@@ -141,7 +141,7 @@ async def build_env(player: Player, *, settings: dict, session: Any = None,
         "channel": "group", "message_id": "m1"}}
 
 
-async def run(env: dict, message: str, mid: str = None) -> str:
+async def run(env: dict, message: str, mid: Optional[str] = None) -> str:
     event = dict(env["event"])
     event["message"] = message
     if mid:
@@ -153,13 +153,17 @@ async def run(env: dict, message: str, mid: str = None) -> str:
 # 元数据 + 校验
 # ---------------------------------------------------------------------------
 def test_k2_metadata_registered() -> None:
-    fields = default_field_meta_table().module("settings").fields
+    _m = default_field_meta_table().module("settings")
+    assert _m is not None
+    fields = _m.fields
     cg = fields.get("command_gates")
     assert cg is not None and cg.type == "obj"
     for k in ("weak", "wild", "forced_battle"):
         assert k in cg.children, f"command_gates 缺 {k}"
         assert cg.children[k].type == "list"
-        assert cg.children[k].element.type == "str"
+        _el = cg.children[k].element
+        assert _el is not None
+        assert _el.type == "str"
 
 
 def test_k2_editor_visible(tmp_path: Path) -> None:

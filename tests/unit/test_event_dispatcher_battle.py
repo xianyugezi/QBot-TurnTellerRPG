@@ -16,7 +16,7 @@
 """
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, cast
 
 from qbot_rpg.core.battle import BattleEngine
 
@@ -65,7 +65,7 @@ def _ev(eid: str, trigger: str, actions: list, heal_side: str = "player") -> dic
 def _engine(effects: Optional[Dict[str, dict]] = None,
             config: Optional[Dict[str, Any]] = None) -> BattleEngine:
     eng = BattleEngine(registry=FakeRegistry(effects), config=config or {})
-    eng._rng = QueueRNG(SEQ)
+    eng._rng = cast(Any, QueueRNG(SEQ))
     return eng
 
 

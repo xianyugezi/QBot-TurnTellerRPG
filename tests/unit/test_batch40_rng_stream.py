@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 import random
 from dataclasses import replace
+from typing import Any
 from types import SimpleNamespace
 
 import pytest
@@ -196,7 +197,7 @@ async def test_no_state_two_contexts_same_first_value():
 # ---------------------------------------------------------------------------
 class _FakeTx:
     def __init__(self) -> None:
-        self.saved = None
+        self.saved: Any = None
 
     async def upsert_player(self, player: object) -> None:
         self.saved = player

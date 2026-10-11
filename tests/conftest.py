@@ -12,7 +12,7 @@ import hashlib
 import os
 import random
 from pathlib import Path
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, List, Mapping, Tuple
 
 import pytest
 
@@ -88,7 +88,7 @@ def _content_stat_snapshot() -> Dict[str, Tuple[int, int]]:
     return out
 
 
-def _diff_snapshots(before: Dict[str, object], after: Dict[str, object]
+def _diff_snapshots(before: Mapping[str, object], after: Mapping[str, object]
                     ) -> Tuple[List[str], List[str], List[str]]:
     added = sorted(set(after) - set(before))
     removed = sorted(set(before) - set(after))
@@ -96,7 +96,7 @@ def _diff_snapshots(before: Dict[str, object], after: Dict[str, object]
     return added, removed, changed
 
 
-def _describe(before: Dict[str, object], after: Dict[str, object]) -> List[str]:
+def _describe(before: Mapping[str, object], after: Mapping[str, object]) -> List[str]:
     added, removed, changed = _diff_snapshots(before, after)
     lines: List[str] = []
     lines += [f"+ content/{p}（新增）" for p in added]
@@ -122,6 +122,7 @@ def _pollution_message() -> str:
     lines += [f"    - content/{p}" for p in removed]
     lines += [f"    ~ content/{p}" for p in changed]
     suspects = _GUARD["suspects"]
+    assert isinstance(suspects, list)
     if suspects:
         lines.append("疑似来源（逐用例滚动快照定位）：")
         for nodeid, descs in suspects:

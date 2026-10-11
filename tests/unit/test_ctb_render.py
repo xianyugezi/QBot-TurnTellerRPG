@@ -24,7 +24,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from qbot_rpg.core.battle import ActionOutcome
 from qbot_rpg.core.message_format.battle_render import (
@@ -195,7 +195,8 @@ def test_batch_paused_ready_line() -> None:
 
 def test_batch_tolerates_bad_input() -> None:
     """兜底不崩：None / 空 / 非 Mapping → 返回 str。"""
-    for bad in (None, {}, SimpleNamespace(), "nonsense"):
+    bad_inputs: List[Any] = [None, {}, SimpleNamespace(), "nonsense"]
+    for bad in bad_inputs:
         assert isinstance(render_battle_action_batch(bad), str)
 
 

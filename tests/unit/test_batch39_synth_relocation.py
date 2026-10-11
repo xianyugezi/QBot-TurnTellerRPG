@@ -214,10 +214,12 @@ def _build_router() -> Router:
 def test_synth_registered_exactly_once_by_common_layer() -> None:
     """`/合成` 唯一注册方 = synth_commands；alchemy_commands 不再注册（防同名双注册）。"""
     router = Router()
-    register_synth_commands(router, make_context=lambda p: make_ctx(_settings("full")))
+    register_synth_commands(router, make_context=lambda p: dict(make_ctx(_settings("full"))))
     assert router.names().count(SYNTH_CMD) == 1
     assert SYNTH_CMD in DEFAULT_WHITELIST
-    assert router.get(SYNTH_CMD).whitelisted
+    _spec = router.get(SYNTH_CMD)
+    assert _spec is not None
+    assert _spec.whitelisted
     alch_router = Router()
     from qbot_rpg.commands.alchemy_commands import register_alchemy_commands
     register_alchemy_commands(alch_router, make_context=lambda p: {})

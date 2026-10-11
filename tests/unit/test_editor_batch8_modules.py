@@ -304,7 +304,7 @@ def _client(root: Path, pack: str = "blank_pack", role: str = "owner"):
         sys.path.insert(0, _REPO)
     if str(REPO / "scripts") not in sys.path:
         sys.path.insert(0, str(REPO / "scripts"))
-    from editor_host import create_app  # noqa: E402
+    create_app = __import__("editor_host").create_app  # noqa: E402
     from fastapi.testclient import TestClient  # noqa: E402
     return TestClient(create_app(pack=pack, root=str(root), role=role))
 

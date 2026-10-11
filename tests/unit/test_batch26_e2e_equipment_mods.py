@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import json
 from pathlib import Path
+from typing import Any, Dict
 
 from qbot_rpg.assembly.context import _table_from_registry
 from qbot_rpg.commands.basic_commands import EquipmentEngineAdapter
@@ -72,7 +73,7 @@ def test_e2e_temp_content_root_wear_and_remove(tmp_path: Path) -> None:
         "level": 1,
         "persistent_state": {},
     }
-    ctx = {
+    ctx: Dict[str, Any] = {
         "player": player, "items": items,
         "skills": {
             "basic_atk": {"id": "basic_atk", "name": "普攻", "type": "basic"},

@@ -303,7 +303,8 @@ def _use_refs(refs: Any, ctx: Dict[str, Any]) -> Dict[str, Any]:
 
 def test_use_no_effect_refs_is_unchanged() -> None:
     """B-V5 负向：实例无 `effect_refs`（字段缺失 / 空）→ 回血 = 定义 power、无状态实例。"""
-    for refs in (None, (), []):
+    _ref_cases: List[Any] = [None, (), []]
+    for refs in _ref_cases:
         ctx = _use_refs(refs, _use_ctx_refs())
         assert ctx["player"]["hp"] == 50            # 30 + 20（基础定义段）
         assert ctx["player"]["persistent_state"] == {}

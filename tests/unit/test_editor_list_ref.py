@@ -261,6 +261,7 @@ process.stdout.write(JSON.stringify(out));
 
 @pytest.mark.skipif(NODE is None, reason="本机无 node，跳过纯 JS 列表/引用语义执行")
 def test_list_and_ref_js_semantics(tmp_path: Path) -> None:
+    assert NODE is not None
     list_src = tmp_path / "list.js"
     list_src.write_text(_marked_block("/* EDITOR_LIST_BEGIN */", "/* EDITOR_LIST_END */"),
                         encoding="utf-8")

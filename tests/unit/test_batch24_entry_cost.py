@@ -54,13 +54,15 @@ def _ctx(entry_cost: Any = None, inv: Any = None, **over: Any) -> dict:
 # ---------------------------------------------------------------------------
 def test_e3_metadata_registered() -> None:
     tbl = default_field_meta_table()
-    fm = tbl.module("maps").fields.get("entry_cost")
+    maps_mod = tbl.module("maps")
+    assert maps_mod is not None
+    fm = maps_mod.fields.get("entry_cost")
     assert fm is not None, "maps 缺 entry_cost 登记"
     assert fm.type == "obj"
     assert fm.label == "进图消耗/门票"
     assert set(fm.children) >= {"items", "consume"}
     assert fm.children["consume"].type == "bool"
-    assert tbl.module("maps").field_groups.get("entry_cost") == "refs"
+    assert maps_mod.field_groups.get("entry_cost") == "refs"
 
 
 def test_e3_editor_visible(tmp_path: Path) -> None:
@@ -240,7 +242,7 @@ def test_e3_e2e_temp_content_root(tmp_path: Path) -> None:
         ensure_ascii=False), encoding="utf-8")
     pack, _changed = build_pack(root)
     maps = pack.modules["maps"]
-    ctx = {"map_id": "gate", "maps": maps, "inventory": {"ticket": 5}}
+    ctx: Dict[str, Any] = {"map_id": "gate", "maps": maps, "inventory": {"ticket": 5}}
     res = DungeonStateMachine().enter(ctx, _DUNGEON)
     assert res["ok"] is True and res["entry_cost_consumed"] is True
     assert ctx["inventory"]["ticket"] == 3

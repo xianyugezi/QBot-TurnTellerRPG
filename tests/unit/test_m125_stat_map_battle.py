@@ -8,11 +8,11 @@
 """
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping
+from typing import Any, Dict, Mapping, cast
 
 from qbot_rpg.core.battle import BattleEngine
 from qbot_rpg.core.damage import DamageFormulaParams, StatMap
-from qbot_rpg.core.effects import DamageCtx, execute_action
+from qbot_rpg.core.effects import DamageCtx, EffectRuntime, execute_action
 
 PLAYER: Dict[str, Any] = {
     "max_hp": 500, "hp": 500, "max_mp": 100, "mp": 100,
@@ -154,8 +154,8 @@ class _RT:
         return {"chain_depth": 3}
 
 
-def _rt() -> _RT:
-    return _RT()
+def _rt() -> EffectRuntime:
+    return cast(EffectRuntime, _RT())
 
 
 def test_effects_damage_uses_stat_map_atk_base() -> None:

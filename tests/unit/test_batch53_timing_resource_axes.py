@@ -23,7 +23,7 @@
 """
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping
+from typing import Any, Dict, Mapping, cast
 
 from qbot_rpg.core.battle import BattleEngine
 from qbot_rpg.core.resource_axis import RESOURCE_STATE_KEY, scale_amount_map
@@ -86,7 +86,7 @@ def _run_cd(extra: Mapping[str, Any], *, axes: Any = None, amp: Any = None) -> D
     if amp is not None:
         cfg["equip_skill_amp"] = amp
     eng = BattleEngine(defs={"s1": _SKILL}, config=cfg)
-    eng._rng = _QueueRNG([0.5, 0.5, 0.5, 1.0])  # noqa: SLF001
+    eng._rng = cast(Any, _QueueRNG([0.5, 0.5, 0.5, 1.0]))  # noqa: SLF001
     eng.start(dict(PLAYER, **dict(extra)), dict(ENEMY), random_seed=1)
     eng.do_action("player", {"type": "skill", "skill_id": "s1", "tag": "combo",
                              "mult": 1.0})
@@ -336,16 +336,17 @@ def test_c3_stack_axes_align_with_batch48_stacks_multiplier() -> None:
 def _run_shift(shift: float, *, axes: Any = None) -> Any:
     """跑一次普攻并返回 (battle_time, player.next_ready, 调度器原语调用记录)。"""
     eng = BattleEngine(config=({EFFECT_AXES_KEY: axes} if axes is not None else None))
-    eng._rng = _QueueRNG([0.5] * 8)  # noqa: SLF001
-    p = {"max_hp": 900, "hp": 900, "atk": 100, "dfn": 50, "spd": 10,
-         "foc": 50, "con": 50, "lck": 50}
+    eng._rng = cast(Any, _QueueRNG([0.5] * 8))  # noqa: SLF001
+    p: Dict[str, Any] = {"max_hp": 900, "hp": 900, "atk": 100, "dfn": 50, "spd": 10,
+                         "foc": 50, "con": 50, "lck": 50}
     if shift:
         p["action_bar_shift"] = shift
     e = {"max_hp": 9000, "hp": 9000, "atk": 0, "dfn": 50, "spd": 8,
          "foc": 0, "con": 50, "lck": 0}
     eng.start(p, e, random_seed=1)
+    ctb = cast(Any, eng._ctb)
     calls: Any = []
-    _h, _d = eng._ctb.hasten_actor, eng._ctb.delay_actor  # noqa: SLF001
+    _h, _d = ctb.hasten_actor, ctb.delay_actor
 
     def _spy_h(a: str, b: float = 0.0) -> Any:
         calls.append(("hasten", str(a), float(b)))
@@ -355,10 +356,10 @@ def _run_shift(shift: float, *, axes: Any = None) -> Any:
         calls.append(("delay", str(a), float(b)))
         return _d(a, b)
 
-    eng._ctb.hasten_actor = _spy_h  # noqa: SLF001
-    eng._ctb.delay_actor = _spy_d  # noqa: SLF001
+    ctb.hasten_actor = _spy_h
+    ctb.delay_actor = _spy_d
     eng.player_act("normal")
-    ready = float(eng._ctb.get_actor("player").next_ready)  # noqa: SLF001
+    ready = float(ctb.get_actor("player").next_ready)
     return float(eng.battle_time), ready, calls
 
 
@@ -443,7 +444,7 @@ def test_e3_scale_amount_map_default_identity_and_consumers() -> None:
     # 门禁与扣减同倍率（同一 ctx，先 check 后 pay）
     from qbot_rpg.core import resource_axis as ra
 
-    ctx = {"stats": _RAGE_REG, RESOURCE_STATE_KEY: {"player": {"rage": 50}}}
+    ctx: Dict[str, Any] = {"stats": _RAGE_REG, RESOURCE_STATE_KEY: {"player": {"rage": 50}}}
     assert ra.check_cost(ctx, "rage", {"rage": 10}, mult=0.5)["ok"] is True
     ra.pay_cost(ctx, "rage", {"rage": 10}, mult=0.5)
     assert ctx[RESOURCE_STATE_KEY]["player"]["rage"] == 45

@@ -112,10 +112,16 @@ def test_tolerate_helper_scoped_to_empty_skeletons() -> None:
         def __init__(self, module: str) -> None:
             self.module = module
 
-    assert _tolerate_empty_modules({"skills": []})(_E("skills")) is True
-    assert _tolerate_empty_modules({"settings": {}})(_E("settings")) is True
+    _skills = _tolerate_empty_modules({"skills": []})
+    assert _skills is not None
+    assert _skills(_E("skills")) is True
+    _settings = _tolerate_empty_modules({"settings": {}})
+    assert _settings is not None
+    assert _settings(_E("settings")) is True
     assert _tolerate_empty_modules({"skills": [{"id": "x"}]}) is None
-    assert _tolerate_empty_modules({"items": [1], "skills": []})(_E("items")) is False
+    _items = _tolerate_empty_modules({"items": [1], "skills": []})
+    assert _items is not None
+    assert _items(_E("items")) is False
 
 
 def test_tolerated_warning_is_marked_and_has_human_module_label(tmp_path: Path) -> None:

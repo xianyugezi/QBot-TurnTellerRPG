@@ -223,8 +223,12 @@ def test_extra_arg_usage_human_text(probe) -> None:
 def test_conditions_not_met_does_not_call_add_item_hook(probe) -> None:
     """写盘四断言之一：条件不满足 → 无入包 hook 调用、背包不变、冷却不变。"""
     calls: list = []
-    ctx = _ctx(probe, location="m_night", period="noon",
-               add_item=lambda item, count, bound: calls.append((item, count, bound)) or True)
+
+    def _add_item(item: Any, count: int, bound: Any) -> bool:
+        calls.append((item, count, bound))
+        return True
+
+    ctx = _ctx(probe, location="m_night", period="noon", add_item=_add_item)
     out = cmd_gather(parse_command("采集"), ctx)
     assert "不出" in out
     assert calls == []
@@ -285,14 +289,19 @@ def test_register_gather_commands() -> None:
     router = Router()
     register_gather_commands(router, make_context=lambda p: {})
     assert GATHER_CMD in router.names()
-    assert router.get(GATHER_CMD).whitelisted is True
+    spec = router.get(GATHER_CMD)
+    assert spec is not None
+    assert spec.whitelisted is True
 
 
 def test_register_gather_requires_make_context() -> None:
     router = Router()
     register_gather_commands(router, make_context=None)
     with pytest.raises(RuntimeError):
-        router.get(GATHER_CMD).handler(parse_command("采集"))
+        spec = router.get(GATHER_CMD)
+        assert spec is not None
+        assert spec.handler is not None
+        spec.handler(parse_command("采集"))
 
 
 def test_rarity_cn_covers_four_tiers() -> None:

@@ -81,6 +81,7 @@ def test_attack_action_skill() -> None:
     """/攻击 强力斩击 → skill action。"""
     action, err = _attack_action(_Parsed(["强力斩击"]), _ctx())
     assert err is None
+    assert action is not None
     assert action["type"] == "skill" and action["skill_id"] == "power_strike"
 
 

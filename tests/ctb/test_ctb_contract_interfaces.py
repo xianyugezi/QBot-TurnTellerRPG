@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import copy
 import json
+from typing import Any, Dict
 
 import pytest
 
@@ -42,7 +43,7 @@ from qbot_rpg.core.battle import BattleEngine
 PLAYER = {"max_hp": 500, "hp": 500, "max_mp": 100, "mp": 100, "atk": 100, "dfn": 50,
           "mag": 50, "spd": 100, "foc": 100, "con": 50, "str": 100, "int": 80,
           "agi": 50, "spr": 50, "lck": 50, "elem_atk": 0, "name": "P"}
-ENEMY = {"max_hp": 400, "hp": 400, "max_mp": 0, "mp": 0, "atk": 80, "dfn": 40,
+ENEMY: Dict[str, Any] = {"max_hp": 400, "hp": 400, "max_mp": 0, "mp": 0, "atk": 80, "dfn": 40,
          "mag": 30, "spd": 75, "foc": 50, "con": 50, "str": 80, "int": 30,
          "agi": 40, "spr": 40, "lck": 10, "elem_atk": 0, "name": "E"}
 
@@ -376,6 +377,7 @@ class TestPlayerActContract:
         before = before if before is not None else 0
         eng.player_act("normal")
         after = eng.battle_state().get("action_seq")
+        assert after is not None
         assert after > before, f"player_act 应推进 action_seq（{before} → {after}）"
 
     @TODO_AGENT3

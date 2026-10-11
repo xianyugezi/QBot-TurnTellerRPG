@@ -183,18 +183,22 @@ async def test_enabled_registers_routes_and_returns_text(tmp_path: Path) -> None
     res = load_pack_extensions(r, pack_dir=root, settings={"ext": {"enabled": True}}, cli=True)
 
     assert res.ok and res.registered == ("探针",) and res.aliases == ("zzp",)
-    assert r.has("探针") and r.get("探针").whitelisted
+    _probe = r.get("探针")
+    assert _probe is not None
+    assert r.has("探针") and _probe.whitelisted
 
     route = r.dispatch("/探针 甲乙")
     assert route.kind == ROUTE_COMMAND and route.command == "探针"
-    out = await r.get("探针").handler(
+    _probe_handler = _probe.handler
+    assert _probe_handler is not None
+    out = await _probe_handler(
         _parsed("探针", ["甲乙"], "探针 甲乙"), ctx={"qq_id": "u1"}
     )
     assert out == "OK:zt_ok:甲乙"
 
-    aroute = r.dispatch("zzp 丙", {"aliases": r.aliases})
+    aroute = r.dispatch("zzp 丙", {"aliases": getattr(r, "aliases")})
     assert aroute.kind == ROUTE_ALIAS and aroute.command == "探针"
-    aout = await r.get("探针").handler(_parsed("探针", ["丙"]), ctx={"qq_id": "u1"})
+    aout = await _probe_handler(_parsed("探针", ["丙"]), ctx={"qq_id": "u1"})
     assert aout == "OK:zt_ok:丙"
 
 
@@ -213,6 +217,7 @@ def test_gm_only_maps_to_gm_spec(tmp_path: Path) -> None:
     r = _fw_router()
     load_pack_extensions(r, pack_dir=root, settings={"ext": {"enabled": True}}, cli=True)
     spec = r.get("探针")
+    assert spec is not None
     assert spec.is_gm is True and spec.permission == "gm"
 
 
@@ -429,10 +434,18 @@ async def test_handler_exception_isolated(tmp_path: Path) -> None:
     res = load_pack_extensions(r, pack_dir=root, settings={"ext": {"enabled": True}}, cli=True)
     assert res.ok and set(res.registered) == {"探针", "稳固"}
 
-    out = await r.get("探针").handler(_parsed(), ctx={"qq_id": "u1"})
+    _p2 = r.get("探针")
+    assert _p2 is not None
+    _h2 = _p2.handler
+    assert _h2 is not None
+    out = await _h2(_parsed(), ctx={"qq_id": "u1"})
     assert out == "❌ 功能暂不可用"  # 人话兜底，不崩
     # 同一包的其它指令照常
-    assert await r.get("稳固").handler(_parsed(command="稳固"), ctx={"qq_id": "u1"}) == "ok"
+    _w = r.get("稳固")
+    assert _w is not None
+    _hw = _w.handler
+    assert _hw is not None
+    assert await _hw(_parsed(command="稳固"), ctx={"qq_id": "u1"}) == "ok"
 
 
 # =============================================================================
@@ -477,7 +490,9 @@ def test_ext_api_player_is_readonly() -> None:
         hp: int
 
     ctx = ExtContext(pack_id="p", ctx={"player": P("a", 1), "settings": {"x": 1}})
-    assert ctx.player["name"] == "a" and ctx.player["hp"] == 1
+    _pv = ctx.player
+    assert _pv is not None
+    assert _pv["name"] == "a" and _pv["hp"] == 1
     with pytest.raises(TypeError):
         ctx.player["hp"] = 99  # type: ignore[index]
     with pytest.raises(TypeError):

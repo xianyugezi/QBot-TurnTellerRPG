@@ -49,12 +49,16 @@ def _ctx(items, *, inventory=None, player=None):
 def test_a2_metadata_registered() -> None:
     tbl = default_field_meta_table()
     for mod in ("items", "equipment"):
-        fm = tbl.module(mod).fields.get("max_hold")
+        _mod = tbl.module(mod)
+        assert _mod is not None
+        fm = _mod.fields.get("max_hold")
         assert fm is not None, f"{mod} 缺 max_hold 登记"
         assert fm.type == "int"
         assert fm.range_min == -1 and fm.range_max == 1
         assert fm.label == "最大获取数量" and fm.help
-    assert tbl.module("items").field_groups.get("max_hold") == "base"
+    _items = tbl.module("items")
+    assert _items is not None
+    assert _items.field_groups.get("max_hold") == "base"
 
 
 def test_a2_editor_visible(tmp_path: Path) -> None:

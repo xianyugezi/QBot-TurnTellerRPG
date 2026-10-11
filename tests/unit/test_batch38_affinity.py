@@ -8,6 +8,8 @@
 """
 from __future__ import annotations
 
+from typing import Any, Dict
+
 from qbot_rpg.content.field_meta import default_field_meta_table
 from qbot_rpg.content.validator import check_pack
 from qbot_rpg.core.affinity import (
@@ -19,7 +21,7 @@ from qbot_rpg.core.affinity import (
 )
 
 # 通用测试配置（相性 id/池 id 均为测试用假名，非内容包业务名）
-CFG = {
+CFG: Dict[str, Any] = {
     "affinities": [
         {"id": "a_x", "name": "X", "exclusive_pool": "p_x"},
         {"id": "a_y", "name": "Y", "exclusive_pool": "p_y"},

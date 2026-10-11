@@ -51,6 +51,7 @@ def _marked(name: str) -> str:
 
 
 def _run_node(source: str) -> Any:
+    assert NODE is not None
     proc = subprocess.run([NODE, "-e", source], capture_output=True, text=True, timeout=60)
     assert proc.returncode == 0, proc.stderr
     return proc.stdout.strip()
@@ -264,7 +265,9 @@ def test_currency_field_declares_options_ref_but_keeps_type_str() -> None:
     settings = table.module("settings")
     assert settings is not None
     dp = settings.fields["death_penalty"]
-    currency = dp.children["drop_currency"].element.children["currency"]
+    _dc = dp.children["drop_currency"].element
+    assert _dc is not None
+    currency = _dc.children["currency"]
     assert currency.options_ref == "settings.currencies" and currency.ref_target is None
     assert currency.type == "str"          # 校验口径不变（存在性仍由专项钩子 R-4 判）
 
@@ -304,6 +307,7 @@ def _font_js() -> str:
 
 
 def test_font_module_pure_logic() -> None:
+    assert NODE is not None
     js = _font_js()
     harness = """
     var F = module.exports;
@@ -350,7 +354,9 @@ def test_font_tokens_complete_in_all_three_scales() -> None:
             assert re.search(re.escape(tok) + r"\s*:", body), f"{scale} 档缺令牌 {tok}"
     # 只覆盖字号：三档块里不得出现间距 / 行高 / 颜色令牌
     for scale in ("small", "medium", "large"):
-        body = re.search(r'html\[data-fs="%s"\]\s*\{([^}]*)\}' % scale, html).group(1)
+        _m = re.search(r'html\[data-fs="%s"\]\s*\{([^}]*)\}' % scale, html)
+        assert _m is not None
+        body = _m.group(1)
         assert "--sp-" not in body and "--lh-" not in body and "--bg" not in body
 
 

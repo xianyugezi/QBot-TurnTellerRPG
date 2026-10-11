@@ -359,9 +359,11 @@ def test_s5_same_source_renews_distinct_source_stacks() -> None:
     assert inst is not None and int(inst["stacks"]) == 1
     r3 = rt.apply_status(STACK_ATK.id, BP, source="other", force=True)
     assert r3.reason == "stacked"
-    assert int(rt.find_status(BP, STACK_ATK.id)["stacks"]) == 2
+    inst2 = rt.find_status(BP, STACK_ATK.id)
+    assert inst2 is not None
+    assert int(inst2["stacks"]) == 2
     assert _engine_with({STACK_ATK.id: STACK_ATK},
-                        [dict(rt.find_status(BP, STACK_ATK.id))])._aggregate_boost(  # noqa: SLF001
+                        [dict(inst2)])._aggregate_boost(  # noqa: SLF001
         BP, "atk") == 10.0
 
 
@@ -395,7 +397,8 @@ SLOTS_C: Dict[str, Any] = {
 }
 OFFHAND_C = {"enabled": True, "single_hand_scale": 0.5}
 ITEMS_C: Dict[str, Any] = {"sword": {"id": "sword", "type": "weapon"}}
-RUNES_C: Dict[str, Any] = {RUNE_STACK["id"]: RUNE_STACK, RUNE_GRIEVOUS["id"]: RUNE_GRIEVOUS}
+RUNES_C: Dict[str, Any] = {str(RUNE_STACK["id"]): RUNE_STACK,
+                           str(RUNE_GRIEVOUS["id"]): RUNE_GRIEVOUS}
 
 
 def test_rune_effect_refs_of_difference_table() -> None:

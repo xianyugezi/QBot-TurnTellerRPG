@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 import math
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 
 from qbot_rpg.commands.battle_launch_commands import _enemy_combatant
 from qbot_rpg.content.field_meta import default_field_meta_table
@@ -72,7 +72,7 @@ def _agg(stats: Dict[str, float], slot: str, panel_budget: Any) -> Dict[str, Any
 # ---------------------------------------------------------------------------
 def test_equip_share_default_is_40pct_and_calibrated_is_60pct() -> None:
     """装备占比：缺省 7:8:5 → 40.00%；equip_stat_mult=2.25 → 18/30 = 60.00%（±1%）。"""
-    assert abs(equip_share(None) - 0.40) < 1e-9
+    assert abs(equip_share(cast(Any, None)) - 0.40) < 1e-9
     assert abs(equip_share({"equip_stat_mult": MULT}) - 0.60) < 1e-9
     share = equip_share({"equip_stat_mult": MULT})
     assert abs(share - 0.60) <= 0.01, "装备占比必须落在 60% ±1%"

@@ -12,7 +12,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Mapping
 
 from qbot_rpg.core.season_events import (
     LAST_SEASON_IDX_KEY,
@@ -92,7 +92,8 @@ def test_trigger_proc_runner_called() -> None:
         called.append(str(proc.get("id", "")))
         return type("R", (), {"ok": True})()
 
-    procs = [{"id": "p1", "type": "heal"}, {"id": "p2", "type": "dispel"}]
+    procs: List[Mapping[str, Any]] = [{"id": "p1", "type": "heal"},
+                                      {"id": "p2", "type": "dispel"}]
     r = trigger_season_event(state, "summer", procs=procs, runtime=object(), proc_runner=runner)
     assert r["triggered"] is True
     assert set(called) == {"p1", "p2"}
@@ -102,7 +103,7 @@ def test_trigger_proc_runner_called() -> None:
 def test_trigger_no_runner_skips() -> None:
     """runner 未注入 → proc 只登记 skipped（不执行不阻断）。"""
     state: Dict[str, Any] = {SEASON_EVENT_STATE_KEY: {LAST_SEASON_IDX_KEY: 0}}
-    procs = [{"id": "p1", "type": "heal"}]
+    procs: List[Mapping[str, Any]] = [{"id": "p1", "type": "heal"}]
     r = trigger_season_event(state, "summer", procs=procs)
     assert r["triggered"] is True
     assert r["proc_results"][0]["skipped"] == "runner_not_injected"

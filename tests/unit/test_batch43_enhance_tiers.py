@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import asdict
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from qbot_rpg.commands.enhance_commands import cmd_enhance, cmd_enhance_info
 from qbot_rpg.commands.parsers import parse_command
@@ -366,7 +366,7 @@ def test_existing_stone_tiers_1_to_12_unchanged() -> None:
             7: "high", 8: "high", 9: "high", 10: "high", 11: "high", 12: "high"}
     tier_of = {}
     for t in DEFAULT_STONE_TIERS:
-        for lv in t["levels"]:
+        for lv in cast(List[int], t["levels"]):
             tier_of[int(lv)] = t["tier"]
     for lv, tier in hist.items():
         assert tier_of[lv] == tier, (lv, tier_of[lv], tier)

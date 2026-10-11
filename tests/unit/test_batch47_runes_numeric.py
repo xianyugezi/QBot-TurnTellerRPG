@@ -212,6 +212,20 @@ JEWEL_ITEMS = {"gem_ruby": {"id": "gem_ruby", "name": "红宝石", "type": "装�
 SOCKET_DEFS = {"sword": [{"slot_level": 3}, {"slot_level": 3}]}
 
 
+def _inv_remove(inv: Dict[str, int], i: Any, c: Any = 1) -> bool:
+    """测试替身 remove_item：足够则扣减并返回 True（对齐引擎契约）。"""
+    if inv.get(str(i), 0) >= int(c):
+        inv[str(i)] = inv[str(i)] - int(c)
+        return True
+    return False
+
+
+def _inv_add(inv: Dict[str, int], i: Any, c: Any = 1, b: bool = True) -> bool:
+    """测试替身 add_item：累加并返回 True（`b` 兼容签名，忽略）。"""
+    inv[str(i)] = inv.get(str(i), 0) + int(c)
+    return True
+
+
 def _mount_ctx() -> Tuple[Dict[str, Any], Dict[str, int], Dict[str, Any]]:
     inv = {"gem_ruby": 2, "r_atk": 2}
     p = {"equipment": {"weapon": {"item_id": "sword", "uid": "uA"}}}
@@ -220,11 +234,8 @@ def _mount_ctx() -> Tuple[Dict[str, Any], Dict[str, int], Dict[str, Any]]:
         "equipment": {"sword": {"jewels": {}}}, "rune_sockets": {}, "player": p,
         "inventory": inv,
         "count_item": lambda i: int(inv.get(str(i), 0)),
-        "remove_item": lambda i, c=1: (
-            inv.get(str(i), 0) >= int(c)
-            and (inv.__setitem__(str(i), inv[str(i)] - int(c)) or True)),
-        "add_item": lambda i, c=1, b=True: (
-            inv.__setitem__(str(i), inv.get(str(i), 0) + int(c)) or True),
+        "remove_item": lambda i, c=1: _inv_remove(inv, i, c),
+        "add_item": lambda i, c=1, b=True: _inv_add(inv, i, c, b),
     }
     js = JewelSystem(settings={"deep_craft": {"enabled": True}})
     return ctx, inv, {"js": js}

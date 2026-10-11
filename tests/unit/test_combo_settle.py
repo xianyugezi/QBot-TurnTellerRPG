@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Mapping
 
 from qbot_rpg.core.combo_settle import reachable_combos, settle_combo
 from qbot_rpg.core.combo_table import ComboRow
@@ -56,11 +56,11 @@ def test_settle_ok_with_checks_and_pays() -> None:
     def mp_pay(ctx: Any, cost: int) -> None:
         events.append(f"mp:{cost}")
 
-    def energy_check(ctx: Any, axis: str, cost: Dict[str, int]) -> bool:
+    def energy_check(ctx: Any, axis: str, cost: Mapping[str, int]) -> bool:
         energy_checked.append((axis, cost))
         return True
 
-    def energy_pay(ctx: Any, axis: str, cost: Dict[str, int]) -> None:
+    def energy_pay(ctx: Any, axis: str, cost: Mapping[str, int]) -> None:
         events.append(f"energy:{axis}:{cost}")
 
     def effect_runner(ctx: Any, behavior: Dict[str, Any]) -> Any:
@@ -89,7 +89,7 @@ def test_settle_mp_insufficient_rejected() -> None:
     def mp_check(ctx: Any, cost: int) -> bool:
         return False
 
-    def energy_check(ctx: Any, axis: str, cost: Dict[str, int]) -> bool:
+    def energy_check(ctx: Any, axis: str, cost: Mapping[str, int]) -> bool:
         energy_checked.append((axis, cost))
         return True
 
@@ -108,7 +108,7 @@ def test_settle_energy_insufficient_rejected() -> None:
     def mp_pay(ctx: Any, cost: int) -> None:
         paid.append("mp")
 
-    def energy_check(ctx: Any, axis: str, cost: Dict[str, int]) -> bool:
+    def energy_check(ctx: Any, axis: str, cost: Mapping[str, int]) -> bool:
         return False
 
     r = settle_combo({}, _row(), mp_cost=16, mp_check=mp_check, mp_pay=mp_pay,

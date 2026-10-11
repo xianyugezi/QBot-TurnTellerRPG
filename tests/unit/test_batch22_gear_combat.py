@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import copy
-from typing import Any, Mapping
+from typing import Any, Mapping, cast
 
 from qbot_rpg.content.field_meta import default_field_meta_table
 from qbot_rpg.core.battle import BattleEngine
@@ -54,7 +54,7 @@ class _QueueRNG:
 
 def _engine(player: Mapping[str, Any], enemy: Mapping[str, Any]) -> BattleEngine:
     eng = BattleEngine()
-    eng._rng = _QueueRNG(SEQ)
+    eng._rng = cast(Any, _QueueRNG(SEQ))
     eng.start(copy.deepcopy(dict(player)), copy.deepcopy(dict(enemy)), random_seed=7)
     return eng
 
@@ -137,7 +137,9 @@ def test_a3_pvp_bridge_into_combatant() -> None:
 def test_a3_metadata_items_equipment() -> None:
     tbl = default_field_meta_table()
     for mod in ("items", "equipment"):
-        fields = tbl.module(mod).fields
+        _mm = tbl.module(mod)
+        assert _mm is not None
+        fields = _mm.fields
         for k in A3_ALL:
             fm = fields.get(k)
             assert fm is not None, f"{mod}.{k} 缺登记"

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any, Mapping
 
 from qbot_rpg.content.effect_presets import FRAMEWORK_EFFECT_PRESETS
 from qbot_rpg.content.field_meta import (
@@ -83,7 +84,7 @@ def test_deleted_forge_decompose_rate_yellow_migration_hint() -> None:
 # ===========================================================================
 # 标注类 · 编辑器说明含「未实现」
 # ===========================================================================
-def _preset_axes(p: dict) -> set:
+def _preset_axes(p: Mapping[str, Any]) -> set:
     return {str(p.get("axis"))} | {str(k) for k in (p.get("defaults") or {})}
 
 
@@ -111,7 +112,9 @@ def test_r6_r7_r8_presets_point_to_wired_axes() -> None:
 
 def test_r10_r22_formula_display_fields_marked_unimplemented() -> None:
     """R10–R22：formula 展示层无 reader 字段 help 显式写「未实现」。"""
-    fields = default_field_meta_table().module("formula").fields
+    _formula = default_field_meta_table().module("formula")
+    assert _formula is not None
+    fields = _formula.fields
     cases = [
         (fields["damage"].children, "floor_mode"),
         (fields["damage"].children, "deep_floor"),

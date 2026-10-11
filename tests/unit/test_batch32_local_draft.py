@@ -82,6 +82,7 @@ def _module_source() -> str:
 
 @pytest.mark.skipif(NODE is None, reason="本机无 node，跳过纯 JS 本地草稿语义执行")
 def test_local_draft_js_semantics(tmp_path: Path) -> None:
+    assert NODE is not None
     src = tmp_path / "localdraft.js"
     src.write_text(_module_source(), encoding="utf-8")
     proc = subprocess.run([NODE, "-e", _NODE_HARNESS, str(src)],

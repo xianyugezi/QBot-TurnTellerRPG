@@ -169,6 +169,7 @@ process.stdout.write(JSON.stringify(out));
 
 @pytest.mark.skipif(NODE is None, reason="本机无 node，跳过纯 JS 标签/V8 语义执行")
 def test_field_label_and_select_option_js_semantics(tmp_path: Path) -> None:
+    assert NODE is not None
     label_src = tmp_path / "field_label.js"
     label_src.write_text(
         _marked_block("/* EDITOR_FIELD_LABEL_BEGIN */", "/* EDITOR_FIELD_LABEL_END */"),

@@ -106,6 +106,7 @@ def _fn_body(html: str, name: str) -> str:
 
 @pytest.mark.skipif(NODE is None, reason="本机无 node，跳过纯 JS 历史栈语义执行")
 def test_history_js_semantics(tmp_path: Path) -> None:
+    assert NODE is not None
     src = tmp_path / "history.js"
     src.write_text(_module_source(), encoding="utf-8")
     proc = subprocess.run([NODE, "-e", _NODE_HARNESS, str(src)],

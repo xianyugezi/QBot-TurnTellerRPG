@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import types
 from dataclasses import asdict, replace
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Mapping, Optional, cast
 
 
 from qbot_rpg.commands.alchemy_commands import cmd_decompose
@@ -104,7 +104,7 @@ def test_a1_temper_disabled_by_default() -> None:
 
 def test_a2_essence_disabled_by_default() -> None:
     assert normalize_essence_config(None)["enabled"] is False
-    assert read_forge_settings({})["essence_rate"]["enabled"] is False
+    assert cast("Mapping[str, Any]", read_forge_settings({})["essence_rate"])["enabled"] is False
     plan = plan_instance_decompose(_instance(), cfg={})
     assert plan["ok"] is False and plan["reason"] == "essence_disabled"
 
@@ -134,7 +134,7 @@ def test_a5_forge_defaults_new_key_only() -> None:
     for k, v in FORGE_SETTINGS_DEFAULTS.items():
         if k != "essence_rate":
             assert raw[k] == v
-    assert raw["essence_rate"]["enabled"] is False
+    assert cast("Mapping[str, Any]", raw["essence_rate"])["enabled"] is False
 
 
 # ===========================================================================

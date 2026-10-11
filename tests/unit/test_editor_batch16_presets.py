@@ -425,7 +425,7 @@ def test_http_create_with_preset_applies_defaults(
     import qbot_rpg.content.validator as validator_mod
     from fastapi.testclient import TestClient
 
-    from editor_host import create_app
+    create_app = __import__("editor_host").create_app
 
     monkeypatch.setattr(validator_mod, "default_field_meta_table", lambda: META)
     with TestClient(create_app(pack="pack_p", root=str(pack_root),

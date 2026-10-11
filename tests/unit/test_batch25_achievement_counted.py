@@ -47,13 +47,15 @@ class _P:
 # 元数据登记 + 编辑器可见
 # ---------------------------------------------------------------------------
 def test_i1_metadata_registered() -> None:
-    fm = default_field_meta_table().module("achievements").fields.get("counted")
+    _ach = default_field_meta_table().module("achievements")
+    assert _ach is not None
+    fm = _ach.fields.get("counted")
     assert fm is not None, "achievements 缺 counted 登记"
     assert fm.type == "bool"
     assert fm.label == "计入总数"
     assert fm.help, "counted 缺中文说明"
     # 与 hidden 正交：两个键都在
-    assert "hidden" in default_field_meta_table().module("achievements").fields
+    assert "hidden" in _ach.fields
 
 
 def test_i1_editor_visible(tmp_path: Path) -> None:

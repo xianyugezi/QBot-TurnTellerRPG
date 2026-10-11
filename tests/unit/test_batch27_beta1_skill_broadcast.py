@@ -70,12 +70,14 @@ def _outcome(*, skill_id: str = "", action_type: str = "skill",
 # ---------------------------------------------------------------------------
 def test_b1_metadata_registered() -> None:
     tbl = default_field_meta_table()
-    fm = tbl.module("skills").fields.get("message_key")
+    skills_mod = tbl.module("skills")
+    assert skills_mod is not None
+    fm = skills_mod.fields.get("message_key")
     assert fm is not None, "skills 缺 message_key 登记"
     assert fm.type == "str"
     assert fm.options_ref == "templates", "编辑器下拉来源应为全量模板表"
     assert fm.label == "战斗播报模板" and fm.help
-    assert tbl.module("skills").field_groups.get("message_key") == "基本"
+    assert skills_mod.field_groups.get("message_key") == "基本"
 
 
 def test_b1_editor_visible(tmp_path: Path) -> None:

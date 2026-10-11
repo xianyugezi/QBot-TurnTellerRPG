@@ -485,15 +485,23 @@ JEWEL_DEFS = {"sword": [{"slot_level": 3}, {"slot_level": 3}]}
 
 def _jewel_ctx() -> Any:
     inv = {"gem_ruby": 2}
+
+    def _remove(i: Any, c: Any = 1) -> bool:
+        if inv.get(str(i), 0) >= int(c):
+            inv[str(i)] = inv[str(i)] - int(c)
+            return True
+        return False
+
+    def _add(i: Any, c: Any = 1, b: Any = True) -> bool:
+        inv[str(i)] = inv.get(str(i), 0) + int(c)
+        return True
+
     ctx: Dict[str, Any] = {
         "items": JEWEL_ITEMS, "slot_defs": JEWEL_DEFS, "inventory": inv,
         "equipment": {"sword": {"jewels": {}}},
         "count_item": lambda i: int(inv.get(str(i), 0)),
-        "remove_item": lambda i, c=1: (inv.get(str(i), 0) >= int(c)
-                                       and (inv.__setitem__(str(i), inv[str(i)] - int(c))
-                                            or True)),
-        "add_item": lambda i, c=1, b=True: (inv.__setitem__(str(i), inv.get(str(i), 0) + int(c))
-                                            or True),
+        "remove_item": _remove,
+        "add_item": _add,
     }
     return ctx, inv
 
@@ -501,7 +509,9 @@ def _jewel_ctx() -> Any:
 def test_jewel_mount_unmount_field_by_field_regression() -> None:
     """既有装饰珠镶嵌逐字段对拍（rune_sockets 存在与否结果完全一致）。"""
     js = JewelSystem(settings={})
-    for extra in ({}, {"rune_sockets": {}}, {"rune_sockets": {"u": ["r1", None]}}):
+    _extras: List[Dict[str, Any]] = [{}, {"rune_sockets": {}},
+                                     {"rune_sockets": {"u": ["r1", None]}}]
+    for extra in _extras:
         ctx, inv = _jewel_ctx()
         ctx.update(extra)
         res = js.mount(ctx, "gem_ruby", "sword", 0, "p1")

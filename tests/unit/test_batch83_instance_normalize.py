@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Mapping
+from typing import Any, Mapping, cast
 
 from qbot_rpg.commands.basic_commands import EquipmentEngineAdapter
 from qbot_rpg.data.item import ItemInstance, item_instance_from_mapping
@@ -76,7 +76,7 @@ def test_equip_path_preserves_effect_refs_and_stack_max() -> None:
         stack_max=1, slot="weapon", effect_refs=("moon_bless", "frost_bite"),
         cooldown_until="2031-02-03T04:05:06Z"))
     ctx: dict = {"player": {"inventory": [row], "job_id": "warrior", "level": 10}}
-    EquipmentEngineAdapter(engine=_FakeEngine()).equip_wear(1, ctx)
+    EquipmentEngineAdapter(engine=cast(Any, _FakeEngine())).equip_wear(1, ctx)
     after = ctx["player"]["inventory"][0]
     assert _field(after, "effect_refs") == ("moon_bless", "frost_bite")
     assert _field(after, "stack_max") == 1
@@ -93,7 +93,7 @@ def test_equip_path_normal_flow_unchanged() -> None:
            "required_level": 5, "temper_alloc": {"atk": 1}}
     expected = item_instance_from_mapping(row)
     ctx: dict = {"player": {"inventory": [dict(row)], "job_id": "warrior", "level": 10}}
-    EquipmentEngineAdapter(engine=_FakeEngine()).equip_wear(1, ctx)
+    EquipmentEngineAdapter(engine=cast(Any, _FakeEngine())).equip_wear(1, ctx)
     after = ctx["player"]["inventory"][0]
     assert isinstance(after, ItemInstance)
     assert dataclasses.asdict(after) == dataclasses.asdict(expected)

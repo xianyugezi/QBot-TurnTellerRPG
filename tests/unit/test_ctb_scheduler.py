@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from qbot_rpg.core.ctb_rules import (
     CTB_TIEBREAK_RULE,
     DEFAULT_RECOVERY,
@@ -29,7 +31,7 @@ from qbot_rpg.core.ctb_rules import (
     recovery_for,
     time_cost,
 )
-from qbot_rpg.core.ctb_scheduler import CTBScheduler, CtbTicket
+from qbot_rpg.core.ctb_scheduler import CTBScheduler, CtbActorView, CtbTicket
 
 
 # ---------------------------------------------------------------------------
@@ -46,6 +48,20 @@ def _run_ticks(sched: CTBScheduler, n: int):
             break
         trace.append((round(ev["time"], 4), ev["actor_id"], ev["event"]))
     return trace
+
+
+def _peek(sched: CTBScheduler) -> CtbActorView:
+    """peek_next 的非 None 断言包装（mypy 收紧）。"""
+    view = sched.peek_next()
+    assert view is not None
+    return view
+
+
+def _actor(sched: CTBScheduler, actor_id: str) -> CtbActorView:
+    """get_actor 的非 None 断言包装（mypy 收紧）。"""
+    view = sched.get_actor(actor_id)
+    assert view is not None
+    return view
 
 
 # ---------------------------------------------------------------------------
@@ -169,13 +185,13 @@ def test_tiebreak_is_deterministic_for_same_speed() -> None:
     sched.push_actor("alpha", side="enemy", effective_speed=100)
     sched.push_actor("player1", side="player", effective_speed=100, is_player=True)
     sched.start()
-    assert sched.peek_next().actor_id == "player1"
+    assert _peek(sched).actor_id == "player1"
 
     sched2 = CTBScheduler()
     sched2.push_actor("zeta", side="enemy", effective_speed=100)
     sched2.push_actor("alpha", side="enemy", effective_speed=100)
     sched2.start()
-    assert sched2.peek_next().actor_id == "alpha"
+    assert _peek(sched2).actor_id == "alpha"
 
 
 def test_tiebreak_same_id_fifo_fallback() -> None:
@@ -184,12 +200,12 @@ def test_tiebreak_same_id_fifo_fallback() -> None:
     for aid in ("c", "a", "b"):
         s1.push_actor(aid, side="enemy", effective_speed=100)
     s1.start()
-    order1 = [s1.peek_next().actor_id]
+    order1 = [_peek(s1).actor_id]
     s2 = CTBScheduler()
     for aid in ("b", "c", "a"):
         s2.push_actor(aid, side="enemy", effective_speed=100)
     s2.start()
-    order2 = [s2.peek_next().actor_id]
+    order2 = [_peek(s2).actor_id]
     assert order1 == order2 == ["a"]
 
 
@@ -282,7 +298,7 @@ def test_battle_time_advance_emitted_on_time_jump() -> None:
 
 def test_subscribe_callback_receives_events_and_isolated() -> None:
     """订阅者能收到事件；订阅者异常不阻断调度。"""
-    got = []
+    got: list[dict[str, Any]] = []
 
     def boom(_payload):
         raise RuntimeError("订阅者故意抛错")
@@ -332,7 +348,7 @@ def test_stale_ticket_is_dropped() -> None:
     sched = CTBScheduler()
     sched.push_actor("a", side="enemy", effective_speed=100)
     sched.start()
-    old_ticket = sched.get_actor("a").ticket
+    old_ticket = _actor(sched, "a").ticket
     assert sched.resolve_ticket(old_ticket) is True  # 当前代有效
 
     sched.update_speed("a", 200)  # bump generation → 旧票失效
@@ -341,7 +357,7 @@ def test_stale_ticket_is_dropped() -> None:
     assert sched.stale_dropped == 1
 
     # 新票据为当前代，有效
-    new_ticket = sched.get_actor("a").ticket
+    new_ticket = _actor(sched, "a").ticket
     assert sched.is_ticket_stale(new_ticket) is False
 
 
@@ -367,10 +383,10 @@ def test_dead_actor_ticket_dropped_and_not_rescheduled() -> None:
     sched.push_actor("e1", side="enemy", effective_speed=100)
     sched.push_actor("e2", side="enemy", effective_speed=90)
     sched.start()
-    dead_ticket = sched.get_actor("e1").ticket
+    dead_ticket = _actor(sched, "e1").ticket
     sched.mark_dead("e1")
     assert sched.is_ticket_stale(dead_ticket) is True
-    assert sched.peek_next().actor_id == "e2"
+    assert _peek(sched).actor_id == "e2"
 
 
 # ---------------------------------------------------------------------------
@@ -396,6 +412,7 @@ def test_player_ready_pauses_for_input() -> None:
     sched.start()
     # 第一拍玩家先 ready
     ev = sched.advance_to_next_ready()
+    assert ev is not None
     assert ev["event"] == CtbEvent.ACTOR_READY
     assert ev["is_player"] is True
     assert sched.should_pause_for_input() is True
@@ -412,11 +429,13 @@ def test_complete_player_action_resumes_scheduler() -> None:
     sched.advance_to_next_ready()  # 玩家 ready → 暂停
     assert sched.paused is True
     end_evt = sched.complete_player_action()
+    assert end_evt is not None
     assert end_evt["event"] == CtbEvent.ACTOR_TURN_END
     assert sched.paused is False
     # 继续推进：轮到 NPC
     sched.drain_events()
     ev = sched.advance_to_next_ready()
+    assert ev is not None
     assert ev["actor_id"] == "e1"
 
 
@@ -463,6 +482,7 @@ def test_batch_marked_pause_on_player_ready() -> None:
     # 玩家结算后（200 ready），NPC e1 在 133.33 ready → 自动推进
     sched.drain_events()
     ev = sched.advance_to_next_ready()
+    assert ev is not None
     assert ev["actor_id"] == "e1"
     batch = sched.current_batch
     assert batch is not None and batch.count == 1

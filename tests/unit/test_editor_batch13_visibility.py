@@ -23,6 +23,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 import re
 import shutil
@@ -45,7 +46,7 @@ API_PY = REPO / "qbot_rpg" / "web" / "api.py"
 CATALOG: Set[str] = {e.module for e in FRAMEWORK_MODULE_CATALOG}
 
 sys.path.insert(0, str(REPO / "scripts"))
-import editor_visibility_selfcheck as selfcheck  # noqa: E402
+selfcheck: Any = importlib.import_module("editor_visibility_selfcheck")
 
 
 def _html() -> str:
@@ -59,6 +60,7 @@ def _marked(name: str) -> str:
 
 
 def _run_node(source: str) -> Any:
+    assert NODE is not None
     proc = subprocess.run([NODE, "-e", source], capture_output=True, text=True, timeout=60)
     assert proc.returncode == 0, proc.stderr
     return json.loads(proc.stdout)
@@ -170,7 +172,9 @@ def test_catalog_has_framework_systems_entries() -> None:
 def test_time_cycle_is_not_a_first_level_module_by_u2() -> None:
     """U2：时间天气按定稿挂「通用设置」卡片，**不**新增一级模块。"""
     assert "time_cycle" not in CATALOG_BY_MODULE
-    fields = api.default_field_meta_table().module("settings").fields
+    settings_mod = api.default_field_meta_table().module("settings")
+    assert settings_mod is not None
+    fields = settings_mod.fields
     assert "time_cycle" in fields
 
 
@@ -221,13 +225,17 @@ SETTINGS_KEYS = (
 
 
 def test_settings_fields_registered() -> None:
-    fields = api.default_field_meta_table().module("settings").fields
+    settings_mod = api.default_field_meta_table().module("settings")
+    assert settings_mod is not None
+    fields = settings_mod.fields
     for key in SETTINGS_KEYS:
         assert key in fields, key
 
 
 def test_command_mode_enum_and_default_job_ref() -> None:
-    fields = api.default_field_meta_table().module("settings").fields
+    settings_mod = api.default_field_meta_table().module("settings")
+    assert settings_mod is not None
+    fields = settings_mod.fields
     cm = fields["command_mode"]
     assert cm.type == "enum" and set(cm.enum) == {
         "global_shortcut", "combat_shortcut", "prefix_only"}
@@ -236,7 +244,9 @@ def test_command_mode_enum_and_default_job_ref() -> None:
 
 
 def test_time_cycle_subfield_shape() -> None:
-    tc = api.default_field_meta_table().module("settings").fields["time_cycle"]
+    settings_mod = api.default_field_meta_table().module("settings")
+    assert settings_mod is not None
+    tc = settings_mod.fields["time_cycle"]
     assert tc.type == "obj"
     assert {"enabled", "season", "period", "weather", "broadcast", "combat"} <= set(tc.children)
     assert tc.children["season"].children["season_days"].type == "int"
@@ -263,7 +273,9 @@ def test_manifest_templates_now_registered() -> None:
 
 
 def test_formula_section_fields_registered() -> None:
-    fields = api.default_field_meta_table().module("formula").fields
+    formula_mod = api.default_field_meta_table().module("formula")
+    assert formula_mod is not None
+    fields = formula_mod.fields
     for key in ("damage", "hit", "crit", "block", "defense", "weakness", "elements", "luck",
                 "derived", "power", "effects_link", "death_check", "stats_collector"):
         assert key in fields, key
@@ -285,12 +297,20 @@ def test_formula_section_renders_for_pack_that_defines_it(tmp_path: Path) -> Non
 
 
 def test_maps_gather_points_and_weather_fields_registered() -> None:
-    maps = api.default_field_meta_table().module("maps").fields
+    maps_mod = api.default_field_meta_table().module("maps")
+    assert maps_mod is not None
+    maps = maps_mod.fields
     assert maps["weather_pool"].type == "list"
-    gp = maps["gather_points"].element.children
+    gp_elem = maps["gather_points"].element
+    assert gp_elem is not None
+    gp = gp_elem.children
     assert {"id", "item", "rarity", "rate", "name", "weather_mods"} <= set(gp)
-    assert {"weather", "rate_mult", "rarity_shift"} <= set(gp["weather_mods"].element.children)
-    monsters = maps["monsters"].element.children
+    wm_elem = gp["weather_mods"].element
+    assert wm_elem is not None
+    assert {"weather", "rate_mult", "rarity_shift"} <= set(wm_elem.children)
+    mo_elem = maps["monsters"].element
+    assert mo_elem is not None
+    monsters = mo_elem.children
     assert {"active_time", "seasons", "periods", "weather_weights"} <= set(monsters)
 
 

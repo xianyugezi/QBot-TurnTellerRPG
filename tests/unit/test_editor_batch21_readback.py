@@ -18,7 +18,7 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 import pytest
 
@@ -252,8 +252,8 @@ def test_readback_timing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
     e2e_with = _best(lambda: editor_ops.save_entry(
         "pack_u", "widgets", "w0001", {"count": 7}, root=tmp_path, meta=META), rounds=8)
     orig_rb = atomic_store.read_back_modules
-    atomic_store.read_back_modules = lambda cd, exp: {
-        "ok": True, "verified": list(exp), "errors": []}
+    atomic_store.read_back_modules = cast(Any, lambda cd, exp: {
+        "ok": True, "verified": list(exp), "errors": []})
     try:
         e2e_without = _best(lambda: editor_ops.save_entry(
             "pack_u", "widgets", "w0001", {"count": 7}, root=tmp_path, meta=META), rounds=8)

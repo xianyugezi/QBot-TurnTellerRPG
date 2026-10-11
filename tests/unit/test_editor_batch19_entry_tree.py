@@ -22,10 +22,11 @@ E veinborn 实测左栏结构；F 回归（不声明的包行为不变）；G �
 
 from __future__ import annotations
 
+import importlib
 import json
 import shutil
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 import pytest
 
@@ -268,7 +269,7 @@ def test_frontend_entry_tree_contract() -> None:
 def test_selfcheck_still_passes() -> None:
     import sys
     sys.path.insert(0, str(REPO / "scripts"))
-    import editor_visibility_selfcheck as selfcheck
+    selfcheck = cast("Any", importlib.import_module("editor_visibility_selfcheck"))
     for pack in ("demo_blank", "veinborn"):
         r = selfcheck.check_pack(pack, CONTENT)
         assert r["errors"] == [], (pack, r["errors"])

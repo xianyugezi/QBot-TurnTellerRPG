@@ -194,7 +194,9 @@ class TestGrantRevokeGm:
         s.grant_gm(conn, GM1, OWNER)
         assert s.revoke_gm(conn, GM1, OWNER) is True
         s.grant_gm(conn, GM1, OWNER)
-        logs = json.loads(str(row_of(conn, GM1)["revoke_log"]))
+        row = row_of(conn, GM1)
+        assert row is not None
+        logs = json.loads(str(row["revoke_log"]))
         assert logs == []  # 新行 revoke_log 从空开始（历史在 audit_log E5）
         # 权限语义正确：是 GM 不是 owner
         assert s.is_gm(conn, GM1) is True

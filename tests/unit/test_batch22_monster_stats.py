@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import copy
-from typing import Any, Mapping
+from typing import Any, Mapping, cast
 
 from qbot_rpg.commands.battle_launch_commands import _enemy_combatant
 from qbot_rpg.content.field_meta import default_field_meta_table
@@ -37,7 +37,7 @@ class _QueueRNG:
 
 def _engine(player: Mapping[str, Any], enemy: Mapping[str, Any]) -> BattleEngine:
     eng = BattleEngine()
-    eng._rng = _QueueRNG(SEQ)
+    eng._rng = cast(Any, _QueueRNG(SEQ))
     eng.start(copy.deepcopy(dict(player)), copy.deepcopy(dict(enemy)), random_seed=7)
     return eng
 
@@ -47,7 +47,9 @@ def _rec(eng: BattleEngine, actor: str) -> Mapping[str, Any]:
 
 
 def test_d1_enemy_stats_metadata_reuses_registry_keys() -> None:
-    children = default_field_meta_table().module("enemies").fields["stats"].children
+    enemies_mod = default_field_meta_table().module("enemies")
+    assert enemies_mod is not None
+    children = enemies_mod.fields["stats"].children
     for k in A3_ALL:
         assert k in children, f"enemies.stats 缺 {k}（应与 A3 同键）"
         assert children[k].label

@@ -21,7 +21,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Dict, List, Mapping, Tuple
+from typing import Any, Dict, List, Mapping, Tuple, cast
 
 import pytest
 
@@ -186,7 +186,7 @@ def test_c_v2_four_sources_sum() -> None:
     """SP×10 + 快照 extra_cap/core_cap/challenge_cap + 相性 = 求和（同机制同单位）。"""
     settings = _settings_effects({_A: {_KEY: 10}})
     snap = {"extra_cap": 4, "core_cap": 6, "challenge_cap": 10, "affinity_values": {_A: 5}}
-    eng = SettleEngine(prof=_Prof(sp_count=2), settings=settings)
+    eng = SettleEngine(prof=cast(Any, _Prof(sp_count=2)), settings=settings)
     assert eng._extra_cap({}, snap) == 2 * 10 + 4 + 6 + 10 + 10  # 50
 
 
@@ -205,7 +205,7 @@ def test_c_v2_confirm_reaches_summed_cap() -> None:
     settings = _settings_effects({_A: {_KEY: 10}})
     profile = _Prof(sp_count=1)
     bucket: List[Dict[str, Any]] = []
-    eng = SettleEngine(prof=profile, settings=settings)
+    eng = SettleEngine(prof=cast(Any, profile), settings=settings)
     recipe = {"id": "r", "level": 1, "quality_cap": 50, "element_req": {},
               "output": {"item": "potion", "count": 1}}
     ctx = _confirm_ctx(bucket)

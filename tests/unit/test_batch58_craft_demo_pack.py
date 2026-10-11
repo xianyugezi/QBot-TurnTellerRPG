@@ -129,10 +129,15 @@ def test_effect_preset_terms_are_named_tier_values() -> None:
     # 受疗：+15（强疗）与 −15（重伤）
     assert ("healing_received_pct", 15) in used and ("healing_received_pct", -15) in used
     # 取值确为批54 预设 normal 档（不臆造）
-    assert find_effect_preset("weapon_crit_up")["tiers"]["normal"] == 10
-    assert find_effect_preset("weapon_crit_down")["tiers"]["normal"] == -10
-    assert find_effect_preset("armor_heal_up")["tiers"]["normal"] == 15
-    assert find_effect_preset("armor_heal_down")["tiers"]["normal"] == -15
+    def _tier(pid: str) -> Any:
+        preset = find_effect_preset(pid)
+        assert preset is not None, pid
+        return preset["tiers"]["normal"]
+
+    assert _tier("weapon_crit_up") == 10
+    assert _tier("weapon_crit_down") == -10
+    assert _tier("armor_heal_up") == 15
+    assert _tier("armor_heal_down") == -15
 
 
 # ---------------------------------------------------------------------------

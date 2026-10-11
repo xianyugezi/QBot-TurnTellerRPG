@@ -50,13 +50,17 @@ def parse(raw: str):
 # 元数据登记 + 编辑器可见
 # ---------------------------------------------------------------------------
 def test_k1_metadata_registered() -> None:
-    fields = default_field_meta_table().module("settings").fields
+    settings_mod = default_field_meta_table().module("settings")
+    assert settings_mod is not None
+    fields = settings_mod.fields
     for k in ("register_gift", "register_level"):
         assert k in fields, f"settings 缺 {k} 登记"
     gift = fields["register_gift"]
     assert gift.type == "list"
-    assert gift.element.children["count"].type == "int"
-    assert gift.element.children["item"].ref_target == "item"
+    gift_elem = gift.element
+    assert gift_elem is not None
+    assert gift_elem.children["count"].type == "int"
+    assert gift_elem.children["item"].ref_target == "item"
     assert gift.label == "注册初始礼包"
     assert fields["register_level"].type == "int"
     assert fields["register_level"].label == "注册初始等级"

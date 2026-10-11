@@ -26,7 +26,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 import pytest
 
@@ -103,7 +103,7 @@ def test_effective_share_degrades_to_equip_share_when_off() -> None:
     """A1：未启用（effect_pct=0/非法）→ 与 `equip_share` 逐位一致。"""
     assert effective_equip_share(BUDGET, 0.0) == equip_share(BUDGET)
     assert effective_equip_share(BUDGET, -5.0) == equip_share(BUDGET)
-    assert effective_equip_share(BUDGET, "x") == equip_share(BUDGET)
+    assert effective_equip_share(BUDGET, cast(Any, "x")) == equip_share(BUDGET)
 
 
 def test_monster_scaling_effect_keys_default_identity() -> None:
@@ -296,6 +296,7 @@ def test_validator_effect_budget_key_constant() -> None:
 # ---------------------------------------------------------------------------
 def test_field_meta_registers_effect_budget() -> None:
     m = default_field_meta_table().module("settings")
+    assert m is not None
     assert "effect_budget" in m.fields
     fm = m.fields["effect_budget"]
     assert fm.label and fm.help

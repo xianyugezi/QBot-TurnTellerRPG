@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Mapping
+from typing import Any, Dict, List, Mapping, cast
 
 from qbot_rpg.content.atomic_store import (
     apply_module_changes,
@@ -335,7 +335,7 @@ def test_reload_rollback_on_validation_failure() -> None:
     assert out.restored is True
     assert out.errors and out.errors[0].kind == "R-2"
     # registry 未被污染（回退 = 上一份校验通过快照）
-    assert len(reg.modules_raw["enemies"]) == 2
+    assert len(cast(Any, reg.modules_raw["enemies"])) == 2
     assert reg.generation == 5
     # 人话收集（L183 包络 errors[] 形态）
     assert human and human[0]["level"] == "red"

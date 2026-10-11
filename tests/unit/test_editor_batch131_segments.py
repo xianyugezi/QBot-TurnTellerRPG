@@ -24,6 +24,7 @@ time_cycle / message_prefix / pvp / codex / shortcut_max 等「框架已登记�
 
 from __future__ import annotations
 
+import importlib
 import json
 import shutil
 import sys
@@ -40,9 +41,11 @@ CONTENT = REPO / "content"
 HTML = REPO / "qbot_rpg" / "web" / "static" / "index.html"
 
 sys.path.insert(0, str(REPO / "scripts"))
-import editor_visibility_selfcheck as selfcheck  # noqa: E402
+selfcheck: Any = importlib.import_module("editor_visibility_selfcheck")
 
-SETTINGS_FIELDS = set(api.default_field_meta_table().module("settings").fields)
+settings_mod = api.default_field_meta_table().module("settings")
+assert settings_mod is not None
+SETTINGS_FIELDS = set(settings_mod.fields)
 
 
 def _seg_ids(le: Dict[str, Any]) -> set:

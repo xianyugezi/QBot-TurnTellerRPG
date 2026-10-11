@@ -22,7 +22,7 @@ from __future__ import annotations
 import json
 import random
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 
 from qbot_rpg.world.encounter import roll_encounter
 from qbot_rpg.world.movement import move_to_map, resolve_move
@@ -40,7 +40,11 @@ def _map(rows: List[Dict[str, Any]], mid: str = "wild") -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 def test_e2_metadata_registered() -> None:
     tbl = default_field_meta_table()
-    mrow = tbl.module("maps").fields["monsters"].element.children
+    _maps = tbl.module("maps")
+    assert _maps is not None
+    _elem = _maps.fields["monsters"].element
+    assert _elem is not None
+    mrow = _elem.children
     assert "encounter_chance" in mrow
     assert mrow["encounter_chance"].type == "int"
     assert mrow["encounter_chance"].range_min == 0 and mrow["encounter_chance"].range_max == 100
@@ -185,7 +189,7 @@ def test_e2_move_to_map_emits_encounter() -> None:
 
 
 def test_e2_resolve_move_propagates_encounter() -> None:
-    maps = [
+    maps: List[Dict[str, Any]] = [
         {"id": "town", "name": "村", "monsters": [],
          "exits": {"up": {"to": "wild", "mode": "bidirectional"}}},
         {"id": "wild", "name": "野外",
@@ -203,7 +207,7 @@ def test_e2_resolve_move_propagates_encounter() -> None:
 # E2 回归：不带 encounter 字段 → move_to_map 返回逐字段一致（无 encounter 键）
 # ---------------------------------------------------------------------------
 def test_e2_regression_without_field_identical() -> None:
-    maps = [
+    maps: List[Dict[str, Any]] = [
         {"id": "town", "name": "村", "monsters": [], "exits": {"up": {"to": "plain"}}},
         {"id": "plain", "name": "荒原", "monsters": [{"enemy": "e", "count": 1}],
          "exits": {"down": {"to": "town"}}},
@@ -213,7 +217,7 @@ def test_e2_regression_without_field_identical() -> None:
     want = {"ok": True, "map_id": "plain", "name": "荒原", "desc": None, "lore": None}
     assert got == want, got
     # chance=0 同样不加键（行为与现状一致）
-    maps0 = [dict(maps[0]),
+    maps0: List[Dict[str, Any]] = [dict(maps[0]),
              {"id": "plain", "name": "荒原",
               "monsters": [{"enemy": "e", "count": 1, "encounter_chance": 0}],
               "exits": {"down": {"to": "town"}}}]
@@ -238,7 +242,7 @@ def test_e2_e2e_temp_content_root(tmp_path: Path) -> None:
                 "encounter_count_min": 2, "encounter_count_max": 4}])],
         ensure_ascii=False), encoding="utf-8")
     pack, _changed = build_pack(root)
-    maps = pack.modules["maps"]
+    maps = cast(List[Dict[str, Any]], pack.modules["maps"])
     ctx = _ctx(maps, rng=random.Random(5), map_id="town")
     moved = move_to_map(ctx, "wild", maps=maps)
     enc = moved.get("encounter")

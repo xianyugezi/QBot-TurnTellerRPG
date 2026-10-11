@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, Mapping
 
 from qbot_rpg.core.battle_season import (
     detect_season_change,
@@ -167,10 +167,10 @@ def test_tc15_settle_combo_ok() -> None:
     def mp_pay(ctx: Any, cost: int) -> None:
         paid.append(cost)
 
-    def energy_check(ctx: Any, axis: str, cost: Dict[str, int]) -> bool:
+    def energy_check(ctx: Any, axis: str, cost: Mapping[str, int]) -> bool:
         return True
 
-    def energy_pay(ctx: Any, axis: str, cost: Dict[str, int]) -> None:
+    def energy_pay(ctx: Any, axis: str, cost: Mapping[str, int]) -> None:
         paid.append((axis, cost))
 
     r = settle_combo({}, _combo_row(), mp_cost=16,

@@ -465,7 +465,9 @@ def test_pool_entry_payload_keys_are_editor_visible() -> None:
     table = default_field_meta_table()
     settings = table.module("settings")
     assert settings is not None
-    entries = settings.fields["affinity_pools"].element.children["entries"]
+    _aff = settings.fields["affinity_pools"].element
+    assert _aff is not None
+    entries = _aff.children["entries"]
     entry = entries.element
     assert entry is not None
     for key in ("stat", "set_affix", "value", "weight", "requires_affinity",

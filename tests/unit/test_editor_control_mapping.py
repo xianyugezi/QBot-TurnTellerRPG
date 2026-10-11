@@ -125,6 +125,7 @@ def test_entry_detail_editable_flag_and_ref_target(widgets_pack: Path) -> None:
 def test_real_pack_declared_multiline_renders_textarea() -> None:
     """真实内容包中「详情」类字段由元数据声明 multiline → 编辑控件 textarea（非启发式）。"""
     meta = api.field_meta_table().module("skills")
+    assert meta is not None
     detail_meta = meta.fields["detail"]
     assert detail_meta.multiline is True
     eid = api.list_entries("test_demo", "skills", root=CONTENT)["entries"][0]["id"]

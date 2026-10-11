@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 from qbot_rpg.content.field_meta import default_field_meta_table
 from qbot_rpg.content.validator import check_pack
@@ -65,7 +65,9 @@ def _session() -> DungeonSession:
 # ---------------------------------------------------------------------------
 def test_e5_metadata_registered() -> None:
     tbl = default_field_meta_table()
-    fm = tbl.module("dungeon").fields.get("advance_on_kill_count")
+    dungeon_mod = tbl.module("dungeon")
+    assert dungeon_mod is not None
+    fm = dungeon_mod.fields.get("advance_on_kill_count")
     assert fm is not None, "dungeon 缺 advance_on_kill_count 登记"
     assert fm.type == "int" and fm.range_min == 1
     assert fm.label == "击杀推进阈值" and fm.help
@@ -204,7 +206,7 @@ def test_e5_e2e_temp_content_root(tmp_path: Path) -> None:
     (root / "dungeon.json").write_text(json.dumps(
         [_DUNGEON], ensure_ascii=False), encoding="utf-8")
     pack, _changed = build_pack(root)
-    ddef = pack.modules["dungeon"][0]
+    ddef = cast(Any, pack.modules["dungeon"])[0]
     ctx = _ctx()
     s = _session()
     r = record_dungeon_kill(ctx, ddef, s, 3)

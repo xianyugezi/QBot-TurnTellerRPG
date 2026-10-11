@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 from qbot_rpg.content.field_meta import default_field_meta_table
 from qbot_rpg.content.forge_settings import DEFAULT_SKILL_AMP_BOUNDS, read_skill_amp_bounds
@@ -67,7 +67,7 @@ def _run(amp: Dict[str, Any] | None, *, cooldown: int = 0) -> tuple:
     if amp is not None:
         cfg["equip_skill_amp"] = amp
     eng = BattleEngine(defs=defs, config=cfg)
-    eng._rng = _QueueRNG([0.5, 0.5, 0.5, 1.0])  # noqa: SLF001 - 确定性注入（同既有测试）
+    eng._rng = cast(Any, _QueueRNG([0.5, 0.5, 0.5, 1.0]))  # noqa: SLF001 - 确定性注入（同既有测试）
     eng.start(dict(PLAYER), dict(ENEMY), random_seed=1)
     out = eng.do_action("player", {"type": "skill", "skill_id": "s1", "tag": "combo",
                                    "mult": 1.0})
@@ -81,18 +81,26 @@ def _run(amp: Dict[str, Any] | None, *, cooldown: int = 0) -> tuple:
 def test_a3_metadata_registered() -> None:
     tbl = default_field_meta_table()
     for mod in ("items", "equipment"):
-        fm = tbl.module(mod).fields.get("skill_amp")
+        _mm = tbl.module(mod)
+        assert _mm is not None
+        fm = _mm.fields.get("skill_amp")
         assert fm is not None, f"{mod} 缺 skill_amp 登记"
         assert fm.type == "list"
-        kids = fm.element.children
+        _el = fm.element
+        assert _el is not None
+        kids = _el.children
         assert kids["skill"].type == "ref" and kids["skill"].ref_target == "skill"
         assert kids["type"].type == "enum" and kids["type"].enum == ("damage", "cooldown")
         assert kids["value"].type == "int" and kids["value"].allow_negative is True
     # 上下限在既有 settings.forge 段（obj），框架默认值在 content/forge_settings
-    forge = tbl.module("settings").fields["forge"]
+    _settings = tbl.module("settings")
+    assert _settings is not None
+    forge = _settings.fields["forge"]
     assert "skill_amp_bounds" in forge.children
     assert "damage_max" in forge.children["skill_amp_bounds"].children
-    assert tbl.module("equipment").field_groups.get("skill_amp") == "effects"
+    _eq = tbl.module("equipment")
+    assert _eq is not None
+    assert _eq.field_groups.get("skill_amp") == "effects"
     assert DEFAULT_SKILL_AMP_BOUNDS["damage_max"] == 90
 
 

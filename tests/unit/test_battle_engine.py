@@ -19,6 +19,7 @@ CTB 迁移（2026-09-10）：旧 round 语义 → CTB 语义。旧「回合」�
 from __future__ import annotations
 
 import json
+from typing import cast
 
 import pytest
 
@@ -74,7 +75,7 @@ def test_b2_guard_defense_command_halves(seed: int):
     enemy_final_guarded = sum(
         int(x.get("damage", {}).get("final", 0) or 0)
         for x in eng.battle_state()["action_record"] if x.get("actor") == "enemy")
-    assert hp_guarded == PLAYER["hp"] - enemy_final_guarded  # 受击账目自洽
+    assert hp_guarded == cast(int, PLAYER["hp"]) - enemy_final_guarded  # 受击账目自洽
 
     # 对照：同一 seed、同拍主动普攻（无防御窗口）→ 敌方同拍伤害应显著更高（约 2 倍）。
     eng2 = make().start(PLAYER, ENEMY, random_seed=seed)
@@ -352,6 +353,7 @@ def test_player_act_keeps_pre_ready_effect_events(monkeypatch) -> None:
     `not paused` 分支，并让首次 resolve 追加一条事件，断言它出现在报告里。
     """
     eng = BattleEngine().start(dict(PLAYER), dict(ENEMY), random_seed=1)
+    assert eng._ctb is not None
     eng._ctb._paused = False               # 强制进入「玩家拍前自动推进」分支
     calls = {"n": 0}
 

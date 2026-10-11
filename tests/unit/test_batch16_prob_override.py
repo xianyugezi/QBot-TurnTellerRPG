@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 import shutil
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 from qbot_rpg.core.monster_ai import IDLE, NORMAL, MonsterAI
 from qbot_rpg.web import api
@@ -33,7 +33,7 @@ DEFS: Dict[str, Dict[str, Any]] = {
     "delta": {"id": "delta", "tags": ["attack"], "probability": 1, "weight": 50},
 }
 
-ENEMY = {
+ENEMY: Dict[str, Any] = {
     "id": "e", "name": "e",
     "actions": [
         {"action": "alpha", "probability": 1, "weight": 40},   # 覆盖定义处锚点 + 权重
@@ -177,12 +177,14 @@ def test_definition_side_fields_marked_overridable() -> None:
     from qbot_rpg.content.field_meta import default_field_meta_table
 
     table = default_field_meta_table()
+    action_mod = table.module("action")
+    assert action_mod is not None
     for key in ("probability", "weight"):
-        fm = table.module("action").fields[key]
+        fm = action_mod.fields[key]
         assert getattr(fm, "overridable_default", False) is True, key
         card = api.help_card(key, fm, 1)
         assert card["default_note"] == "默认值（可被引用处覆盖）", card
-        desc = api._descriptor(key, fm, 1, True, None, None, 0)
+        desc = api._descriptor(key, fm, 1, True, None, cast(Any, None), 0)
         assert desc["overridable_default"] is True
 
 
@@ -191,7 +193,10 @@ def test_use_site_fields_documented_as_override() -> None:
     from qbot_rpg.content.field_meta import default_field_meta_table
 
     table = default_field_meta_table()
-    elem = table.module("enemies").fields["actions"].element
+    enemies_mod = table.module("enemies")
+    assert enemies_mod is not None
+    elem = enemies_mod.fields["actions"].element
+    assert elem is not None
     for key in ("probability", "weight"):
         assert "留空 = 用行动定义处的默认值" in elem.children[key].help
 
@@ -206,9 +211,9 @@ def test_frontend_renders_default_note_line() -> None:
     start = html.index("function helpLines(")
     end = html.index("function helpTitle(")
     import subprocess  # noqa: PLC0415
-    script = (start and html[start:end]
-              + "\nprocess.stdout.write(JSON.stringify(helpLines("
-                "{default_note: '默认值（可被引用处覆盖）', help: 'h'})));")
+    script = cast(str, start and html[start:end]
+                  + "\nprocess.stdout.write(JSON.stringify(helpLines("
+                    "{default_note: '默认值（可被引用处覆盖）', help: 'h'})));")
     proc = subprocess.run([node, "-e", script], capture_output=True, text=True)
     assert proc.returncode == 0, proc.stderr
     assert "取值来源" in proc.stdout and "默认值（可被引用处覆盖）" in proc.stdout

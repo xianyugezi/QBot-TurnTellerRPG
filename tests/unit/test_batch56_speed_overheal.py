@@ -69,7 +69,9 @@ def _run_speed(pct: float = 0.0, *, axes: Optional[Mapping[str, Any]] = None,
     if pct:
         target[SPEED_AXIS] = pct
     eng.start(p, e, random_seed=1)
-    view = eng._ctb.get_actor(side)  # noqa: SLF001
+    _ctb = eng._ctb  # noqa: SLF001
+    assert _ctb is not None
+    view = _ctb.get_actor(side)
     assert view is not None
     return float(view.effective_speed), float(view.next_ready)
 

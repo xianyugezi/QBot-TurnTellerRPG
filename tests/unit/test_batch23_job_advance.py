@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Dict, Mapping, Optional
+from typing import Any, Dict, Mapping, Optional, cast
 
 from qbot_rpg.commands.job_commands import _advance_block, cmd_job
 from qbot_rpg.content.field_meta import default_field_meta_table
@@ -69,7 +69,9 @@ def _parsed(arg: str) -> Any:
 # ---------------------------------------------------------------------------
 def test_c1_metadata_registered() -> None:
     tbl = default_field_meta_table()
-    fm = tbl.module("jobs").fields.get("advance")
+    jobs_mod = tbl.module("jobs")
+    assert jobs_mod is not None
+    fm = jobs_mod.fields.get("advance")
     assert fm is not None, "jobs 缺 advance 登记"
     assert fm.type == "obj"
     kids = fm.children or {}
@@ -81,8 +83,8 @@ def test_c1_metadata_registered() -> None:
     assert kids["items"].element.ref_target == "item"
     for k in ("from", "level", "items"):
         assert kids[k].label and kids[k].help, f"advance.{k} 缺中文名/说明"
-    assert tbl.module("jobs").field_subgroups.get("advance") == "advance"
-    assert tbl.module("jobs").subgroup_labels.get("advance") == "转职前置"
+    assert jobs_mod.field_subgroups.get("advance") == "advance"
+    assert jobs_mod.subgroup_labels.get("advance") == "转职前置"
 
 
 def test_c1_editor_visible(tmp_path: Path) -> None:
@@ -240,8 +242,9 @@ def test_c1_e2e_temp_content_root(tmp_path: Path) -> None:
     (root / "items.json").write_text(json.dumps([
         {"id": "proof", "name": "转职证明"}], ensure_ascii=False), encoding="utf-8")
     pack, _changed = build_pack(root)
-    jobs = {e["id"]: dict(e) for e in pack.modules["jobs"]}
-    items = {e["id"]: dict(e) for e in pack.modules["items"]}
+    mods = cast(Any, pack.modules)
+    jobs = {e["id"]: dict(e) for e in mods["jobs"]}
+    items = {e["id"]: dict(e) for e in mods["items"]}
 
     bad = _ctx("warrior", 3, {"proof": 1}, jobs=jobs)
     bad["items"] = items

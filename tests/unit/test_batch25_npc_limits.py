@@ -52,7 +52,11 @@ def make_ctx(**over: Any) -> dict:
 # ---------------------------------------------------------------------------
 def test_h1_metadata_registered() -> None:
     tbl = default_field_meta_table()
-    kids = tbl.module("npc").fields["interactions"].element.children
+    _npc = tbl.module("npc")
+    assert _npc is not None
+    _inter = _npc.fields["interactions"].element
+    assert _inter is not None
+    kids = _inter.children
     for k in ("daily_limit", "total_limit", "key"):
         assert k in kids, f"npc.interactions 缺 {k} 登记"
     assert kids["daily_limit"].type == "int"

@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 import sys
 from pathlib import Path
@@ -17,7 +18,7 @@ for _p in (str(_REPO), str(_REPO / "scripts")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from editor_host import create_app  # noqa: E402
+create_app = getattr(importlib.import_module("editor_host"), "create_app")
 from fastapi.testclient import TestClient  # noqa: E402
 
 from qbot_rpg.content.models import FieldMeta, FieldMetaTable, ModuleMeta  # noqa: E402

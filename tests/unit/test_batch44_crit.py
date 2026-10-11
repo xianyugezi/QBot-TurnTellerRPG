@@ -355,7 +355,9 @@ def test_breakdown_formula_unchanged() -> None:
 # ---------------------------------------------------------------------------
 def test_editor_field_visible_with_design_intent() -> None:
     table = default_field_meta_table()
-    dc = table.module("settings").fields["deep_craft"]
+    _settings = table.module("settings")
+    assert _settings is not None
+    dc = _settings.fields["deep_craft"]
     rules = dc.children["craft_rules"]
     assert rules.children["quality_exp_crit"].label, "缺中文名"
     crit = rules.children["quality_exp_crit"]

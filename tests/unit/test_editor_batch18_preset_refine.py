@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import pytest
 
@@ -35,10 +35,11 @@ EQUIP_PCT_CRIT = ("atk_pct", "dfn_pct", "hp_pct", "crit")
 
 def _items_keys() -> set:
     mmeta = default_field_meta_table().module("items")
+    assert mmeta is not None
     return {str(k) for k in mmeta.fields}
 
 
-def _preset(pid: str) -> Dict[str, object]:
+def _preset(pid: str) -> Dict[str, Any]:
     hit = [p for p in entry_presets_mod.framework_presets("items") if p["id"] == pid]
     assert len(hit) == 1, pid
     return dict(hit[0])

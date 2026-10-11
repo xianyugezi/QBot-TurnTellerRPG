@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 import time
-from typing import List
+from typing import Any, Dict, List
 
 import pytest
 
@@ -32,7 +32,7 @@ from qbot_rpg.storage.repository import Repository
 
 from conftest import make_player  # type: ignore[import-not-found]
 
-_CFG = {
+_CFG: Dict[str, Any] = {
     "enabled": True,
     "schedule": {"weekday": 7, "open_hour": 0},  # 周日 0 点起开放（测试不卡窗口）
     "score_weights": {"quality": 0.4, "trait": 0.3, "awaken": 0.2, "potential": 0.1},
@@ -99,7 +99,7 @@ def test_in_window_schedule() -> None:
     """窗口判定：周日 0 点开 → 任何周日时刻都开。"""
     # 2026-09-06 是周日
     ts = time.mktime((2026, 9, 6, 10, 0, 0, 0, 0, -1))
-    ok, hint = ct.in_window({}, ts)  # 无 schedule → 开放
+    ok, hint = ct.in_window({}, int(ts))  # 无 schedule → 开放
     assert ok is True
 
 

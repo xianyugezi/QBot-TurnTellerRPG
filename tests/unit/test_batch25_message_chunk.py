@@ -120,7 +120,9 @@ async def run_long(env: dict, mid: str = "m1") -> str:
 # 元数据 + 校验
 # ---------------------------------------------------------------------------
 def test_k4_metadata_registered() -> None:
-    fm = default_field_meta_table().module("settings").fields.get("message_chunk_len")
+    _settings = default_field_meta_table().module("settings")
+    assert _settings is not None
+    fm = _settings.fields.get("message_chunk_len")
     assert fm is not None, "settings 缺 message_chunk_len 登记"
     assert fm.type == "int"
     assert fm.label == "消息分段长度上限"

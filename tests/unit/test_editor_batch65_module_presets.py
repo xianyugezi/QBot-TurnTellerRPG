@@ -16,13 +16,14 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, List
 
 import pytest
 
@@ -145,9 +146,9 @@ def test_merge_same_id_pack_overrides_framework_in_place() -> None:
 
 
 def test_merge_ignores_malformed_pack_presets() -> None:
-    merged = mp.merge_module_presets(
-        [None, {"id": "", "modules": ["a"]}, {"id": "novalue", "modules": []},
-         {"id": "bad", "modules": "a"}])
+    malformed: List[Any] = [None, {"id": "", "modules": ["a"]}, {"id": "novalue", "modules": []},
+                            {"id": "bad", "modules": "a"}]
+    merged = mp.merge_module_presets(malformed)
     assert [p["id"] for p in merged] == [p["id"] for p in mp.FRAMEWORK_MODULE_PRESETS]
 
 
@@ -184,8 +185,10 @@ def test_catalog_pack_declaration_override_append_disable(tmp_path: Path) -> Non
     ids = [p["id"] for p in cat["presets"]]
     assert ids == ["basic_rpg", "story_exploration", "zz_mine"]
     basic = mp.find_module_preset(cat["presets"], "basic_rpg")
+    assert basic is not None
     assert basic["label"] == "本包基础" and basic["help"] == "覆盖版"
     mine = mp.find_module_preset(cat["presets"], "zz_mine")
+    assert mine is not None
     assert mine["add_modules"] == ["maps"]          # skills 已启用
 
 
@@ -199,6 +202,7 @@ def test_catalog_preset_reports_unknown_module_not_silent(tmp_path: Path) -> Non
     })
     cat = api.module_catalog("bad", root=tmp_path)
     row = mp.find_module_preset(cat["presets"], "p")
+    assert row is not None
     assert "no_such_mod" not in row["modules"]
     assert row["unknown"] == ["no_such_mod"]
     assert "skills" in row["modules"]
@@ -337,7 +341,7 @@ def _client(root: Path, pack: str = "blank_pack", role: str = "owner"):
         sys.path.insert(0, str(REPO))
     if str(REPO / "scripts") not in sys.path:
         sys.path.insert(0, str(REPO / "scripts"))
-    from editor_host import create_app  # noqa: E402
+    create_app = getattr(importlib.import_module("editor_host"), "create_app")
     from fastapi.testclient import TestClient  # noqa: E402
     return TestClient(create_app(pack=pack, root=str(root), role=role))
 

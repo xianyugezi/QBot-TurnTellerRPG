@@ -16,7 +16,7 @@
 """
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping
+from typing import Any, Dict, Mapping, cast
 
 from qbot_rpg.core.battle import BattleEngine
 from qbot_rpg.core.effects import (
@@ -143,7 +143,7 @@ class _FixedRNG:
 
 
 def _apply(rt: EffectRuntime, sid: str, ctx: DamageCtx) -> Any:
-    ctx.variables["rng"] = _FixedRNG()
+    cast(Dict[str, Any], ctx.variables)["rng"] = _FixedRNG()
     return rt.apply_status(sid, ctx.target, source=ctx.attacker,
                            attacker=ctx.attacker, ctx=ctx)
 

@@ -11,7 +11,7 @@
             · core/world/storage/content/data 之间无环（Kahn 拓扑）
             · commands/web 不被任何层 import
             · 依赖方向符合 §1.4 矩阵（web→{content,core,storage,data} 等，反向即违规）→ R3 / D-05
-  TC-05   core 内部直调边冻结（新增 core→core import 即失败；日研 Q1）
+  TC-06   跨域业务直调冻结（跨族且目标为业务模块 → 新增即失败；日研 Q1 口径②）\n  TC-05   core 内部直调边冻结（新增 core→core import 即失败；日研 Q1）
   TC-04   data/ 五类（Player/BattleSnapshot/StatusInstance/ItemInstance/WorldState）
           各定义一次（全仓唯一）且 dataclass(frozen=True) → D-03 / U1
 
@@ -245,6 +245,118 @@ CORE_EDGE_BASELINE: FrozenSet[str] = frozenset((
     "qbot_rpg/core/weather_conditions.py -> qbot_rpg/core/worldtime.py",
     "qbot_rpg/core/weather_consumers.py -> qbot_rpg/core/weather_conditions.py",
 ))
+# ---------------------------------------------------------------- TC-06 口径
+#: 「L1 业务模块族」前缀（同族内直调视为合法：同一玩法的内部实现细节）
+CORE_FAMILY_PREFIXES: Tuple[str, ...] = (
+    "alchemy",
+    "ctb",
+    "weather",
+    "combo",
+    "codex",
+    "quest",
+    "shop",
+    "dungeon",
+    "monster",
+    "transform",
+    "resource",
+    "equip",
+    "battle",
+    "marks",
+    "effects",
+    "damage",
+    "checkin",
+    "position",
+    "reward",
+    "stats",
+    "status",
+    "season",
+)
+#: 支撑模块白名单（**允许被业务模块直调**；用户 2026-10-10 拍板口径②：
+#: 基础设施 + 共享服务/基础件。fan-in 实测：__init__ 14 / reward 12 / condition_engine 9 /
+#: event_bus 9 / proficiency 9 / quality 7 / dayroll 6 / adventure_log 6 / affinity 5）
+CORE_SUPPORT_MODULES: Tuple[str, ...] = (
+    "__init__",
+    "adventure_log",
+    "affinity",
+    "condition_engine",
+    "core",
+    "ctb_config",
+    "ctb_rules",
+    "damage",
+    "dayroll",
+    "equip_mods",
+    "event_bus",
+    "event_dispatcher",
+    "formula_engine",
+    "formula_loader",
+    "levelup",
+    "marks",
+    "message_format",
+    "position",
+    "proficiency",
+    "quality",
+    "resource_axis",
+    "reward",
+    "stats",
+    "templates",
+)
+#: 跨族业务直调边冻结基线（52 条，2026-10-11 实测）：口径 = 源族≠目标族 且 目标不在支撑白名单。
+#: 冻结后**新增跨族业务直调边即 FAIL**；收敛一条就从本表删一条（只提示，不奖励/不惩罚）。
+CROSS_DOMAIN_BASELINE: FrozenSet[str] = frozenset((
+    "qbot_rpg/core/alchemy_affinity.py -> qbot_rpg/core/deep_craft.py",
+    "qbot_rpg/core/alchemy_battle.py -> qbot_rpg/core/energy_bar.py",
+    "qbot_rpg/core/alchemy_helper.py -> qbot_rpg/core/synthesis.py",
+    "qbot_rpg/core/alchemy_meta.py -> qbot_rpg/core/codex.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/combo.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/combo_settle.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/combo_table.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/ctb_scheduler.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/damage_stats.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/effects.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/monster_ai.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/monster_chains.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/resource_lifecycle.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/season_events.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/skill_season.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/transform.py",
+    "qbot_rpg/core/battle.py -> qbot_rpg/core/transform_revert.py",
+    "qbot_rpg/core/decompose.py -> qbot_rpg/core/temper.py",
+    "qbot_rpg/core/dungeon_boss.py -> qbot_rpg/core/monster_phases.py",
+    "qbot_rpg/core/effects.py -> qbot_rpg/core/combo.py",
+    "qbot_rpg/core/effects.py -> qbot_rpg/core/effect_types.py",
+    "qbot_rpg/core/enhance_affix.py -> qbot_rpg/core/deep_craft.py",
+    "qbot_rpg/core/environment_lore.py -> qbot_rpg/core/codex.py",
+    "qbot_rpg/core/environment_lore.py -> qbot_rpg/core/investigate.py",
+    "qbot_rpg/core/equip_mods.py -> qbot_rpg/core/equipment.py",
+    "qbot_rpg/core/equipment.py -> qbot_rpg/core/panel_budget.py",
+    "qbot_rpg/core/equipment.py -> qbot_rpg/core/player_attributes.py",
+    "qbot_rpg/core/equipment.py -> qbot_rpg/core/runes.py",
+    "qbot_rpg/core/event_dispatcher.py -> qbot_rpg/core/effect_types.py",
+    "qbot_rpg/core/event_dispatcher.py -> qbot_rpg/core/effects.py",
+    "qbot_rpg/core/forge_bounds.py -> qbot_rpg/core/alchemy_core.py",
+    "qbot_rpg/core/forge_king.py -> qbot_rpg/core/codex.py",
+    "qbot_rpg/core/forge_sets.py -> qbot_rpg/core/equipment.py",
+    "qbot_rpg/core/gathering.py -> qbot_rpg/core/weather_consumers.py",
+    "qbot_rpg/core/inventory.py -> qbot_rpg/core/player_attributes.py",
+    "qbot_rpg/core/jewel.py -> qbot_rpg/core/equipment.py",
+    "qbot_rpg/core/jewel.py -> qbot_rpg/core/runes.py",
+    "qbot_rpg/core/job_slots.py -> qbot_rpg/core/skill_slots.py",
+    "qbot_rpg/core/levelup.py -> qbot_rpg/core/player_attributes.py",
+    "qbot_rpg/core/message_format/panel_render.py -> qbot_rpg/core/player_attributes.py",
+    "qbot_rpg/core/npc.py -> qbot_rpg/core/quest.py",
+    "qbot_rpg/core/pvp.py -> qbot_rpg/core/battle.py",
+    "qbot_rpg/core/pvp.py -> qbot_rpg/core/skill_slots_battle.py",
+    "qbot_rpg/core/reward.py -> qbot_rpg/core/codex.py",
+    "qbot_rpg/core/reward.py -> qbot_rpg/core/codex_milestones.py",
+    "qbot_rpg/core/rune_battle.py -> qbot_rpg/core/equipment.py",
+    "qbot_rpg/core/rune_battle.py -> qbot_rpg/core/jewel.py",
+    "qbot_rpg/core/templates/__init__.py -> qbot_rpg/core/templates/base.py",
+    "qbot_rpg/core/time_query.py -> qbot_rpg/core/worldtime.py",
+    "qbot_rpg/core/trait_inherit.py -> qbot_rpg/core/alchemy_core.py",
+    "qbot_rpg/core/upgrade.py -> qbot_rpg/core/runes.py",
+    "qbot_rpg/core/weather_conditions.py -> qbot_rpg/core/worldtime.py",
+))
+
 # TC-04 五类（细化_3a §3.2 / D-03）
 REQUIRED_TYPES: Tuple[str, ...] = (
     "Player", "BattleSnapshot", "StatusInstance", "ItemInstance", "WorldState",
@@ -663,9 +775,71 @@ def check_tc05(root: str, files: List[str]) -> None:
         print(f"  ✓ 通过（当前 {len(current)} 条 core 内部边，基线 {len(CORE_EDGE_BASELINE)} 条，无新增）")
 
 
+def _module_stem(rel_path: str) -> str:
+    """`qbot_rpg/core/alchemy_core.py` → `alchemy_core`（message_format 子包归一名）。"""
+    parts = rel_path.split("/")
+    if len(parts) >= 3 and parts[2] == "message_format":
+        return "message_format"
+    return os.path.basename(rel_path).removesuffix(".py")
+
+
+def _family_of(stem: str) -> str:
+    """模块名 → 业务族（支撑白名单 → `(支撑)`）。"""
+    if stem in CORE_SUPPORT_MODULES:
+        return "(支撑)"
+    for prefix in CORE_FAMILY_PREFIXES:
+        if stem.startswith(prefix):
+            return prefix
+    return stem.split("_")[0]
+
+
+def check_tc06(root: str, files: List[str]) -> None:
+    """TC-06：**跨域业务直调**冻结（用户 2026-10-10 口径②·日研 Q1）。
+
+    口径：同族内直调合法；目标 ∈ `CORE_SUPPORT_MODULES`（基础设施 + 共享服务）合法；
+    **跨族且目标是业务模块** = 应走事件/注册表的耦合 → 冻结现有 52 条（`CROSS_DOMAIN_BASELINE`），
+    **新增即 FAIL**（比 TC-05 更精确：TC-05 冻结全部 core→core 边，TC-06 标出「该走事件」的那一批）。
+
+    白名单/族划分**属治理元数据**：若把它们改宽（例如把业务模块挪进支撑白名单）会让基线边
+    「突然合法」→ 本检查按**基线边失配**报 FAIL，要求显式登记（防静默绕过）。
+    """
+    print("TC-06  跨域业务直调冻结：新增 core 跨族业务 import 边即失败（口径②）")
+    current: Set[str] = set()
+    for file in files:
+        if layer_of(file) != "core":
+            continue
+        try:
+            tree = ast.parse(open(file, "r", encoding="utf-8").read(), filename=file)
+        except SyntaxError:
+            continue
+        for tgt in collect_import_edges(tree, file, root):
+            if tgt == file or layer_of(tgt) != "core":
+                continue
+            key = _edge_key(root, file, tgt)
+            s = _module_stem(key.split(" -> ")[0])
+            d = _module_stem(key.split(" -> ")[1])
+            if _family_of(s) == _family_of(d) or d in CORE_SUPPORT_MODULES:
+                continue
+            current.add(key)
+
+    added = sorted(current - CROSS_DOMAIN_BASELINE)
+    lost = sorted(CROSS_DOMAIN_BASELINE - current)
+    if added:
+        for e in added:
+            _fail(
+                f"TC-06 新增跨域业务直调边：{e} —— 跨族业务模块之间应走事件/注册表；"
+                "确需直调请在 CROSS_DOMAIN_BASELINE 登记并写明理由"
+            )
+    if lost:
+        print(f"  · 提示：{len(lost)} 条基线边已不在「跨域业务」口径内（收敛或分类变更）：{lost[:3]}"
+              + (" …" if len(lost) > 3 else ""))
+    if not added:
+        print(f"  ✓ 通过（当前跨域业务边 {len(current)} 条，基线 {len(CROSS_DOMAIN_BASELINE)} 条，无新增）")
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     global _OK
-    parser = argparse.ArgumentParser(description="G0 架构检查（细化_3a TC-01~05）")
+    parser = argparse.ArgumentParser(description="G0 架构检查（细化_3a TC-01~06）")
     parser.add_argument(
         "--path", default=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         help="仓库根目录（默认脚本父目录）",
@@ -684,9 +858,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     check_tc03(root, files)
     check_tc04(root, files)
     check_tc05(root, files)
+    check_tc06(root, files)
 
     if _OK:
-        print("ARCH-OK  TC-01/TC-02/TC-03/TC-04/TC-05 全部通过（细化_3a 分层契约满足）")
+        print("ARCH-OK  TC-01/TC-02/TC-03/TC-04/TC-05/TC-06 全部通过（细化_3a 分层契约满足）")
         return 0
     print("ARCH-FAIL 存在违规，详见上方清单（质量门禁红）")
     return 1

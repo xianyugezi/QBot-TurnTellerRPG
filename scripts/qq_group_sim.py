@@ -202,7 +202,9 @@ async def _repl(sim: QQGroupSim, start_player: str) -> None:
 
 def main() -> None:
     # stdout 行缓冲（os._exit 强杀前不丢输出——print 缓冲在 _exit 时被丢弃）
-    sys.stdout.reconfigure(line_buffering=True)
+    _reconfigure = getattr(sys.stdout, "reconfigure", None)  # TextIO 静态类型无该 API
+    if callable(_reconfigure):
+        _reconfigure(line_buffering=True)
     ap = argparse.ArgumentParser(description="QQ 群消息收发模拟器")
     ap.add_argument("msgs", nargs="*", help="直接发送的指令（可多条）")
     ap.add_argument("--player", default="10001", help="发言人 qid（默认 10001）")

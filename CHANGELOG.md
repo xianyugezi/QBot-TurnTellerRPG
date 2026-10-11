@@ -31,6 +31,10 @@
   **④ 文档漂移修正**：`README.md` 目录树份数与编辑器口径按实况对齐；`docs/细化规划总索引.md`
   74 条悬空链接修复（0 失效）+ 份数口径写明；`docs/审查/审计与方案/` 39 份补 `doc_meta`
   快照元数据头。
+  **⑤ TC-06 跨域业务直调冻结（2026-10-11）**：`scripts/check_architecture.py` 增
+  `CORE_FAMILY_PREFIXES`（22 业务族）+ `CORE_SUPPORT_MODULES`（口径② 白名单 24 项）+
+  `CROSS_DOMAIN_BASELINE`（**52** 条跨族业务边冻结）+ `check_tc06` —— 新增跨族业务直调边即
+  `ARCH-FAIL`，基线收敛只提示；白名单扩容致基线失配会被报出（防静默绕过）。
 
 - **批82（2026-09-23）**：**手册 §六剩余项收口（用户 4 条裁决 + 可直接执行项 + Q1~Q8 入册）**。
   依据 `/root/deliverables/手册剩余项_核清与口径.md`。

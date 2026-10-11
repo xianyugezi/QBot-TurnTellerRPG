@@ -26,7 +26,7 @@ def _spy_send(self, text, **kw):
     return _orig_send(self, text, **kw)
 
 
-BC.BattlePipeline.send = _spy_send
+setattr(BC.BattlePipeline, "send", _spy_send)  # 猴补：录正文（规避 mypy method-assign）
 
 LINES: list = []
 NORMAL = "✅ 正常"

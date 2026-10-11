@@ -13,6 +13,9 @@
   行号即清单坐标，本表按 文件×错误码 聚合。mypy 配置 = non-strict 定档（D7 决策记录 D7-D1），
   `warn_unused_ignores` / `warn_redundant_casts` 显式启用。
 - **新增代码零豁免**：清单外规则码、或未入清单文件中的任何违规 → 阶段0 快速门失败（exit≠0）。
+- **分档口径（2026-10-11 起 · 现行）**：见本表 §六——ruff 全仓必拦 / mypy **框架本体**存量基线 +
+  新增必拦（`docs/verify/mypy_framework_baseline.json`）/ mypy `tests`+`scripts` 只告警
+  （债务清单 `docs/verify/mypy_debt.txt`）。
 - **技术备案（偏离 D7 处，仅实现必需）**：`mypy .` 需 `explicit_package_bases + namespace_packages`
   （tests/ 无 `__init__.py` 链，缺此二项 mypy 报 "Source file found twice" 无法运行）。
 
@@ -277,3 +280,34 @@
 - `mypy .` → Success: no issues found in 231 source files
 - 阶段0 静态前置挂 run_all_tests.py（D7 LNT-04），`--skip-lint` 为逃生口（5d §3.2 L133）。
 - **技术备案（2026-08-28 批7A 审查 P2-4）**：mypy 未设 `python_version`——默认以运行解释器（.venv 3.11）为分析目标，与 ruff `target-version="py39"` 名义语法下限不一致；存量代码未验证 3.9 语法兼容（大量 3.10+ 标注可能大量新增报错 → 门禁突变风险），本批登记为**已知口径差距**，不追平 python_version（避免门禁突变）；追平时机 = 覆盖率/依赖门禁稳定后由后续里程碑决策（D7 LNT-02 同口径）。
+
+## 六、2026-10-11 分档与债务收敛（**现行口径**）
+
+> **背景**：2026-08-28 建立的「存量一次性豁免 + 清单外必拦」基线，在后续提交（CTB 重写、编辑器重写、
+> viv85 内容包、脚手架探针等）中**未同步维护** → 阶段0 实测两红：`ruff check .` **40 处**、
+> `mypy .` **661 处 / 186 文件**（其中框架本体 `qbot_rpg/**` 160 处）。用户 2026-10-10 拍板「**分档**」。
+
+**分档口径（现行）**：
+
+| 段 | 范围 | 处置 | 载体 |
+|---|---|---|---|
+| ① | `ruff check .` 全仓 | **必拦**（2026-10-11 已清零：40 → 0） | `pyproject [tool.ruff.lint.per-file-ignores]` + 本表 §二 |
+| ② | `mypy qbot_rpg`（**框架本体**） | **存量基线豁免 + 新增必拦** | `docs/verify/mypy_framework_baseline.json`（`文件::错误码 → 计数`，60 组合 / 160 处）+ `scripts/check_mypy_baseline.py` |
+| ③ | `mypy tests scripts` | **只告警不阻断**（存量 565 处） | 债务清单 `docs/verify/mypy_debt.txt`（阶段0 与 check_all 每次覆盖写出） |
+
+**为什么不整文件豁免**：mypy 的 `[[tool.mypy.overrides]] ignore_errors = true` 会把该文件**将来**的
+新错误一起放行（= 骗作者）；②按「文件 × 错误码计数」只放行**已登记的那几处**，任何新增/加重立即变红。
+
+**2026-10-11 已修（非豁免新增）**：
+
+- **ruff 40 处**：其中 **3 条属挪位失配**——2026-09-10 `qbot_rpg/engine/` 并入 `core/` 后，
+  pyproject 的豁免路径仍写 `engine/...`（`worldtime.py` E501×17 / `weather_conditions.py` E501×1 /
+  `weather_consumers.py` F401×1，计数与本表 §二 逐条吻合），路径同步为 `core/...`（同文件同规则同计数）；
+  其余 37 处为后加代码的**新违规**（探针脚本 4 个、测试 2 个、框架 2 个文件），按「新增代码零豁免」改码。
+- **mypy unused-ignore 96 处**已删（`warn_unused_ignores` 判据：这些 `# type: ignore[码]` 已不再抑制任何
+  错误）→ 全仓 661 → **566** 处；框架本体 163 → **160** 处（已入基线）。
+  其中 1 处为「双注释行」（`# type: ignore[arg-type]  # noqa: E501`）清理时误伤，已按语义修回。
+
+**收敛路径（按批推进，不设期限）**：③段债务按目录分批（框架本体余项 160 → `content`/`web` →
+最后 `tests` 459 / `scripts` 37），每批收敛后跑 `scripts/check_mypy_baseline.py --update` 收紧基线；
+③段清零后把阶段0 恢复为 `mypy .` 单段全拦，并在本表 §六 记录切换。

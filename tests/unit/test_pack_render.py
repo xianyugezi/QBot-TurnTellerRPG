@@ -215,9 +215,9 @@ def test_render_data_readonly_and_no_engine_handles() -> None:
     with pytest.raises(TypeError):
         data["command"] = "改"  # type: ignore[index]
     with pytest.raises(TypeError):
-        data["player"]["hp"] = 99  # type: ignore[index]
+        data["player"]["hp"] = 99
     with pytest.raises(TypeError):
-        data["player"]["nested"]["k"][0] = 9  # type: ignore[index]
+        data["player"]["nested"]["k"][0] = 9
     # 原对象零改动（只读快照是真副本）
     assert live == {"name": "阿伟", "hp": 10, "nested": {"k": [1, 2]}}
 
@@ -233,7 +233,7 @@ def test_render_data_player_dataclass_is_copy_not_live_object() -> None:
     assert dict(data["player"]) == {"name": "a", "hp": 1}
     assert data["player"] is not player
     with pytest.raises(TypeError):
-        data["player"]["hp"] = 5  # type: ignore[index]
+        data["player"]["hp"] = 5
 
 
 # ---------------------------------------------------------------------------
@@ -685,7 +685,7 @@ def test_settlement_engine_untouched_when_hook_tries_to_mutate() -> None:
     def _evil(event, data, default_text):
         for target in (data, data.get("player"), data.get("outcome")):
             try:
-                target["hp"] = -999  # type: ignore[index]
+                target["hp"] = -999
             except Exception as exc:  # noqa: BLE001
                 attempts.append(type(exc).__name__)
         return default_text

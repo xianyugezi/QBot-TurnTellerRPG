@@ -661,7 +661,7 @@ def _fmt_value(value: object) -> str:
 
 
 def _fmt_list(values: object, limit: int = 12) -> str:
-    rows = [_fmt_value(v) for v in (values or [])]  # type: ignore[union-attr]
+    rows = [_fmt_value(v) for v in (values or [])]
     if len(rows) > limit:
         rows = rows[:limit] + ["…"]
     return "、".join(rows) if rows else "（空）"

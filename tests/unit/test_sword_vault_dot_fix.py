@@ -83,7 +83,7 @@ def test_sw_vault_dodge_feedback():
     et = next(e for e in raw["enemies"] if e["id"] == "gravel_tortoise")
     st = et.get("stats") or {}
     eng = BattleEngine(defs=all_defs, combo_engine=ce, enemy_def=et)
-    eng._rng = _QR([0.1] * 800)  # type: ignore[assignment]
+    eng._rng = _QR([0.1] * 800)
     player = {"max_hp": 900, "hp": 900, "max_mp": 30, "mp": 30, "atk": 50, "dfn": 60, "foc": 10,
               "agi": 10, "spr": 10, "con": 10, "str": 50, "int": 10, "lck": 10, "elem_atk": 0,
               "name": "P", "spd": 10, "mag": 10, "proficiency": {"alchemy": {"level": 4, "exp": 0}}}
@@ -116,7 +116,7 @@ def test_dot_part_break_per_tick():
     et = next(e for e in raw["enemies"] if e["id"] == "gravel_tortoise")
     st = et.get("stats") or {}
     eng = BattleEngine(defs=all_defs, combo_engine=ce, enemy_def=et)
-    eng._rng = _QR([0.1] * 800)  # type: ignore[assignment]
+    eng._rng = _QR([0.1] * 800)
     player = {"max_hp": 900, "hp": 900, "max_mp": 30, "mp": 30, "atk": 50, "dfn": 60, "foc": 10,
               "agi": 10, "spr": 10, "con": 10, "str": 50, "int": 10, "lck": 10, "elem_atk": 0,
               "name": "P", "spd": 10, "mag": 10, "proficiency": {"alchemy": {"level": 4, "exp": 0}}}

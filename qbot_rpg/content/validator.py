@@ -546,7 +546,7 @@ class _Checker:
         for _iss in _ext_issues:
             self._err("settings", str(_iss.get("field") or "schema_ext"), "R-5",
                       rule=str(_iss.get("rule") or "schema_ext_invalid"),
-                      **dict(_iss.get("detail") or {}))  # type: ignore[arg-type]
+                      **dict(_iss.get("detail") or {}))
 
     # ---- 包自持校验扩展（批71 · D1） ----
     def _schema_allow_keys(self, module_name: str, path: str) -> Mapping[str, Mapping[str, object]]:

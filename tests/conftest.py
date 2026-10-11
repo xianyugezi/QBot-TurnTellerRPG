@@ -124,7 +124,7 @@ def _pollution_message() -> str:
     suspects = _GUARD["suspects"]
     if suspects:
         lines.append("疑似来源（逐用例滚动快照定位）：")
-        for nodeid, descs in suspects:  # type: ignore[misc]
+        for nodeid, descs in suspects:
             lines.append(f"    · {nodeid}")
             lines += [f"        {d}" for d in descs]
     else:

@@ -317,7 +317,7 @@ def _spy(eng: Any) -> List[Tuple[str, str, List[str]]]:
                       [str(e.get("status_id") or e.get("type")) for e in out]))
         return out
 
-    eng._dispatch_event = wrapped  # type: ignore[assignment]
+    eng._dispatch_event = wrapped
     return calls
 
 

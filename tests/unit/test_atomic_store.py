@@ -219,7 +219,7 @@ def test_apply_changes_garbage_change_entries_ignored() -> None:
         {"module": "enemies", "entries": {"not": "a list"}},  # entries 非 list
     ]
     # 运行期宽容语义：坏条目跳过不崩（静态契约外输入，mypy 无法表达 → 本行测试意图显式）
-    out = apply_module_changes(raw, garbage)  # type: ignore[arg-type]  # noqa: E501
+    out = apply_module_changes(raw, garbage)
     assert out["ok"] is True
     assert out["changed_modules"] == []
     assert out["modules"]["enemies"] == raw["enemies"]

@@ -283,7 +283,7 @@ def test_battle_hud_payload_tolerates_garbage() -> None:
     """接线层取数兜底：空/异常快照 → 全缺省（不崩、不臆造）。"""
     from qbot_rpg.commands.battle_commands import battle_hud_payload
 
-    for bad in ({}, None, {"player": 1, "enemy": "x"}):        # type: ignore[arg-type]
+    for bad in ({}, None, {"player": 1, "enemy": "x"}):
         hud = battle_hud_payload(bad)                          # type: ignore[arg-type]
         assert hud["player_mp"] is None and hud["player_shield"] == 0
         assert hud["enemy_air"] is False and hud["enemy_broken_parts"] == ()

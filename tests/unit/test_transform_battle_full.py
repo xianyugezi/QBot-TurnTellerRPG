@@ -134,7 +134,7 @@ def test_trigger_transform_via_rage_burst() -> None:
         f"冷却应= cooldown(5) 从触发起算，got {ts['cooldown_remaining']}"
     assert ts["active_skill_set"] == "transform_skills"
     # 触发事件审计（战报消费）
-    evs = eng._transform_events  # type: ignore[attr-defined]
+    evs = eng._transform_events
     kinds = [e.get("type") for e in evs]
     assert "transform_committed" in kinds, f"应有 transform_committed 事件，got {kinds}"
 
@@ -192,7 +192,7 @@ def test_c1_form_active_rejects_retrigger() -> None:
     assert out.outcomes[0].ok is True, "触发技本身仍按普通技能结算"
     ts = _ts(eng)
     assert ts["form"] == "berserker_form", f"C1 拒绝不应改形态，got {ts}"
-    evs = eng._transform_events  # type: ignore[attr-defined]
+    evs = eng._transform_events
     committed = [e for e in evs if e.get("type") == "transform_committed"]
     assert len(committed) == 1, f"二次触发不应提交新变换，got {evs}"
 
@@ -210,7 +210,7 @@ def test_c3_cooldown_rejects_retrigger() -> None:
     assert ts["cooldown_remaining"] == 4, f"还原后冷却应 5→4，got {ts['cooldown_remaining']}"
     # 冷却中再次触发 → C3 拒绝
     eng.player_act({"type": "skill", "skill_id": "rage_burst"})
-    evs = eng._transform_events  # type: ignore[attr-defined]
+    evs = eng._transform_events
     rej = [e for e in evs if e.get("type") == "transform_rejected"]
     assert rej and rej[-1].get("guard") == "C3", f"冷却中应 C3 拒绝，got {evs}"
 
@@ -226,7 +226,7 @@ def test_c4_skip_turn_rejects_trigger() -> None:
     eng.battle_state()  # noqa: B018 —— battle_state() 深拷贝不串改，写内部 _snap
     eng._snap["player"]["control_state"] = {
         "type": "睡眠", "skip_turn": 1.0, "turns": 1, "source": "enemy",
-    }  # type: ignore[attr-defined]
+    }
     seq0 = _seq(eng)
     out = eng.player_act({"type": "skill", "skill_id": "rage_burst"})
     # 被控 → 行动被跳过（TurnReport.outcomes[0]），不会走到技能结算
@@ -270,7 +270,7 @@ def test_natural_revert_writes_event() -> None:
     eng = _engine()
     _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     _steps(eng, 2, {"type": "normal"})
-    evs = eng._transform_events  # type: ignore[attr-defined]
+    evs = eng._transform_events
     reverted = [e for e in evs if e.get("type") == "transform_reverted"]
     assert reverted and reverted[-1].get("reason") == "natural", \
         f"应有 natural 还原事件，got {evs}"
@@ -298,7 +298,7 @@ def test_revert_form_no_form_noop() -> None:
     eng = _engine()
     _full_turn(eng, {"type": "skill", "skill_id": "calm_down"})
     assert _ts(eng)["form"] is None
-    evs = eng._transform_events  # type: ignore[attr-defined]
+    evs = eng._transform_events
     assert not any(e.get("type") == "transform_reverted" for e in evs), \
         f"常态还原应零操作，got {evs}"
 
@@ -314,7 +314,7 @@ def test_dispel_reverts_at_next_turn_end() -> None:
     assert _ts(eng)["form"] == "berserker_form"
     # 登记 dispel 待还原（D-05：驱散命中 → transform_pending_dispel 标记，
     # 战斗层 _transform_dispel_pending 瞬态缓存承接，下一次行动收尾结算）
-    eng._transform_dispel_pending["player"] = True  # type: ignore[attr-defined]
+    eng._transform_dispel_pending["player"] = True
     # 同次行动窗口内形态仍在（延迟还原，不立即清）
     assert _ts(eng)["form"] == "berserker_form"
     _full_turn(eng, {"type": "normal"})
@@ -324,7 +324,7 @@ def test_dispel_reverts_at_next_turn_end() -> None:
     # dispel 还原当次行动收尾 tick 冷却 5→4（P-3 dispel 不豁免 + D-03 同拍递减）
     assert ts["cooldown_remaining"] == 4, \
         f"dispel 还原后冷却应 5→4（P-3 不豁免 + 当次行动递减），got {ts['cooldown_remaining']}"
-    evs = eng._transform_events  # type: ignore[attr-defined]
+    evs = eng._transform_events
     reverted = [e for e in evs if e.get("type") == "transform_reverted"]
     assert reverted and reverted[-1].get("reason") == "dispel", \
         f"应有 dispel 还原事件，got {evs}"
@@ -336,7 +336,7 @@ def test_dispel_persistent_marker_reverts() -> None:
     _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     # 持久标记通道（transform_revert.dispel_triggered 读取位；战斗快照 player
     # 侧 persistent_state 段——start 未建则惰性建段）
-    ps = eng._snap["player"].setdefault("persistent_state", {})  # type: ignore[attr-defined]
+    ps = eng._snap["player"].setdefault("persistent_state", {})
     ps["transform_pending_dispel"] = True
     _full_turn(eng, {"type": "normal"})
     assert _ts(eng)["form"] is None, "持久标记应触发 dispel 还原"
@@ -392,7 +392,7 @@ def test_trigger_clears_combo_state() -> None:
     cs = eng.battle_state().get("combo_state", {})
     # 连段引擎对普攻可能不累计——直接写快照连段（真实快照段）
     eng._snap["combo_state"] = {"player": {"chain_id": "x", "chain_name": "链",
-                                           "count": 3, "hold": True, "step_index": 1}}  # type: ignore[attr-defined]
+                                           "count": 3, "hold": True, "step_index": 1}}
     _full_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     cs = eng.battle_state().get("combo_state", {}).get("player", {})
     assert cs.get("count") == 0, f"触发变换应清连段，got {cs}"
@@ -406,7 +406,7 @@ def test_snapshot_carries_transform_state() -> None:
     snap = eng.to_snapshot()
     assert snap.get("transform_state", {}).get("form") == "berserker_form", \
         "快照应含形态"
-    eng2 = BattleEngine(defs=_skills()).set_transform_def(_transform()).from_snapshot(snap)  # type: ignore[call-arg]
+    eng2 = BattleEngine(defs=_skills()).set_transform_def(_transform()).from_snapshot(snap)
     ts2 = _ts(eng2)
     assert ts2["form"] == "berserker_form"
     assert ts2["remaining"] == 2, f"快照恢复应带 remaining，got {ts2}"

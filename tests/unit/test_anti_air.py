@@ -89,7 +89,7 @@ def _fresh(raw, all_defs, ce, *, spd=1, config=None):
     ai = MonsterAI(enemy_def=et, action_lib=lambda i: all_defs.get(i),
                    rng=_QR([0.1] * 800))
     eng = BattleEngine(defs=all_defs, combo_engine=ce, enemy_def=et)
-    eng._rng = _QR([0.1] * 800)  # type: ignore[assignment]
+    eng._rng = _QR([0.1] * 800)
     eng.start(dict(_PLAYER), mob, random_seed=7, config=config)
     eng._enemy_ai = ai
     return eng

@@ -535,7 +535,7 @@ def test_overwrite_failure_restores_old_pack(tmp_path: Path, monkeypatch) -> Non
     data = _export(tmp_path, "pack_a", "新包")
     real_replace = pt.os.replace
 
-    def _boom(src, dst, *a, **k):  # type: ignore[no-untyped-def]
+    def _boom(src, dst, *a, **k):
         if pt.TMP_PREFIX in str(src):   # 只让「临时目录 → 目标包」这一步失败
             raise OSError("simulated rename failure")
         return real_replace(src, dst, *a, **k)

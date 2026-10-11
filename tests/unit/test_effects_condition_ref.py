@@ -62,7 +62,7 @@ def _rt(snap: dict) -> EffectRuntime:
     rt = EffectRuntime(status_state=snap.get("status_state"),
                        marks_state=snap.get("marks_state"))
     # resolver：kind=effect 查 _DEFS
-    rt._resolver = lambda id_, kind: _DEFS.get(id_) if kind == "effect" else None  # type: ignore[attr-defined]
+    rt._resolver = lambda id_, kind: _DEFS.get(id_) if kind == "effect" else None
     return rt
 
 

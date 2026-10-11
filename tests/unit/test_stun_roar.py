@@ -76,7 +76,7 @@ def _fresh(*, config=None, enemy_patch=None):
         "con": 10, "agi": 0, "name": et["name"],
     }
     eng = BattleEngine(defs=all_defs, combo_engine=ce, enemy_def=et)
-    eng._rng = _QR([0.5] * 600)  # type: ignore[assignment]
+    eng._rng = _QR([0.5] * 600)
     eng.start(dict(_PLAYER), mob, random_seed=7, config=config)
     eng._snap.setdefault("ai_state", {})
     return eng, raw
@@ -115,7 +115,7 @@ def _spy_delay(eng):
         calls.append((str(actor_id), float(extra_bars), after, before, now))
         return r
 
-    eng._ctb.delay_actor = _spy  # type: ignore[method-assign]
+    eng._ctb.delay_actor = _spy
     return calls
 
 
@@ -153,7 +153,7 @@ def _spy_ko_set(eng):
                 cap.append(int(inst.get("turns", 0)))
                 break
 
-    eng._fire_stun_ko = _types.MethodType(_spy, eng)  # type: ignore[method-assign]
+    eng._fire_stun_ko = _types.MethodType(_spy, eng)
     return cap
 
 

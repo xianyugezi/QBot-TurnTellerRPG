@@ -116,7 +116,7 @@ def test_snapshot_carries_transform_state() -> None:
     assert snap.get("transform_state", {}).get("form") == "berserker_form", \
         "快照应含 transform_state 形态"
     # 恢复
-    eng2 = BattleEngine().from_snapshot(snap)  # type: ignore[call-arg]
+    eng2 = BattleEngine().from_snapshot(snap)
     ts2 = eng2.battle_state()["transform_state"]
     assert ts2["form"] == "berserker_form"
     assert ts2["remaining"] == 2

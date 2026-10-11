@@ -102,7 +102,7 @@ def _engine(**over: Any) -> BattleEngine:
     """构造战斗引擎（defs + resource_registry + set_transform_def 注入）。"""
     eng = BattleEngine(defs=_skills())
     eng.set_transform_def(_transform())
-    eng._resource_registry = {"rage": _RAGE, "element_energy": _ELEMENT}  # type: ignore[attr-defined]
+    eng._resource_registry = {"rage": _RAGE, "element_energy": _ELEMENT}
     eng.start(
         {"hp": 500, "max_hp": 500, "mp": 100, "max_mp": 100,
          "atk": 50, "def": 30, "spr": 20, "spd": 10, "name": "玩家"},
@@ -135,7 +135,7 @@ def _player_turn(eng: BattleEngine, action: Dict[str, Any]) -> Any:
 
 
 def _last_events(eng: BattleEngine) -> Any:
-    return eng._transform_events  # type: ignore[attr-defined]
+    return eng._transform_events
 
 
 # ---------------------------------------------------------------------------
@@ -150,7 +150,7 @@ def test_berserker_rage_burst_triggers_form() -> None:
     在形态激活期不递减（保持 5）。
     """
     eng = _engine()
-    eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}  # type: ignore[attr-defined]
+    eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}
     out = eng.player_act({"type": "skill", "skill_id": "rage_burst"})
     assert out.outcomes[0].ok is True, f"狂暴应成功结算，got {out.outcomes[0].message}"
     ts = _ts(eng)
@@ -169,7 +169,7 @@ def test_berserker_insufficient_rage_rejected() -> None:
     提交后 `action_seq` 不前进（旧「不耗回合」的 CTB 对应断言）。
     """
     eng = _engine()
-    eng._snap["resource_state"] = {"player": {"rage": 80}, "enemy": {}}  # type: ignore[attr-defined]
+    eng._snap["resource_state"] = {"player": {"rage": 80}, "enemy": {}}
     seq_before = int(eng.battle_state()["action_seq"])
     rep = eng.player_act({"type": "skill", "skill_id": "rage_burst"})
     out = rep.outcomes[0]
@@ -189,7 +189,7 @@ def test_berserker_form_skill_fury_slash() -> None:
     使 remaining 3→2，但形态保持（形态技能不触发还原）。
     """
     eng = _engine()
-    eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}  # type: ignore[attr-defined]
+    eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}
     _player_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     assert _ts(eng)["form"] == "berserker_form" and _ts(eng)["remaining"] == 3
     hp_before = eng.battle_state()["enemy"]["hp"]
@@ -203,7 +203,7 @@ def test_berserker_form_skill_fury_slash() -> None:
 def test_berserker_revert_form_active_immediate() -> None:
     """狂战士：形态内施放平息战意（revert_form）→ 即时还原 + 冷却起算。"""
     eng = _engine()
-    eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}  # type: ignore[attr-defined]
+    eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}
     _player_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     assert _ts(eng)["form"] == "berserker_form"
     _player_turn(eng, {"type": "skill", "skill_id": "calm_down"})
@@ -224,7 +224,7 @@ def test_berserker_natural_revert_and_cooldown_full_cycle() -> None:
     逐拍递减 4→3→2→1→0。
     """
     eng = _engine()
-    eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}  # type: ignore[attr-defined]
+    eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}
     _player_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     assert _ts(eng)["form"] == "berserker_form" and _ts(eng)["remaining"] == 3
     for _ in range(3):
@@ -239,7 +239,7 @@ def test_berserker_natural_revert_and_cooldown_full_cycle() -> None:
         assert _ts(eng)["cooldown_remaining"] == expected, \
             f"冷却应递减到 {expected}，got {_ts(eng)}"
     # 归零回常态 → 再次触发（怒气重新攒满）
-    eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}  # type: ignore[attr-defined]
+    eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}
     _player_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     ts = _ts(eng)
     assert ts["form"] == "berserker_form", f"冷却归零应可再次触发，got {ts}"
@@ -254,12 +254,12 @@ def test_berserker_cooldown_rejects_retrigger() -> None:
     照常前进；断言口径为「产生 C3 拒绝事件且不提交新变换」。
     """
     eng = _engine()
-    eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}  # type: ignore[attr-defined]
+    eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}
     _player_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     for _ in range(3):
         _player_turn(eng, {"type": "normal"})
     assert _ts(eng)["form"] is None and _ts(eng)["cooldown_remaining"] == 4
-    eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}  # type: ignore[attr-defined]
+    eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}
     seq_before = int(eng.battle_state()["action_seq"])
     eng.player_act({"type": "skill", "skill_id": "rage_burst"})
     evs = _last_events(eng)
@@ -278,10 +278,10 @@ def test_berserker_form_active_rejects_retrigger() -> None:
     否决变换提交（不产生新形态），但行动本身照常结算、行动条前进。
     """
     eng = _engine()
-    eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}  # type: ignore[attr-defined]
+    eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}
     _player_turn(eng, {"type": "skill", "skill_id": "rage_burst"})
     assert _ts(eng)["form"] == "berserker_form"
-    eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}  # type: ignore[attr-defined]
+    eng._snap["resource_state"] = {"player": {"rage": 100}, "enemy": {}}
     seq_before = int(eng.battle_state()["action_seq"])
     eng.player_act({"type": "skill", "skill_id": "rage_burst"})
     assert _ts(eng)["form"] == "berserker_form", "C1 拒绝不应改形态"
@@ -324,7 +324,7 @@ def test_element_mage_pool_cap_at_max_per_pool() -> None:
 def test_element_mage_combo_fire_fire_water() -> None:
     """元素法师：fire2+water1 → 元素爆发命中「蒸汽冲击」组合行（双耗结算）。"""
     eng = _engine()
-    eng._snap["resource_state"] = {  # type: ignore[attr-defined]
+    eng._snap["resource_state"] = {
         "player": {"element_energy": {"fire": 2, "water": 1, "wind": 0}},
         "enemy": {},
     }
@@ -346,7 +346,7 @@ def test_element_mage_combo_insufficient_rejected() -> None:
     CTB 迁移（2026-09-10）：R-6 被拒 = 零时间成本（`action_seq` 不前进）。
     """
     eng = _engine()
-    eng._snap["resource_state"] = {  # type: ignore[attr-defined]
+    eng._snap["resource_state"] = {
         "player": {"element_energy": {"fire": 1, "water": 0, "wind": 0}},
         "enemy": {},
     }
@@ -368,7 +368,7 @@ def test_element_mage_combo_no_match_rejected() -> None:
     CTB 迁移（2026-09-10）：R-6 被拒 = 零时间成本（`action_seq` 不前进）。
     """
     eng = _engine()
-    eng._snap["resource_state"] = {  # type: ignore[attr-defined]
+    eng._snap["resource_state"] = {
         "player": {"element_energy": {"fire": 1, "water": 1, "wind": 0}},
         "enemy": {},
     }
@@ -386,7 +386,7 @@ def test_element_mage_combo_no_match_rejected() -> None:
 def test_element_mage_combo_behavior_changes_with_pool() -> None:
     """元素法师：相同爆发技随池分布不同 → 命中不同组合行（行为随组合变化）。"""
     eng = _engine()
-    eng._snap["resource_state"] = {  # type: ignore[attr-defined]
+    eng._snap["resource_state"] = {
         "player": {"element_energy": {"fire": 1, "wind": 1, "water": 0}},
         "enemy": {},
     }
@@ -408,13 +408,13 @@ def test_element_mage_burst_cooldown_blocks_next_turn() -> None:
     零时间成本（`action_seq` 不前进）。
     """
     eng = _engine()
-    eng._snap["resource_state"] = {  # type: ignore[attr-defined]
+    eng._snap["resource_state"] = {
         "player": {"element_energy": {"fire": 2, "water": 1, "wind": 0}},
         "enemy": {},
     }
     _player_turn(eng, {"type": "skill", "skill_id": "elemental_burst"})
     # 重新攒能量后立即再爆发 → 冷却中（combo 引擎 should_reject）
-    eng._snap["resource_state"] = {  # type: ignore[attr-defined]
+    eng._snap["resource_state"] = {
         "player": {"element_energy": {"fire": 2, "water": 1, "wind": 0}},
         "enemy": {},
     }
@@ -502,11 +502,11 @@ def test_battle_end_resets_rage_and_energy() -> None:
     → 单次 `player_act`（调度器检测敌方 0 血 → 自动收尾 `BATTLE_END`）。
     """
     eng = _engine()
-    eng._snap["resource_state"] = {  # type: ignore[attr-defined]
+    eng._snap["resource_state"] = {
         "player": {"rage": 72, "element_energy": {"fire": 2, "water": 1, "wind": 0}},
         "enemy": {},
     }
-    eng._snap["enemy"]["hp"] = 0  # type: ignore[attr-defined]
+    eng._snap["enemy"]["hp"] = 0
     rep = eng.player_act({"type": "normal"})
     rs = _rs(eng)
     assert rs.get("rage", 0) == 0 or "rage" not in rs, f"怒气战斗结束应清零，got {rs}"
@@ -524,7 +524,7 @@ def test_snapshot_roundtrip_carries_both_segments() -> None:
     `turn_start`/`turn_end`）；形态 remaining 按玩家行动次数计时（触发后 3）。
     """
     eng = _engine()
-    eng._snap["resource_state"] = {  # type: ignore[attr-defined]
+    eng._snap["resource_state"] = {
         "player": {"rage": 100, "element_energy": {"fire": 2, "water": 0, "wind": 1}},
         "enemy": {},
     }
@@ -534,7 +534,7 @@ def test_snapshot_roundtrip_carries_both_segments() -> None:
         "快照应含形态"
     assert snap.get("resource_state", {}).get("player", {}).get("element_energy") == \
         {"fire": 2, "water": 0, "wind": 1}, "快照应含能量池级展开"
-    eng2 = BattleEngine(defs=_skills()).set_transform_def(_transform()).from_snapshot(  # type: ignore[call-arg]
+    eng2 = BattleEngine(defs=_skills()).set_transform_def(_transform()).from_snapshot(
         snap, resource_registry={"rage": _RAGE, "element_energy": _ELEMENT})
     ts2 = _ts(eng2)
     assert ts2["form"] == "berserker_form" and ts2["remaining"] == 3, \

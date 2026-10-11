@@ -109,7 +109,7 @@ async def build_env(settings: dict, players=None, clock=None) -> dict:
                         settings=settings, session_mgr=_Session())
     # 时间注入：deps.dayroll → (epoch 秒, 日期键)；clock 为单元素 list（可变）
     t = clock if clock is not None else [1000]
-    deps.dayroll = lambda: (t[0], "2026-09-16")  # type: ignore[assignment]
+    deps.dayroll = lambda: (t[0], "2026-09-16")
     deps.router = router  # type: ignore[attr-defined]
     deps.queue = queue
     deps.sender = sender  # type: ignore[attr-defined]

@@ -243,27 +243,46 @@ def _coverage_gate() -> bool:
 
 
 def _lint() -> bool:
-    """阶段0 静态前置：ruff check . + mypy .（D7 LNT-04 / 5d §3.2 L133）。
+    """阶段0 静态前置：ruff + mypy（D7 LNT-04 / 5d §3.2 L133）· **2026-10-10 分档口径**。
 
-    存量基线豁免见 docs/verify/lint_baseline.md（D7 LNT-05/06）：ruff 由 pyproject
-    [tool.ruff.lint.per-file-ignores] 承载、mypy 由 `# type: ignore[码]` 逐处标注；
-    清单外新增问题必拦（任一步失败 → 返回 False）。
+    分档（用户 2026-10-10 拍板，登记见 docs/verify/lint_baseline.md §一/§四）：
+      ① ruff 全仓 `ruff check .` —— **必拦**（2026-10-10 已清零，新增即红）；
+      ② mypy **框架本体** `qbot_rpg/**` —— **存量基线豁免 + 新增必拦**
+         （scripts/check_mypy_baseline.py，基线 docs/verify/mypy_framework_baseline.json）；
+      ③ mypy `tests/**` + `scripts/**` —— **只告警不阻断**，债务清单归档
+         docs/verify/mypy_debt.txt，按批收敛（不假装干净、也不让存量卡住所有提交）。
+    任一步（①②）失败 → 返回 False。
     """
     ok = True
-    for tool, args in (("ruff", ["check", "."]), ("mypy", ["."])):
-        exe = str(PY.parent / tool)
-        print(f"  [运行] {tool} ...")
+    steps = (
+        ("ruff 全仓", [str(PY.parent / "ruff"), "check", "."], True),
+        ("mypy 框架本体基线",
+         [str(PY), str(REPO.parent / "scripts" / "check_mypy_baseline.py")], True),
+        ("mypy tests+scripts（告警）", [str(PY), "-m", "mypy", "tests", "scripts"], False),
+    )
+    for name, cmd, blocking in steps:
+        print(f"  [运行] {name} ...")
         try:
-            r = subprocess.run([exe, *args], cwd=str(REPO.parent), capture_output=True, text=True)
+            r = subprocess.run(cmd, cwd=str(REPO.parent), capture_output=True, text=True)
         except FileNotFoundError:
-            # P2-3 修复（批7A 审查）：工具未安装 → 打印安装指引 + 门禁失败（不裸崩 traceback）
-            print(f"    → 失败：{tool} 未安装（pytest/quality 依赖，见 requirements.txt dev 段；"
-                  f"安装：.venv/bin/pip install {tool}）")
+            print(f"    → 失败：{name} 工具未安装（见 requirements.txt dev 段）")
             ok = False
             continue
-        tail = "\n".join((r.stdout + r.stderr).splitlines()[-2:]).strip()
-        print(f"    → {'通过' if r.returncode == 0 else '失败'}（{tail}）")
-        ok = ok and r.returncode == 0
+        out = r.stdout + r.stderr
+        passed = r.returncode == 0
+        tail = "\n".join(out.splitlines()[-2:]).strip()
+        if not blocking and not passed:
+            debt = "\n".join(out.strip().splitlines())
+            archive = REPO.parent / "docs" / "verify" / "mypy_debt.txt"
+            archive.write_text(
+                f"# mypy 存量债务（tests + scripts，非阻断 · 由 run_all_tests.py 阶段0 写出）\n\n{debt}\n",
+                encoding="utf-8")
+            print(f"    → 告警（不阻断）：仍有存量 "
+                  f"{len([line for line in out.splitlines() if ' error: ' in line])} 处"
+                  f"，清单已归档 docs/verify/mypy_debt.txt")
+            continue
+        print(f"    → {'通过' if passed else '失败'}（{tail}）")
+        ok = ok and passed
     return ok
 
 

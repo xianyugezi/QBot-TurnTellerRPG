@@ -71,7 +71,7 @@ def test_aggregate_per_action_empty_and_bad_records() -> None:
     assert empty["records"] == 0 and empty["total"] == 0 and empty["items"] == []
     assert aggregate_per_action(None)["total"] == 0
     # 坏记录（非 Mapping / 负 final）不抛错，负值按 0
-    s = aggregate_per_action([None, {"final": -5, "source": "x"}])  # type: ignore[list-item]
+    s = aggregate_per_action([None, {"final": -5, "source": "x"}])
     assert s["records"] == 1 and s["total"] == 0 and s["max_hit"] == 0
 
 

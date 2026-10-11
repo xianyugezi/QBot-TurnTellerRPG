@@ -62,7 +62,7 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
     app.state.content_root = content_root
 
     @app.exception_handler(api.EditorError)
-    async def _editor_error(_request, exc):  # type: ignore[no-untyped-def]
+    async def _editor_error(_request, exc):
         # 批66 · 卡点3：错误包络带「怎么办」（`how_to_fix`，可为空串）——
         # 前端据此给可行动横幅；既有 `error` / `kind` 字段不变（零变化）。
         return JSONResponse(
@@ -73,7 +73,7 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
 
     # -------- 权限位（机主可编辑 / GM 只读预览；批2 不做登录页） --------
     @app.get("/api/session")
-    def api_session():  # type: ignore[no-untyped-def]
+    def api_session():
         return editor_ops.session_info(app.state.role)
 
     @app.post("/api/session/role")
@@ -87,61 +87,61 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
 
     # -------- 只读元数据（批1） --------
     @app.get("/api/packs")
-    def api_packs():  # type: ignore[no-untyped-def]
+    def api_packs():
         return api.list_packs(root=content_root, preferred=pack)
 
     @app.get("/api/pack/{pack_id}/modules")
-    def api_modules(pack_id: str):  # type: ignore[no-untyped-def]
+    def api_modules(pack_id: str):
         return api.list_modules(pack_id, root=content_root)
 
     @app.get("/api/pack/{pack_id}/module/{module}/entries")
-    def api_entries(pack_id: str, module: str):  # type: ignore[no-untyped-def]
+    def api_entries(pack_id: str, module: str):
         return api.list_entries(pack_id, module, root=content_root)
 
     @app.get("/api/pack/{pack_id}/entry/{module}/{entry_id}")
-    def api_entry(pack_id: str, module: str, entry_id: str):  # type: ignore[no-untyped-def]
+    def api_entry(pack_id: str, module: str, entry_id: str):
         return api.entry_detail(pack_id, module, entry_id, root=content_root)
 
     @app.get("/api/pack/{pack_id}/refs/{target}")
-    def api_refs(pack_id: str, target: str, q: Optional[str] = None):  # type: ignore[no-untyped-def]
+    def api_refs(pack_id: str, target: str, q: Optional[str] = None):
         return api.ref_options(pack_id, target, root=content_root, query=q)
 
     # -------- 批6 只读：全包条目索引（全局检索）/ 新建界面 / 建议 ID / 被引用扫描 --------
     @app.get("/api/pack/{pack_id}/entry-index")
-    def api_entry_index(pack_id: str):  # type: ignore[no-untyped-def]
+    def api_entry_index(pack_id: str):
         return api.entry_index(pack_id, root=content_root)
 
     # 批32 C1（框架 §6.12-08）：全包条目级「未使用」标记——一次算完，前端一次取。
     @app.get("/api/pack/{pack_id}/unused")
-    def api_pack_unused(pack_id: str):  # type: ignore[no-untyped-def]
+    def api_pack_unused(pack_id: str):
         return api.pack_unused(pack_id, root=content_root)
 
     # 批35（框架 §6.12-12）：进阶继承树只读接口（job 树：从哪些 job 进阶 + 继承什么）。
     @app.get("/api/pack/{pack_id}/job-tree")
-    def api_job_tree(pack_id: str):  # type: ignore[no-untyped-def]
+    def api_job_tree(pack_id: str):
         return api.job_tree(pack_id, root=content_root)
 
     @app.get("/api/pack/{pack_id}/module/{module}/new")
-    def api_new_entry(pack_id: str, module: str, name: Optional[str] = None,  # type: ignore[no-untyped-def]
+    def api_new_entry(pack_id: str, module: str, name: Optional[str] = None,
                       preset: Optional[str] = None):
         return api.new_entry_detail(pack_id, module, root=content_root, name=name,
                                     preset=preset)
 
     @app.get("/api/pack/{pack_id}/module/{module}/suggest_id")
-    def api_suggest_id(pack_id: str, module: str, name: Optional[str] = None,  # type: ignore[no-untyped-def]
+    def api_suggest_id(pack_id: str, module: str, name: Optional[str] = None,
                        mode: Optional[str] = None, preset: Optional[str] = None):
         return api.suggest_id(pack_id, module, root=content_root, name=name,
                               mode=mode, preset=preset)
 
     @app.get("/api/pack/{pack_id}/entry/{module}/{entry_id}/refs")
-    def api_entry_refs(pack_id: str, module: str, entry_id: str):  # type: ignore[no-untyped-def]
+    def api_entry_refs(pack_id: str, module: str, entry_id: str):
         return {"pack": pack_id, "module": module, "entry_id": entry_id,
                 "referrers": api.reference_scan(pack_id, module, entry_id, root=content_root)}
 
     # -------- 校验 / 保存 / 回退（批2） --------
     @app.post("/api/pack/{pack_id}/entry/{module}/{entry_id}/validate")
     def api_validate(pack_id: str, module: str, entry_id: str,
-                     payload: Optional[Dict[str, Any]] = Body(default=None)):  # type: ignore[no-untyped-def]
+                     payload: Optional[Dict[str, Any]] = Body(default=None)):
         body = payload or {}
         return editor_ops.validate_entry(
             pack_id, module, entry_id, body.get("patch") or {},
@@ -149,7 +149,7 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
 
     @app.post("/api/pack/{pack_id}/entry/{module}/{entry_id}/save")
     def api_save(pack_id: str, module: str, entry_id: str,
-                 payload: Optional[Dict[str, Any]] = Body(default=None)):  # type: ignore[no-untyped-def]
+                 payload: Optional[Dict[str, Any]] = Body(default=None)):
         body = payload or {}
         return editor_ops.save_entry(
             pack_id, module, entry_id, body.get("patch") or {},
@@ -159,14 +159,14 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
 
     # 批32 B1（框架 §6.12-06）：框架关键模板只读 → 「复制为包覆盖」生成包内覆盖条目。
     @app.post("/api/pack/{pack_id}/entry/{module}/{entry_id}/copy_override")
-    def api_copy_override(pack_id: str, module: str, entry_id: str):  # type: ignore[no-untyped-def]
+    def api_copy_override(pack_id: str, module: str, entry_id: str):
         return editor_ops.copy_framework_override(
             pack_id, module, entry_id, root=content_root, role=app.state.role)
 
     # -------- 批6 写入：新增条目 / 删除条目 / ID 即时校验 --------
     @app.post("/api/pack/{pack_id}/module/{module}/entry")
     def api_create_entry(pack_id: str, module: str,
-                         payload: Optional[Dict[str, Any]] = Body(default=None)):  # type: ignore[no-untyped-def]
+                         payload: Optional[Dict[str, Any]] = Body(default=None)):
         body = payload or {}
         return editor_ops.create_entry(
             pack_id, module, body.get("entry_id"), body.get("patch") or {},
@@ -174,27 +174,27 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
 
     @app.post("/api/pack/{pack_id}/module/{module}/id_check")
     def api_check_id(pack_id: str, module: str,
-                     payload: Optional[Dict[str, Any]] = Body(default=None)):  # type: ignore[no-untyped-def]
+                     payload: Optional[Dict[str, Any]] = Body(default=None)):
         body = payload or {}
         return api.check_entry_id(pack_id, module, body.get("entry_id"), root=content_root)
 
     @app.post("/api/pack/{pack_id}/entry/{module}/{entry_id}/delete")
-    def api_delete_entry(pack_id: str, module: str, entry_id: str):  # type: ignore[no-untyped-def]
+    def api_delete_entry(pack_id: str, module: str, entry_id: str):
         return editor_ops.delete_entry(
             pack_id, module, entry_id, root=content_root, role=app.state.role)
 
     @app.get("/api/pack/{pack_id}/module/{module}/backup")
-    def api_backup(pack_id: str, module: str):  # type: ignore[no-untyped-def]
+    def api_backup(pack_id: str, module: str):
         return editor_ops.module_backup(pack_id, module, root=content_root)
 
     @app.post("/api/pack/{pack_id}/module/{module}/rollback")
-    def api_rollback(pack_id: str, module: str):  # type: ignore[no-untyped-def]
+    def api_rollback(pack_id: str, module: str):
         return editor_ops.rollback_module(
             pack_id, module, root=content_root, role=app.state.role)
 
     # -------- 批8 模块开关：可启用清单 / 启用停用 / manifest 回退 --------
     @app.get("/api/pack/{pack_id}/module-catalog")
-    def api_module_catalog(pack_id: str):  # type: ignore[no-untyped-def]
+    def api_module_catalog(pack_id: str):
         data = api.module_catalog(pack_id, root=content_root)
         # 批19 #7：别名视图在装配层组装（web 读取层不得依赖 commands/assembly），注入响应。
         data["aliases"] = editor_aliases.list_aliases(
@@ -203,35 +203,35 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
 
     # 批19 #7：指令别名视图（框架内置 ∪ 包声明）
     @app.get("/api/pack/{pack_id}/aliases")
-    def api_aliases(pack_id: str):  # type: ignore[no-untyped-def]
+    def api_aliases(pack_id: str):
         return editor_aliases.list_aliases(api._pack_dir(pack_id, content_root))
 
     @app.post("/api/pack/{pack_id}/module/{module}/toggle")
     def api_toggle_module(pack_id: str, module: str,
-                          payload: Optional[Dict[str, Any]] = Body(default=None)):  # type: ignore[no-untyped-def]
+                          payload: Optional[Dict[str, Any]] = Body(default=None)):
         body = payload or {}
         return editor_ops.set_module_enabled(
             pack_id, module, bool(body.get("enabled")),
             root=content_root, role=app.state.role)
 
     @app.post("/api/pack/{pack_id}/module-preset/{preset_id}/apply")
-    def api_apply_module_preset(pack_id: str, preset_id: str):  # type: ignore[no-untyped-def]
+    def api_apply_module_preset(pack_id: str, preset_id: str):
         """批65 · 一键应用「推荐组合」：累加启用 + 依赖闭包 + 单次备份（可一键回退）。"""
         return editor_ops.apply_module_preset(
             pack_id, preset_id, root=content_root, role=app.state.role)
 
     @app.get("/api/pack/{pack_id}/manifest/backup")
-    def api_manifest_backup(pack_id: str):  # type: ignore[no-untyped-def]
+    def api_manifest_backup(pack_id: str):
         return editor_ops.module_config_backup(pack_id, root=content_root)
 
     @app.post("/api/pack/{pack_id}/manifest/rollback")
-    def api_manifest_rollback(pack_id: str):  # type: ignore[no-untyped-def]
+    def api_manifest_rollback(pack_id: str):
         return editor_ops.rollback_module_config(
             pack_id, root=content_root, role=app.state.role)
 
     # -------- 批11 内容包导出 / 导入（分享给别的作者） --------
     @app.get("/api/pack/{pack_id}/export")
-    def api_export_pack(pack_id: str):  # type: ignore[no-untyped-def]
+    def api_export_pack(pack_id: str):
         """导出此包 → 浏览器下载 `.ttrpack`（只读；GM 只读身份也允许）。"""
         res = editor_ops.export_pack(pack_id, root=content_root)
         if not res.get("ok"):
@@ -246,7 +246,7 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
 
     @app.post("/api/pack/import")
     async def api_import_pack(request: Request, on_conflict: str = "",
-                              new_id: str = ""):  # type: ignore[no-untyped-def]
+                              new_id: str = ""):
         """导入分享来的 `.ttrpack`（请求体 = 文件原始字节；无需 multipart 依赖）。
 
         校验顺序与安全防护全在 `qbot_rpg/content/pack_transfer.py`：zip 结构安全 →
@@ -266,7 +266,7 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
 
     # -------- 批34 通用 CSV：模块级导出 / 导入（框架 §6.7/§6.11/§6.12-05/§6.12-20） --------
     @app.get("/api/pack/{pack_id}/module/{module}/export_csv")
-    def api_export_csv(pack_id: str, module: str):  # type: ignore[no-untyped-def]
+    def api_export_csv(pack_id: str, module: str):
         """导出该模块 → 浏览器下载 CSV（UTF-8 带 BOM）。只读；GM 只读身份也允许。"""
         res = csv_ops.export_csv(pack_id, module, root=content_root)
         if not res.get("ok"):
@@ -282,7 +282,7 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
     @app.post("/api/pack/{pack_id}/module/{module}/import_csv")
     async def api_import_csv(pack_id: str, module: str, request: Request,
                              mode: str = "append", position: int = 0,
-                             on_conflict: str = "skip"):  # type: ignore[no-untyped-def]
+                             on_conflict: str = "skip"):
         """导入模块 CSV（请求体 = 文件原始字节；UTF-8 / GBK 自动识别）。
 
         逐行引用校验 → 默认整批拒绝（零写入零备份）；冲突默认跳过（可显式覆盖）；
@@ -295,7 +295,7 @@ def create_app(pack: Optional[str] = None, root: Optional[str] = None,
             on_conflict=on_conflict, root=content_root, role=app.state.role)
 
     @app.get("/")
-    def index():  # type: ignore[no-untyped-def]
+    def index():
         return FileResponse(str(static_dir / "index.html"))
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
     return app

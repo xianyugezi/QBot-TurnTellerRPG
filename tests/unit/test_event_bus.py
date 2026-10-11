@@ -237,4 +237,4 @@ def test_read_event_log_ring_300_persists() -> None:
     assert "[事件:e5]" in keys
     assert "[事件:e0]" not in keys
     # persistent_state 承载（随玩家 upsert 同事务落档）
-    assert len(ctx["persistent_state"]["event_log"]) == 300  # type: ignore[attr-defined]
+    assert len(ctx["persistent_state"]["event_log"]) == 300

@@ -70,7 +70,7 @@ def _fresh(*, config=None):
         "con": 10, "agi": 0, "name": et["name"],
     }
     eng = BattleEngine(defs=all_defs, combo_engine=ce, enemy_def=et)
-    eng._rng = _QR([0.5] * 400)  # type: ignore[assignment]
+    eng._rng = _QR([0.5] * 400)
     eng.start(dict(_PLAYER), mob, random_seed=7, config=config)
     return eng
 

@@ -74,17 +74,34 @@ def _run(name: str, args: list, timeout: int = 900) -> bool:
 
 
 def _lint() -> bool:
+    """静态门禁（**2026-10-10 分档**，口径与 run_all_tests 阶段0 一致）。
+
+    ① ruff 全仓 —— 必拦；② mypy 框架本体 `qbot_rpg/**` —— 存量基线豁免 + 新增必拦
+    （scripts/check_mypy_baseline.py）；③ mypy `tests` + `scripts` —— 只告警，债务清单归档
+    docs/verify/mypy_debt.txt（口径见 docs/verify/lint_baseline.md）。
+    """
     ok = True
-    for tool in ("ruff", "mypy"):
-        r = subprocess.run([str(REPO / ".venv" / "bin" / tool), "check", "."] if tool == "ruff"
-                           else [str(REPO / ".venv" / "bin" / tool), "."],
-                           cwd=str(REPO), capture_output=True, text=True, timeout=300)
+    checks = (
+        ("ruff 全仓", [str(REPO / ".venv" / "bin" / "ruff"), "check", "."], True),
+        ("mypy 框架本体基线", [str(PY), "scripts/check_mypy_baseline.py"], True),
+        ("mypy tests+scripts（告警）", [str(PY), "-m", "mypy", "tests", "scripts"], False),
+    )
+    for name, cmd, blocking in checks:
+        r = subprocess.run(cmd, cwd=str(REPO), capture_output=True, text=True, timeout=900)
+        out = r.stdout + r.stderr
         passed = r.returncode == 0
-        print(f"\n[{tool}] 全仓 {'✅ 通过' if passed else '❌ 失败'}")
+        errors = len([line for line in out.splitlines() if " error: " in line])
+        if not blocking:
+            if not passed:
+                (REPO / "docs" / "verify" / "mypy_debt.txt").write_text(
+                    "# mypy 存量债务（tests + scripts，非阻断 · 由 check_all.py 写出）\n\n"
+                    + out.strip() + "\n", encoding="utf-8")
+            print(f"\n[{name}] {'✅ 通过' if passed else '⚠️ 告警（不阻断）'} 存量 {errors} 处")
+            continue
+        print(f"\n[{name}] {'✅ 通过' if passed else '❌ 失败'}")
         if not passed:
-            print("    " + "\n    ".join(
-                (r.stdout + r.stderr).splitlines()[-4:]))
-        _RESULTS.append({"name": f"{tool} 全仓", "ok": passed, "tail": ""})
+            print("    " + "\n    ".join(out.splitlines()[-4:]))
+        _RESULTS.append({"name": name, "ok": passed, "tail": ""})
         ok = ok and passed
     return ok
 

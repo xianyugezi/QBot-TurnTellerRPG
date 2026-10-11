@@ -679,6 +679,18 @@
 
 ### Fixed
 
+- **lint 存量分档（2026-10-11）**：**阶段0 静态门从「两红」恢复为绿，并按用户拍板改分档口径**。
+  **① ruff 全仓清零（40 → 0）**：其中 3 条为**挪位失配**（2026-09-10 `qbot_rpg/engine/` 并入 `core/`
+  后 pyproject 豁免路径仍写旧路径：`worldtime.py` E501×17 / `weather_conditions.py` E501×1 /
+  `weather_consumers.py` F401×1），路径同步为 `core/...`（同文件、同规则、同计数）；其余 37 条为
+  后加代码的新违规（4 个 `scripts/veinborn_*` 探针、2 个测试、2 个框架文件），按「新增代码零豁免」改码。
+  **② mypy 分档（`docs/verify/lint_baseline.md` §六 现行口径）**：`ruff` 必拦 + `mypy qbot_rpg`
+  （框架本体）**存量基线豁免 + 新增必拦**（新 `scripts/check_mypy_baseline.py` +
+  `docs/verify/mypy_framework_baseline.json`，60 组合 / 160 处）+ `mypy tests scripts` 只告警
+  （债务清单 `docs/verify/mypy_debt.txt`）。**③ 陈旧豁免清理**：删 96 处已失效的 `# type: ignore[码]`
+  （`warn_unused_ignores` 判据），全仓 mypy 661 → 566 处。`scripts/check_all.py` 与
+  `scripts/run_all_tests.py` 阶段0 同步该分档。
+
 - **批84（2026-09-23）**：**「静默死效果」陷阱修复（B）+ 文档回填（C）**。依据《Vibecoding 说明书》
   §2.3 D / §十三 + 《手册·2》§2.2 + 《玩家指令手册》§十二。
   **① B1 派发状态唯一源**：`data/event_points.py` 新增 `EVENT_POINT_TABLE`

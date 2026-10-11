@@ -862,7 +862,7 @@ def _check_level_condition(report: object, base: str, spec: object) -> None:
             _err_chain(report, base, "V-9", rule="level_op_invalid", got=op,
                        msg="等级条件比较符仅支持 %s" % (list(CHAIN_LEVEL_OPS),))
             continue
-        if not _is_int_value(val) or val < 1:  # type: ignore[operator]
+        if not _is_int_value(val) or val < 1:
             _err_chain(report, base, "V-9", rule="level_threshold_invalid", op=op,
                        got=val, msg="等级阈值须为 int ≥ 1")
 
